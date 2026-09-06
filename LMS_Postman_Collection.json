@@ -1,0 +1,560 @@
+{
+	"info": {
+		"_postman_id": "b3e81880-9a25-4720-91bc-07e3d1a89001",
+		"name": "Intranet LMS Military Grade System API",
+		"description": "Bộ sưu tập Postman API đầy đủ cho Hệ thống Quản lý Điểm & Đào tạo Quân sự. Bao gồm Xác thực JWT, Ma trận Bảng điểm, Audit Log, Thêm cột linh hoạt, Import/Export Excel, Dashboard.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication (Xác thực)",
+			"item": [
+				{
+					"name": "Đăng nhập (Login Admin/BGH)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+									"    console.log(\"Saved JWT Token: \" + jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Đăng nhập với tài khoản Admin/BGH. Tự động lưu Token vào biến {{jwt_token}}."
+					},
+					"response": []
+				},
+				{
+					"name": "Đăng nhập (Teacher / Cán bộ Huấn luyện)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"teacher\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Lấy thông tin tài khoản hiện tại (/auth/me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Class & Matrix Grade Management (Quản lý Ma trận Bảng điểm)",
+			"item": [
+				{
+					"name": "Lấy Ma trận Bảng điểm của Lớp",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/classes/1/matrix?semester=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"matrix"
+							],
+							"query": [
+								{
+									"key": "semester",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Lấy ma trận điểm lớp 1 (SQDB2026-HT1), bao gồm danh sách sinh viên, điểm môn học toàn khóa, 3 môn thi TN, và trạng thái khóa/mở khóa."
+					},
+					"response": []
+				},
+				{
+					"name": "Lưu điểm Hàng loạt & Ghi Audit Log",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"semester\": 1,\n  \"reason\": \"Điều chỉnh điểm thi phúc khảo theo Quyết định số 105/QĐ-BGH\",\n  \"gradeUpdates\": [\n    {\n      \"studentId\": 1,\n      \"subjectId\": 1,\n      \"score\": 8.5\n    }\n  ],\n  \"evaluationUpdates\": [\n    {\n      \"studentId\": 1,\n      \"conductGrade\": \"TOT\",\n      \"scorePolitical\": 8.0,\n      \"scoreMilitary\": 8.5,\n      \"scoreSpecialty\": 9.0\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/classes/1/matrix/bulk-update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"matrix",
+								"bulk-update"
+							]
+						},
+						"description": "Lưu nhiều điểm số cùng lúc. Yêu cầu nhập lý do để tự động ghi log vào bảng kiểm toán grade_audit_logs."
+					},
+					"response": []
+				},
+				{
+					"name": "Thêm Cột Môn Học Linh Hoạt cho Lớp",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/classes/1/add-subject?subjectId=1&semester=1&isExtra=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"add-subject"
+							],
+							"query": [
+								{
+									"key": "subjectId",
+									"value": "1"
+								},
+								{
+									"key": "semester",
+									"value": "1"
+								},
+								{
+									"key": "isExtra",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Gán thêm cột môn học tùy chỉnh vào bảng điểm riêng của lớp."
+					},
+					"response": []
+				},
+				{
+					"name": "Khóa Bảng điểm Lớp (Lock Matrix)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/classes/1/lock?semester=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"lock"
+							],
+							"query": [
+								{
+									"key": "semester",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Niêm phong bảng điểm. Ngăn giáo viên/cán bộ sửa điểm trừ khi được BGH/PĐT mở khóa."
+					},
+					"response": []
+				},
+				{
+					"name": "Mở Khóa Bảng điểm Lớp (Unlock Matrix)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/classes/1/unlock?semester=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"unlock"
+							],
+							"query": [
+								{
+									"key": "semester",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Cho phép mở khóa bảng điểm (Yêu cầu quyền ROLE_BGH hoặc ROLE_PDT)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Audit Logs (Nhật ký Kiểm toán)",
+			"item": [
+				{
+					"name": "Tra cứu Nhật ký Kiểm toán Sửa điểm",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit-logs/grades?classId=1&page=0&size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"audit-logs",
+								"grades"
+							],
+							"query": [
+								{
+									"key": "classId",
+									"value": "1"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Xem chi tiết vết chỉnh sửa điểm: Người sửa, điểm cũ, điểm mới, lý do và thời gian."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Dashboard & Curriculum Progress",
+			"item": [
+				{
+					"name": "Dashboard Báo cáo Tổng quan",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"summary"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tiến độ Chương trình Đào tạo Lớp",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/curriculums/progress/class/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"curriculums",
+								"progress",
+								"class",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Excel Export & Import",
+			"item": [
+				{
+					"name": "Xuất File Excel Ma trận Bảng điểm Lớp (Có Tiêu đề Xoay Dọc)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/classes/1/export-excel?semester=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"export-excel"
+							],
+							"query": [
+								{
+									"key": "semester",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Tải file Excel ma trận điểm chuẩn format quân đội (Tiêu đề 90 độ, 3 môn thi TN, trọng số TN)."
+					},
+					"response": []
+				},
+				{
+					"name": "Import File Excel Bảng điểm Ma trận",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/classes/1/import-excel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"classes",
+								"1",
+								"import-excel"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Student Management (Quản lý Học viên)",
+			"item": [
+				{
+					"name": "Lấy Danh sách Học viên",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/students?classId=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"students"
+							],
+							"query": [
+								{
+									"key": "classId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Lấy danh sách quân số học viên theo lớp (classId) hoặc toàn bộ học viên."
+					},
+					"response": []
+				},
+				{
+					"name": "Thêm Mới Học Viên (Call API)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"studentCode\": \"HV2026006\",\n  \"fullName\": \"Nguyễn Văn Cường\",\n  \"dob\": \"15/05/2002\",\n  \"pob\": \"Hà Nội\",\n  \"gender\": \"Nam\",\n  \"rank\": \"Học viên / Binh nhất\",\n  \"classId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/students",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"students"
+							]
+						},
+						"description": "Thêm mới một học viên vào cơ sở dữ liệu."
+					},
+					"response": []
+				},
+				{
+					"name": "Xóa Học Viên",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/students/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"students",
+								"1"
+							]
+						},
+						"description": "Xóa hồ sơ học viên theo ID."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

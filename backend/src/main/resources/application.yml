@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: grade-management
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://database-1.clkwg4s6os9c.ap-southeast-2.rds.amazonaws.com:5432/lms?sslmode=verify-full&sslrootcert=./global-bundle.pem}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Nguyenvanduc!2k2}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+jwt:
+  secret: ${JWT_SECRET:c3VwZXJzZWNyZXRrZXlmb3JpbnRyYW5ldGdyYWRlbWFuYWdlbWVudHN5c3RlbTIwMjY=}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
