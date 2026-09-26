@@ -52,6 +52,7 @@ public class AdmissionsService {
 
             List<ParsedStudentDTO> currentStudents = new ArrayList<>();
             Map<String, Integer> classCounter = new HashMap<>();
+            Map<String, Integer> studentCounter = new HashMap<>();
 
             for (int r = 0; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
@@ -73,7 +74,7 @@ public class AdmissionsService {
                 if (rowText.contains("Chuyên ngành:")) {
                     // If we previously accumulated students, finalize the previous section
                     if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
-                        ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter);
+                        ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
                         sections.add(sec);
                         totalStudents += currentStudents.size();
                         currentStudents = new ArrayList<>();
@@ -111,7 +112,7 @@ public class AdmissionsService {
 
             // Flush last section if any
             if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
-                ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter);
+                ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
                 sections.add(sec);
                 totalStudents += currentStudents.size();
             }
@@ -181,6 +182,12 @@ public class AdmissionsService {
                             .build())
             );
 
+            // Cập nhật tên lớp chuẩn nếu lớp đã tồn tại từ trước
+            if (!clazz.getName().equals(finalClassName) && !finalClassName.isBlank()) {
+                clazz.setName(finalClassName);
+                classRepository.save(clazz);
+            }
+
             if (!createdClasses.contains(classCode)) {
                 createdClasses.add(classCode);
             }
@@ -216,8 +223,13 @@ public class AdmissionsService {
 
                 Student savedStudent = studentRepository.save(student);
 
-                // Init evaluation if missing
-                if (evaluationRepository.findByStudentId(savedStudent.getId()).isEmpty()) {
+                // Đồng bộ bảng đánh giá với lớp hiện tại của học viên
+                Optional<StudentEvaluation> evalOpt = evaluationRepository.findByStudentId(savedStudent.getId());
+                if (evalOpt.isPresent()) {
+                    StudentEvaluation eval = evalOpt.get();
+                    eval.setClazz(clazz);
+                    evaluationRepository.save(eval);
+                } else {
                     evaluationRepository.save(StudentEvaluation.builder()
                             .student(savedStudent)
                             .clazz(clazz)
@@ -243,7 +255,7 @@ public class AdmissionsService {
         );
     }
 
-    private ParsedSectionDTO buildSectionDTO(String title, String khoa, String majorRaw, String targetType, String targetName, int year, String yearShort, String classNamingMode, List<ParsedStudentDTO> students, Map<String, Integer> classCounter) {
+    private ParsedSectionDTO buildSectionDTO(String title, String khoa, String majorRaw, String targetType, String targetName, int year, String yearShort, String classNamingMode, List<ParsedStudentDTO> students, Map<String, Integer> classCounter, Map<String, Integer> studentCounter) {
         String majorCode = mapMajorCode(majorRaw);
         String majorName = mapMajorName(majorRaw);
 
@@ -263,16 +275,21 @@ public class AdmissionsService {
 
         // Generate Student Code range and assign to students
         // Code format: [targetPrefix][yearShort][majorCode][001..]
-        String targetPrefix = targetType.equals("SQDB") ? "26" : (yearShort + targetType + "-");
+        // Đảm bảo số thứ tự liên tục giữa các lớp cùng chuyên ngành (ví dụ: BB1: 001-050, BB2: 051-110, BB3: 111-170)
         String prefix = targetType.equals("SQDB") ? (yearShort + majorCode) : (yearShort + targetType + "-" + majorCode);
 
-        int stt = 1;
+        String seqKey = targetType + "_" + year + "_" + majorCode;
+        int startStt = studentCounter.getOrDefault(seqKey, 0) + 1;
+        int currentStt = startStt;
+
         for (ParsedStudentDTO s : students) {
-            String code = String.format("%s%03d", prefix, stt++);
+            String code = String.format("%s%03d", prefix, currentStt++);
             s.setStudentCode(code);
         }
 
-        String codeRange = String.format("%s%03d - %s%03d", prefix, 1, prefix, students.size());
+        studentCounter.put(seqKey, currentStt - 1);
+
+        String codeRange = String.format("%s%03d - %s%03d", prefix, startStt, prefix, currentStt - 1);
 
         return ParsedSectionDTO.builder()
                 .rawTitle(title)
@@ -433,7 +450,7 @@ public class AdmissionsService {
 
     private boolean isCorrupted(String text) {
         if (text == null || text.isBlank()) return false;
-        return text.contains("ß╗") || text.contains("─⌐") || text.contains("├í") || text.contains("├┤") || text.contains("");
+        return text.contains("ß╗") || text.contains("─⌐") || text.contains("├í") || text.contains("├┤") || text.contains("\uFFFD");
     }
 
     private String recoverString(String text) {
@@ -441,7 +458,7 @@ public class AdmissionsService {
         if (isCorrupted(text)) {
             try {
                 String recovered = new String(text.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), java.nio.charset.StandardCharsets.UTF_8);
-                if (!recovered.contains("") && !isCorrupted(recovered)) {
+                if (!recovered.contains("\uFFFD") && !isCorrupted(recovered)) {
                     return recovered;
                 }
             } catch (Exception ignored) {}

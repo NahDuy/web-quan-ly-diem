@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,7 @@ public class StudentService {
             students = studentRepository.findByClazzIdOrderByStudentCodeAsc(classId);
         } else {
             students = studentRepository.findAll();
+            students.sort(Comparator.comparing((Student s) -> s.getClazz() != null ? s.getClazz().getCode() : "").thenComparing(Student::getStudentCode));
         }
 
         if (year != null) {
@@ -155,6 +157,15 @@ public class StudentService {
         if (s.getClazz() != null && s.getClazz().getCourse() != null) {
             academicYear = s.getClazz().getCourse().getAcademicYear();
         }
+        String rank = "Học viên SQDB";
+        if (s.getClazz() != null && s.getClazz().getCode() != null) {
+            String cCode = s.getClazz().getCode();
+            if (cCode.startsWith("TDT")) rank = "Học viên TĐT";
+            else if (cCode.startsWith("KDT")) rank = "Học viên KĐT";
+            else if (cCode.startsWith("NVKT")) rank = "Học viên NVKT";
+            else if (cCode.startsWith("HSQ")) rank = "Học viên HSQ";
+        }
+
         return StudentDTO.builder()
                 .id(s.getId())
                 .studentCode(s.getStudentCode())
@@ -166,7 +177,7 @@ public class StudentService {
                 .className(s.getClazz() != null ? s.getClazz().getName() : "")
                 .classCode(s.getClazz() != null ? s.getClazz().getCode() : "")
                 .academicYear(academicYear)
-                .rank("Học viên SQDB")
+                .rank(rank)
                 .status(s.getStatus())
                 .build();
     }
