@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Upload, Download, Plus, Search, Shield, Edit, Trash2, ShieldCheck, Award, X, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Users, Upload, Download, Plus, Search, Shield, Edit, Trash2, ShieldCheck, Award, X, CheckCircle2, RefreshCw, Sparkles, FileSpreadsheet } from 'lucide-react';
+import AdmissionsImportModal from './AdmissionsImportModal';
 
 const MOCK_MILITARY_STUDENTS = [
   { id: 1, studentCode: 'HV2026001', fullName: 'Nguyễn Văn An', rank: 'Học viên SQDB', dob: '15/05/2002', pob: 'Hà Nội', gender: 'Nam', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' },
@@ -11,10 +12,12 @@ const MOCK_MILITARY_STUDENTS = [
 
 export default function StudentManagementView({ onOpenImportModal }) {
   const [students, setStudents] = useState([]);
+  const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAdmissionsModalOpen, setIsAdmissionsModalOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -53,9 +56,25 @@ export default function StudentManagementView({ onOpenImportModal }) {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const res = await fetch('/api/v1/classes');
+      if (res.ok) {
+        const data = await res.json();
+        setClassList(data);
+      }
+    } catch (e) {
+      console.error('Error fetching classes:', e);
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
   }, [selectedClassId]);
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
 
   const filteredStudents = students.filter(s =>
     (s.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -180,12 +199,20 @@ export default function StudentManagementView({ onOpenImportModal }) {
             onChange={(e) => setSelectedClassId(e.target.value)}
             className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
           >
-            <option value="">Tất cả các lớp</option>
-            <option value="1">SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
-            <option value="2">SQDB2026-PB1 (Pháo binh 1)</option>
-            <option value="3">SQDB2026-TT1 (Thông tin Kỹ thuật 1)</option>
-            <option value="4">SQDB2025-HT1 (Hợp thành 2025)</option>
-            <option value="5">SQDB2024-HT1 (Hợp thành 2024)</option>
+            <option value="">Tất cả các lớp ({students.length} học viên)</option>
+            {classList.length > 0 ? (
+              classList.map(c => (
+                <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+              ))
+            ) : (
+              <>
+                <option value="1">SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
+                <option value="2">SQDB2026-PB1 (Pháo binh 1)</option>
+                <option value="3">SQDB2026-TT1 (Thông tin Kỹ thuật 1)</option>
+                <option value="4">SQDB2025-HT1 (Hợp thành 2025)</option>
+                <option value="5">SQDB2024-HT1 (Hợp thành 2024)</option>
+              </>
+            )}
           </select>
 
           <div className="relative">
@@ -199,13 +226,22 @@ export default function StudentManagementView({ onOpenImportModal }) {
             />
           </div>
 
-          <button onClick={fetchStudents} className="btn-secondary" title="Làm mới">
+          <button onClick={() => { fetchStudents(); fetchClasses(); }} className="btn-secondary" title="Làm mới">
             <RefreshCw className={`w-4 h-4 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button onClick={onOpenImportModal} className="btn-secondary">
+          <button 
+            onClick={() => setIsAdmissionsModalOpen(true)}
+            className="btn-primary flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold text-xs rounded-lg shadow-md"
+            title="Nhập danh sách học viên đầu vào từ file Excel (.xls / .xlsx)"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            Nhập DS Đầu Vào (.xls)
+          </button>
+
+          <button onClick={onOpenImportModal} className="btn-secondary" title="Nhập điểm ma trận từ Excel">
             <Upload className="w-4 h-4 text-emerald-400" />
-            Import Excel
+            Nhập Điểm Excel
           </button>
 
           <button
@@ -413,6 +449,16 @@ export default function StudentManagementView({ onOpenImportModal }) {
           </div>
         </div>
       )}
+
+      {/* Admissions Batch Import Modal */}
+      <AdmissionsImportModal
+        isOpen={isAdmissionsModalOpen}
+        onClose={() => setIsAdmissionsModalOpen(false)}
+        onImportSuccess={() => {
+          fetchStudents();
+          fetchClasses();
+        }}
+      />
 
     </div>
   );

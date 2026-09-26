@@ -91,7 +91,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void syncPostgresSequences() {
+    public void syncPostgresSequences() {
         try {
             jdbcTemplate.execute("ALTER TABLE grade_audit_logs ALTER COLUMN metadata TYPE text;");
             log.info("Ensured grade_audit_logs.metadata is column type TEXT");

@@ -220,6 +220,68 @@ export default function MajorManagementView() {
         </div>
       </div>
 
+      {/* Military Training Targets Showcase */}
+      <div className="glass-panel p-5 bg-slate-900/90 border border-amber-500/40 rounded-xl space-y-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-yellow-400" />
+            <h3 className="text-sm font-bold text-yellow-200 uppercase font-military-title">
+              QUY ƯỚC CÁC ĐỐI TƯỢNG ĐÀO TẠO TẠI NHÀ TRƯỜNG
+            </h3>
+          </div>
+          <span className="text-[11px] text-emerald-400 font-semibold">
+            Được tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
+            <span className="px-2 py-0.5 bg-amber-950 text-yellow-300 border border-amber-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              SQDB
+            </span>
+            <p className="text-xs font-bold text-white">Sĩ quan Dự bị</p>
+            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">SQDB2026-TSBB1</code></p>
+            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26TSBB001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
+            <span className="px-2 py-0.5 bg-blue-950 text-blue-300 border border-blue-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              TDT
+            </span>
+            <p className="text-xs font-bold text-white">Tiểu đội trưởng</p>
+            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">TDT2026-BB1</code></p>
+            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26TDT-BB001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
+            <span className="px-2 py-0.5 bg-red-950 text-red-300 border border-red-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              KDT
+            </span>
+            <p className="text-xs font-bold text-white">Khẩu đội trưởng</p>
+            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">KDT2026-COI1</code></p>
+            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26KDT-COI001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
+            <span className="px-2 py-0.5 bg-purple-950 text-purple-300 border border-purple-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              NVKT
+            </span>
+            <p className="text-xs font-bold text-white">Nhân viên Kỹ thuật</p>
+            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">NVKT2026-TT1</code></p>
+            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26NVKT-TT001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
+            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              HSQ
+            </span>
+            <p className="text-xs font-bold text-white">Hạ sĩ quan Chỉ huy</p>
+            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">HSQ2026-BB1</code></p>
+            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26HSQ-BB001</code></p>
+          </div>
+        </div>
+      </div>
+
       {/* Main Table Panel */}
       <div className="glass-panel bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
         <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
