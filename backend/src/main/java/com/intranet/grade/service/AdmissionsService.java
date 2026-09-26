@@ -152,10 +152,15 @@ public class AdmissionsService {
 
             // 2. Get or Create Major
             String majorCode = sec.getMajorCode().toUpperCase().trim();
+            String majorName = sec.getMajorName();
+            if (majorName == null || majorName.isBlank() || isCorrupted(majorName)) {
+                majorName = mapMajorName(majorCode);
+            }
+            final String finalMajorName = majorName;
             Major major = majorRepository.findByCode(majorCode).orElseGet(() ->
                     majorRepository.save(Major.builder()
                             .code(majorCode)
-                            .name(sec.getMajorName())
+                            .name(finalMajorName)
                             .department(defaultDept)
                             .build())
             );
@@ -163,10 +168,14 @@ public class AdmissionsService {
             // 3. Get or Create ClassEntity
             String classCode = sec.getClassCode();
             String className = sec.getClassName();
+            if (className == null || className.isBlank() || isCorrupted(className)) {
+                className = "Lớp " + getTargetName(sec.getTargetType()) + " " + year + " - " + finalMajorName;
+            }
+            final String finalClassName = className;
             ClassEntity clazz = classRepository.findByCode(classCode).orElseGet(() ->
                     classRepository.save(ClassEntity.builder()
                             .code(classCode)
-                            .name(className)
+                            .name(finalClassName)
                             .major(major)
                             .course(course)
                             .build())
@@ -183,19 +192,22 @@ public class AdmissionsService {
 
                 LocalDate dob = parseLocalDate(sDTO.getDob());
                 Student student;
+                String fullName = recoverString(sDTO.getFullName());
+                String pob = recoverString(sDTO.getPob());
+
                 if (existingOpt.isPresent()) {
                     student = existingOpt.get();
-                    student.setFullName(sDTO.getFullName());
+                    student.setFullName(fullName);
                     student.setDob(dob);
-                    student.setPob(sDTO.getPob());
+                    student.setPob(pob);
                     student.setGender(sDTO.getGender());
                     student.setClazz(clazz);
                 } else {
                     student = Student.builder()
                             .studentCode(sCode)
-                            .fullName(sDTO.getFullName())
+                            .fullName(fullName)
                             .dob(dob)
-                            .pob(sDTO.getPob())
+                            .pob(pob)
                             .gender(sDTO.getGender() != null && !sDTO.getGender().isBlank() ? sDTO.getGender() : "Nam")
                             .clazz(clazz)
                             .status("DANG_HOC")
@@ -279,6 +291,14 @@ public class AdmissionsService {
     }
 
     private String mapMajorCode(String raw) {
+        if (raw == null) return "BB";
+        String upper = raw.trim().toUpperCase();
+        if (upper.equals("TSBB") || upper.equals("COI") || upper.equals("DKZ") || upper.equals("PK127")
+                || upper.equals("BB") || upper.equals("PB") || upper.equals("TT") || upper.equals("CB")
+                || upper.equals("TTG") || upper.equals("HH") || upper.equals("HC") || upper.equals("KT")
+                || upper.equals("QY") || upper.equals("HT") || upper.equals("BCHT")) {
+            return upper;
+        }
         String lower = raw.toLowerCase();
         if (lower.contains("trinh sát")) return "TSBB";
         if (lower.contains("cối")) return "COI";
@@ -409,5 +429,23 @@ public class AdmissionsService {
             }
         } catch (Exception ignored) {}
         return LocalDate.of(2003, 1, 1);
+    }
+
+    private boolean isCorrupted(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("ß╗") || text.contains("─⌐") || text.contains("├í") || text.contains("├┤") || text.contains("");
+    }
+
+    private String recoverString(String text) {
+        if (text == null || text.isBlank()) return text;
+        if (isCorrupted(text)) {
+            try {
+                String recovered = new String(text.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), java.nio.charset.StandardCharsets.UTF_8);
+                if (!recovered.contains("") && !isCorrupted(recovered)) {
+                    return recovered;
+                }
+            } catch (Exception ignored) {}
+        }
+        return text;
     }
 }

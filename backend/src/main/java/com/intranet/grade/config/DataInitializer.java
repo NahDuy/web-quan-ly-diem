@@ -94,7 +94,8 @@ public class DataInitializer implements CommandLineRunner {
     public void syncPostgresSequences() {
         try {
             jdbcTemplate.execute("ALTER TABLE grade_audit_logs ALTER COLUMN metadata TYPE text;");
-            log.info("Ensured grade_audit_logs.metadata is column type TEXT");
+            jdbcTemplate.execute("UPDATE majors SET name = 'Binh chủng Hợp thành' WHERE (code = 'BCHT' OR code = 'HT') AND (name LIKE '%ß%' OR name LIKE '%╗%');");
+            log.info("Ensured grade_audit_logs.metadata is column type TEXT and sanitized majors");
         } catch (Exception e) {
             log.debug("Metadata column check notice: {}", e.getMessage());
         }

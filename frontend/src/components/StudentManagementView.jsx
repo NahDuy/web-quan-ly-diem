@@ -18,6 +18,9 @@ export default function StudentManagementView({ onOpenImportModal }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdmissionsModalOpen, setIsAdmissionsModalOpen] = useState(false);
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+  const [isDeleteClassModalOpen, setIsDeleteClassModalOpen] = useState(false);
+  const [deletingClasses, setDeletingClasses] = useState(false);
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -80,6 +83,63 @@ export default function StudentManagementView({ onOpenImportModal }) {
     (s.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.studentCode || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDeleteAllClasses = async () => {
+    setDeletingClasses(true);
+    setErrorMsg('');
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/classes/all', {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg(data.message || 'Đã xóa toàn bộ lớp học thành công!');
+        setSelectedClassId('');
+        setIsDeleteAllModalOpen(false);
+        await fetchClasses();
+        await fetchStudents();
+        setTimeout(() => setMsg(''), 4000);
+      } else {
+        setErrorMsg(data.message || 'Không thể xóa toàn bộ lớp học!');
+      }
+    } catch (e) {
+      setErrorMsg('Lỗi kết nối khi xóa lớp: ' + e.message);
+    } finally {
+      setDeletingClasses(false);
+    }
+  };
+
+  const handleDeleteSelectedClass = async () => {
+    if (!selectedClassId) return;
+    setDeletingClasses(true);
+    setErrorMsg('');
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/classes/${selectedClassId}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg(data.message || 'Đã xóa lớp học thành công!');
+        setSelectedClassId('');
+        setIsDeleteClassModalOpen(false);
+        await fetchClasses();
+        await fetchStudents();
+        setTimeout(() => setMsg(''), 4000);
+      } else {
+        setErrorMsg(data.message || 'Không thể xóa lớp học!');
+      }
+    } catch (e) {
+      setErrorMsg('Lỗi kết nối khi xóa lớp: ' + e.message);
+    } finally {
+      setDeletingClasses(false);
+    }
+  };
 
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
@@ -214,6 +274,28 @@ export default function StudentManagementView({ onOpenImportModal }) {
               </>
             )}
           </select>
+
+          {/* Delete Single Selected Class */}
+          {selectedClassId && (
+            <button
+              onClick={() => setIsDeleteClassModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800 rounded-lg text-xs font-semibold transition-all shadow-sm"
+              title="Xóa lớp học đang chọn và các học viên thuộc lớp"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+              Xóa lớp này
+            </button>
+          )}
+
+          {/* Delete All Classes */}
+          <button
+            onClick={() => setIsDeleteAllModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/90 hover:bg-red-900 text-red-300 border border-red-700 hover:border-red-500 rounded-lg text-xs font-bold transition-all shadow-sm"
+            title="Xóa toàn bộ các lớp học và học viên hiện có để chuẩn bị nạp lại từ Excel"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            Xóa toàn bộ lớp
+          </button>
 
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -418,11 +500,13 @@ export default function StudentManagementView({ onOpenImportModal }) {
                     onChange={(e) => setNewClassId(parseInt(e.target.value))}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
                   >
-                    <option value={1}>SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
-                    <option value={2}>SQDB2026-PB1 (Pháo binh 1)</option>
-                    <option value={3}>SQDB2026-TT1 (Thông tin Kỹ thuật 1)</option>
-                    <option value={4}>SQDB2025-HT1 (Hợp thành 2025)</option>
-                    <option value={5}>SQDB2024-HT1 (Hợp thành 2024)</option>
+                    {classList.length > 0 ? (
+                      classList.map(c => (
+                        <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+                      ))
+                    ) : (
+                      <option value={1}>SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -446,6 +530,107 @@ export default function StudentManagementView({ onOpenImportModal }) {
               </div>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete All Classes */}
+      {isDeleteAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-red-700/80 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center space-x-3 text-red-400">
+              <div className="p-3 bg-red-950/80 border border-red-700 rounded-xl">
+                <Trash2 className="w-6 h-6 text-red-400 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">XÓA TOÀN BỘ LỚP HỌC?</h3>
+                <p className="text-xs text-red-300 font-semibold">Cảnh báo: Hành động không thể hoàn tác</p>
+              </div>
+            </div>
+
+            <div className="bg-red-950/40 border border-red-900/60 rounded-xl p-3.5 text-xs text-slate-300 space-y-2">
+              <p>Hành động này sẽ <strong>xóa toàn bộ {classList.length} lớp học</strong> cùng toàn bộ dữ liệu điểm số, đánh giá rèn luyện và hồ sơ học viên trong hệ thống.</p>
+              <p className="text-amber-300 font-semibold">💡 Bạn có thể dùng chức năng này để dọn sạch dữ liệu cũ và nạp lại danh sách mới từ file Excel.</p>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteAllModalOpen(false)}
+                className="btn-secondary px-4 py-2 text-xs"
+                disabled={deletingClasses}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAllClasses}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-lg shadow-red-900/40"
+                disabled={deletingClasses}
+              >
+                {deletingClasses ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Xác nhận Xóa Toàn Bộ
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete Single Class */}
+      {isDeleteClassModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-red-700/80 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center space-x-3 text-red-400">
+              <div className="p-3 bg-red-950/80 border border-red-700 rounded-xl">
+                <Trash2 className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">XÓA LỚP HỌC ĐÃ CHỌN?</h3>
+                <p className="text-xs text-red-300 font-semibold">Lớp: {classList.find(c => String(c.id) === String(selectedClassId))?.code || selectedClassId}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800">
+              Toàn bộ học viên và điểm số thuộc lớp này sẽ bị xóa khỏi cơ sở dữ liệu.
+            </p>
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteClassModalOpen(false)}
+                className="btn-secondary px-4 py-2 text-xs"
+                disabled={deletingClasses}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSelectedClass}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                disabled={deletingClasses}
+              >
+                {deletingClasses ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Xác nhận Xóa Lớp
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

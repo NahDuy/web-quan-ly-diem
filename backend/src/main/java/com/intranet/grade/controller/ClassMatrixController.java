@@ -18,23 +18,30 @@ import java.util.Map;
 public class ClassMatrixController {
 
     private final GradeMatrixService gradeMatrixService;
-    private final com.intranet.grade.repository.ClassRepository classRepository;
+    private final com.intranet.grade.service.ClassService classService;
 
     @GetMapping
     public ResponseEntity<List<com.intranet.grade.dto.ClassSummaryDTO>> getAllClasses() {
-        List<com.intranet.grade.dto.ClassSummaryDTO> list = classRepository.findAll().stream()
-                .map(c -> com.intranet.grade.dto.ClassSummaryDTO.builder()
-                        .id(c.getId())
-                        .code(c.getCode())
-                        .name(c.getName())
-                        .majorCode(c.getMajor() != null ? c.getMajor().getCode() : null)
-                        .majorName(c.getMajor() != null ? c.getMajor().getName() : null)
-                        .courseCode(c.getCourse() != null ? c.getCourse().getCode() : null)
-                        .courseName(c.getCourse() != null ? c.getCourse().getName() : null)
-                        .academicYear(c.getCourse() != null ? c.getCourse().getStartYear() : null)
-                        .build())
-                .toList();
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(classService.getAllClasses());
+    }
+
+    @DeleteMapping("/all")
+    public ResponseEntity<?> deleteAllClasses() {
+        int count = classService.deleteAllClasses();
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã xóa toàn bộ " + count + " lớp học và toàn bộ học viên thành công!",
+                "deletedCount", count
+        ));
+    }
+
+    @DeleteMapping("/{classId}")
+    public ResponseEntity<?> deleteClass(@PathVariable Integer classId) {
+        classService.deleteClass(classId);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã xóa lớp học thành công!"
+        ));
     }
 
     @GetMapping("/{classId}/matrix")
