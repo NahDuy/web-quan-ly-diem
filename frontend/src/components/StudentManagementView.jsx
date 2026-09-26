@@ -10,7 +10,7 @@ const MOCK_MILITARY_STUDENTS = [
   { id: 5, studentCode: 'HV2026005', fullName: 'Vũ Thị Hoa', rank: 'Học viên SQDB', dob: '05/12/2002', pob: 'Quảng Ninh', gender: 'Nữ', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' }
 ];
 
-export default function StudentManagementView({ onOpenImportModal }) {
+export default function StudentManagementView() {
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,13 @@ export default function StudentManagementView({ onOpenImportModal }) {
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const handleExportStudents = () => {
+    const url = selectedClassId 
+      ? `/api/v1/students/export-excel?classId=${selectedClassId}`
+      : `/api/v1/students/export-excel`;
+    window.location.href = url;
+  };
+
   // Form State for Adding Student
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
@@ -33,6 +40,17 @@ export default function StudentManagementView({ onOpenImportModal }) {
   const [newGender, setNewGender] = useState('Nam');
   const [newClassId, setNewClassId] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+
+  // Form State for Editing Student
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [editCode, setEditCode] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editRank, setEditRank] = useState('Học viên / Binh nhất');
+  const [editDob, setEditDob] = useState('');
+  const [editPob, setEditPob] = useState('');
+  const [editGender, setEditGender] = useState('Nam');
+  const [editClassId, setEditClassId] = useState(1);
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -213,6 +231,82 @@ export default function StudentManagementView({ onOpenImportModal }) {
     }
   };
 
+  const handleOpenEditModal = (student) => {
+    setEditingStudent(student);
+    setEditCode(student.studentCode || '');
+    setEditName(student.fullName || '');
+    setEditRank(student.rank || 'Học viên / Binh nhất');
+    setEditDob(student.dob || '');
+    setEditPob(student.pob || '');
+    setEditGender(student.gender || 'Nam');
+    setEditClassId(student.classId || (classList[0]?.id || 1));
+    setErrorMsg('');
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditStudentSubmit = async (e) => {
+    e.preventDefault();
+    if (!editCode.trim() || !editName.trim()) {
+      alert('Vui lòng nhập đầy đủ Số hiệu Học viên và Họ tên!');
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const payload = {
+        studentCode: editCode.toUpperCase().trim(),
+        fullName: editName.trim(),
+        dob: editDob || '01/01/2003',
+        pob: editPob || 'Hà Nội',
+        gender: editGender,
+        rank: editRank,
+        classId: parseInt(editClassId) || 1
+      };
+
+      const res = await fetch(`/api/v1/students/${editingStudent.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const updatedStudent = await res.json();
+        setStudents(prev => prev.map(s => s.id === editingStudent.id ? updatedStudent : s));
+        setIsEditModalOpen(false);
+        setMsg(`Đã cập nhật thông tin học viên ${editName} (${editCode.toUpperCase()}) thành công!`);
+        setTimeout(() => setMsg(''), 3500);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setErrorMsg(errData.message || 'Lỗi từ máy chủ khi cập nhật học viên');
+      }
+    } catch (err) {
+      console.error('Error updating student:', err);
+      // Local fallback
+      setStudents(prev => prev.map(s => s.id === editingStudent.id ? {
+        ...s,
+        studentCode: editCode.toUpperCase().trim(),
+        fullName: editName.trim(),
+        dob: editDob,
+        pob: editPob,
+        gender: editGender,
+        rank: editRank,
+        classId: parseInt(editClassId) || 1
+      } : s));
+      setIsEditModalOpen(false);
+      setMsg(`Đã cập nhật thông tin học viên ${editName}`);
+      setTimeout(() => setMsg(''), 3500);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleDeleteStudent = async (id, name) => {
     if (!window.confirm(`Xác nhận xóa dữ liệu học viên ${name}?`)) return;
 
@@ -321,14 +415,10 @@ export default function StudentManagementView({ onOpenImportModal }) {
             Nhập DS Đầu Vào (.xls)
           </button>
 
-          <button onClick={onOpenImportModal} className="btn-secondary" title="Nhập điểm ma trận từ Excel">
-            <Upload className="w-4 h-4 text-emerald-400" />
-            Nhập Điểm Excel
-          </button>
-
           <button
-            onClick={() => alert('Đã xuất danh sách ' + filteredStudents.length + ' học viên quân sự ra file Excel!')}
+            onClick={handleExportStudents}
             className="btn-secondary"
+            title="Xuất danh sách học viên quân sự ra file Excel"
           >
             <Download className="w-4 h-4 text-yellow-400" />
             Xuất Excel
@@ -389,7 +479,11 @@ export default function StudentManagementView({ onOpenImportModal }) {
                     <span className="badge-success text-[10px]">Đang huấn luyện</span>
                   </td>
                   <td className="p-3 text-center space-x-2">
-                    <button className="p-1 text-slate-400 hover:text-yellow-400 transition" title="Sửa hồ sơ">
+                    <button
+                      onClick={() => handleOpenEditModal(student)}
+                      className="p-1 text-slate-400 hover:text-yellow-400 transition"
+                      title="Sửa hồ sơ"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
@@ -526,6 +620,135 @@ export default function StudentManagementView({ onOpenImportModal }) {
                   disabled={submitting}
                 >
                   {submitting ? 'Đang gửi API...' : 'Lưu Học Viên (Call API)'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CHỈNH SỬA HỌC VIÊN */}
+      {isEditModalOpen && editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="glass-panel w-full max-w-lg p-6 bg-slate-900 border border-slate-700 shadow-2xl rounded-xl relative">
+            
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4 text-yellow-400">
+              <Edit className="w-6 h-6" />
+              <h3 className="font-military-title text-lg font-bold text-yellow-300">
+                Chỉnh Sửa Hồ Sơ Học Viên Quân Sự
+              </h3>
+            </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-red-950/70 border border-red-500/50 text-red-300 text-xs rounded-lg">
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleEditStudentSubmit} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Số hiệu Học viên (SHHV) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: HV2026006"
+                    value={editCode}
+                    onChange={(e) => setEditCode(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Họ và tên Học viên *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Nguyễn Văn Cường"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Cấp bậc / Chức vụ</label>
+                  <select
+                    value={editRank}
+                    onChange={(e) => setEditRank(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="Học viên / Binh nhất">Học viên / Binh nhất</option>
+                    <option value="Học viên / Hạ sĩ">Học viên / Hạ sĩ</option>
+                    <option value="Học viên / Trung sĩ">Học viên / Trung sĩ</option>
+                    <option value="Học viên / Thượng sĩ">Học viên / Thượng sĩ</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Ngày sinh (DD/MM/YYYY)</label>
+                  <input
+                    type="text"
+                    placeholder="15/05/2002"
+                    value={editDob}
+                    onChange={(e) => setEditDob(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Quê quán</label>
+                  <input
+                    type="text"
+                    placeholder="VD: Hà Nội"
+                    value={editPob}
+                    onChange={(e) => setEditPob(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Đơn vị / Lớp Huấn luyện *</label>
+                  <select
+                    value={editClassId}
+                    onChange={(e) => setEditClassId(parseInt(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                  >
+                    {classList.length > 0 ? (
+                      classList.map(c => (
+                        <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+                      ))
+                    ) : (
+                      <option value={1}>SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="btn-secondary"
+                  disabled={submitting}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary bg-yellow-600 hover:bg-yellow-700 text-slate-950 font-bold"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang lưu...' : 'Lưu Thay Đổi'}
                 </button>
               </div>
             </form>

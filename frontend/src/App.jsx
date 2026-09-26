@@ -13,7 +13,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('matrix');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importModalConfig, setImportModalConfig] = useState({
+    isOpen: false,
+    classId: 1,
+    semester: 1,
+    classCode: ''
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -60,15 +65,20 @@ export default function App() {
         )}
 
         {activeTab === 'students' && (
-          <StudentManagementView
-            onOpenImportModal={() => setIsImportModalOpen(true)}
-          />
+          <StudentManagementView />
         )}
 
         {activeTab === 'matrix' && (
           <MatrixDataGrid
             currentUser={currentUser}
-            onOpenImportModal={() => setIsImportModalOpen(true)}
+            onOpenImportModal={(classId, semester, classCode) =>
+              setImportModalConfig({
+                isOpen: true,
+                classId: classId || 1,
+                semester: semester || 1,
+                classCode: classCode || ''
+              })
+            }
           />
         )}
 
@@ -93,8 +103,11 @@ export default function App() {
       />
 
       <ExcelImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
+        isOpen={importModalConfig.isOpen}
+        classId={importModalConfig.classId}
+        semester={importModalConfig.semester}
+        classCode={importModalConfig.classCode}
+        onClose={() => setImportModalConfig(prev => ({ ...prev, isOpen: false }))}
         onImportSuccess={() => {
           setActiveTab('matrix');
         }}

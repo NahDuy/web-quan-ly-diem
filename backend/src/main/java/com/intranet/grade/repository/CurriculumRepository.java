@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface CurriculumRepository extends JpaRepository<Curriculum, Integer> {
     Optional<Curriculum> findByMajorIdAndCourseId(Integer majorId, Integer courseId);
+    java.util.List<Curriculum> findByMajorId(Integer majorId);
 }

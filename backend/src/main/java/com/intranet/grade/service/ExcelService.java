@@ -388,4 +388,138 @@ public class ExcelService {
         }
         return LocalDate.of(2002, 1, 1);
     }
+
+    public byte[] exportStudentsToExcel(Integer classId) throws IOException {
+        List<Student> students;
+        String classTitle = "TOÀN BỘ CÁC LỚP HỌC VIÊN QUÂN SỰ";
+        if (classId != null) {
+            ClassEntity clazz = classRepository.findById(classId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học ID: " + classId));
+            students = studentRepository.findByClazzIdOrderByStudentCodeAsc(classId);
+            classTitle = "LỚP: " + clazz.getClassName() + " (" + clazz.getClassCode() + ")";
+        } else {
+            students = studentRepository.findAll();
+            students.sort(Comparator.comparing(Student::getFullName, Comparator.nullsLast(Comparator.naturalOrder())));
+        }
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("DanhSach_HocVien");
+            sheet.setDisplayGridlines(true);
+
+            // Fonts & Styles
+            Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            titleFont.setFontName("Times New Roman");
+
+            CellStyle titleStyle = workbook.createCellStyle();
+            titleStyle.setFont(titleFont);
+            titleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            Font subTitleFont = workbook.createFont();
+            subTitleFont.setItalic(true);
+            subTitleFont.setFontHeightInPoints((short) 11);
+            subTitleFont.setFontName("Times New Roman");
+            CellStyle subTitleStyle = workbook.createCellStyle();
+            subTitleStyle.setFont(subTitleFont);
+            subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setFontHeightInPoints((short) 11);
+            headerFont.setFontName("Times New Roman");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            Font dataFont = workbook.createFont();
+            dataFont.setFontHeightInPoints((short) 11);
+            dataFont.setFontName("Times New Roman");
+
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setFont(dataFont);
+            dataStyle.setBorderTop(BorderStyle.THIN);
+            dataStyle.setBorderBottom(BorderStyle.THIN);
+            dataStyle.setBorderLeft(BorderStyle.THIN);
+            dataStyle.setBorderRight(BorderStyle.THIN);
+            dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle centerDataStyle = workbook.createCellStyle();
+            centerDataStyle.cloneStyleFrom(dataStyle);
+            centerDataStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Title rows
+            Row r0 = sheet.createRow(0);
+            Cell c0 = r0.createCell(0);
+            c0.setCellValue("DANH SÁCH HỌC VIÊN QUÂN SỰ");
+            c0.setCellStyle(titleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
+
+            Row r1 = sheet.createRow(1);
+            Cell c1 = r1.createCell(0);
+            c1.setCellValue(classTitle);
+            c1.setCellStyle(subTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 6));
+
+            // Headers (đã bỏ cột Giới tính theo yêu cầu)
+            String[] headers = {"STT", "Số hiệu HV", "Họ và tên", "Ngày sinh", "Quê quán", "Cấp bậc", "Lớp / Đại đội"};
+            Row headerRow = sheet.createRow(3);
+            headerRow.setHeightInPoints(24);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 4;
+            int stt = 1;
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (Student s : students) {
+                Row row = sheet.createRow(rowIdx++);
+                Cell cellStt = row.createCell(0);
+                cellStt.setCellValue(stt++);
+                cellStt.setCellStyle(centerDataStyle);
+
+                Cell cellCode = row.createCell(1);
+                cellCode.setCellValue(s.getStudentCode() != null ? s.getStudentCode() : "");
+                cellCode.setCellStyle(centerDataStyle);
+
+                Cell cellName = row.createCell(2);
+                cellName.setCellValue(s.getFullName() != null ? s.getFullName() : "");
+                cellName.setCellStyle(dataStyle);
+
+                Cell cellDob = row.createCell(3);
+                cellDob.setCellValue(s.getDob() != null ? s.getDob().format(dtf) : "");
+                cellDob.setCellStyle(centerDataStyle);
+
+                Cell cellPob = row.createCell(4);
+                cellPob.setCellValue(s.getPob() != null ? s.getPob() : "");
+                cellPob.setCellStyle(dataStyle);
+
+                Cell cellRank = row.createCell(5);
+                cellRank.setCellValue("Học viên");
+                cellRank.setCellStyle(centerDataStyle);
+
+                Cell cellClass = row.createCell(6);
+                String cName = (s.getClazz() != null) ? s.getClazz().getClassCode() : "";
+                cellClass.setCellValue(cName);
+                cellClass.setCellStyle(centerDataStyle);
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
 }

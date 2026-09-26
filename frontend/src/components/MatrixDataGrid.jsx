@@ -144,6 +144,7 @@ const INITIAL_MILITARY_MOCK_MATRIX = {
 export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [classId, setClassId] = useState(1);
   const [semester, setSemester] = useState(1);
+  const [classList, setClassList] = useState([]);
   const [matrixData, setMatrixData] = useState(INITIAL_MILITARY_MOCK_MATRIX);
   const [loading, setLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -162,6 +163,51 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [newSubName, setNewSubName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubCredits, setNewSubCredits] = useState('3');
+
+  const fetchClasses = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/classes', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setClassList(data);
+          setClassId(prev => (data.some(c => c.id === prev) ? prev : data[0].id));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load classes', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const handleInitFromCurriculum = async () => {
+    setLoading(true);
+    setSaveSuccessMsg('');
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/classes/${classId}/init-from-curriculum?semester=${semester}`, {
+        method: 'POST',
+        headers
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaveSuccessMsg(data.message || 'Đã đồng bộ các môn từ Lộ trình đào tạo vào lớp thành công!');
+        await fetchMatrix();
+      } else {
+        alert(data.message || 'Lỗi khi khởi tạo môn học từ lộ trình');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ để đồng bộ môn học');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchMatrix = async () => {
     setLoading(true);
@@ -451,13 +497,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <select
               value={classId}
               onChange={(e) => setClassId(parseInt(e.target.value))}
-              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold max-w-xs truncate"
             >
-              <option value={1}>SQDB2026-HT1 (Lớp SQDB 2026 - Binh chủng Hợp thành 1)</option>
-              <option value={2}>SQDB2026-PB1 (Lớp SQDB 2026 - Pháo binh 1)</option>
-              <option value={3}>SQDB2026-TT1 (Lớp SQDB 2026 - Thông tin Kỹ thuật 1)</option>
-              <option value={4}>SQDB2025-HT1 (Lớp SQDB 2025 - Binh chủng Hợp thành 1)</option>
-              <option value={5}>SQDB2024-HT1 (Lớp SQDB 2024 - Binh chủng Hợp thành 1)</option>
+              {classList.length > 0 ? (
+                classList.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.classCode} - {cls.className} ({cls.totalStudents || 0} HV)
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value={1}>SQDB2026-HT1 (Lớp SQDB 2026 - Binh chủng Hợp thành 1)</option>
+                  <option value={2}>SQDB2026-PB1 (Lớp SQDB 2026 - Pháo binh 1)</option>
+                  <option value={3}>SQDB2026-TT1 (Lớp SQDB 2026 - Thông tin Kỹ thuật 1)</option>
+                  <option value={4}>SQDB2025-HT1 (Lớp SQDB 2025 - Binh chủng Hợp thành 1)</option>
+                  <option value={5}>SQDB2024-HT1 (Lớp SQDB 2024 - Binh chủng Hợp thành 1)</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -476,7 +532,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+          <button
+            onClick={handleInitFromCurriculum}
+            disabled={loading}
+            className="btn-secondary bg-indigo-950/80 hover:bg-indigo-900 border-indigo-600 text-indigo-300 font-bold text-xs"
+            title="Tự động đồng bộ các môn học theo Lộ trình Đào tạo của Chuyên ngành vào Lớp này"
+          >
+            <RefreshCw className={`w-4 h-4 text-indigo-400 ${loading ? 'animate-spin' : ''}`} />
+            ⚡ Lấy Môn từ Lộ Trình
+          </button>
+
           <button
             onClick={() => setIsAddSubjectModalOpen(true)}
             className="btn-secondary bg-emerald-950/80 hover:bg-emerald-900 border-emerald-600 text-emerald-300 font-bold text-xs"
@@ -495,7 +561,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             </button>
           )}
 
-          <button onClick={onOpenImportModal} className="btn-secondary">
+          <button
+            onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
+            className="btn-secondary"
+          >
             <Upload className="w-4 h-4 text-emerald-400" />
             Import Excel Điểm
           </button>
@@ -511,6 +580,29 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         <div className="p-3 bg-emerald-950 border border-emerald-600 text-emerald-300 text-sm rounded-lg flex items-center gap-2 font-bold shadow-md">
           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           {saveSuccessMsg}
+        </div>
+      )}
+
+      {/* Empty Subject State Banner */}
+      {safeColumns.length === 0 && (
+        <div className="p-4 bg-amber-950/40 border border-amber-600/50 rounded-xl text-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+          <div>
+            <h4 className="font-bold text-amber-300 text-sm flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              Lớp chưa có danh sách môn học cho Học kỳ {semester}
+            </h4>
+            <p className="text-xs text-amber-200/80 mt-1">
+              Lớp thuộc chuyên ngành <strong>{matrixData.majorName || 'Quân sự'}</strong>. Bạn có thể nhấn nút để hệ thống tự động liên kết các môn học từ <strong>Lộ trình Đào tạo</strong> của chuyên ngành này vào bảng điểm.
+            </p>
+          </div>
+          <button
+            onClick={handleInitFromCurriculum}
+            disabled={loading}
+            className="btn-primary bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap shadow-lg flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            ⚡ Lấy Môn từ Lộ Trình Ngay
+          </button>
         </div>
       )}
 

@@ -52,6 +52,18 @@ public class ClassMatrixController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{classId}/init-from-curriculum")
+    public ResponseEntity<Map<String, Object>> initFromCurriculum(
+            @PathVariable Integer classId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        var subjects = gradeMatrixService.initializeClassMatrixFromCurriculum(classId, semester);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã khởi tạo thành công " + subjects.size() + " môn học theo Lộ trình đào tạo của chuyên ngành!",
+                "totalSubjects", subjects.size()
+        ));
+    }
+
     @PostMapping("/{classId}/matrix/bulk-update")
     public ResponseEntity<Map<String, Object>> bulkUpdateMatrix(
             @PathVariable Integer classId,

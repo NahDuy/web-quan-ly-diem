@@ -92,6 +92,53 @@ public class StudentService {
     }
 
     @Transactional
+    public StudentDTO updateStudent(Long id, CreateStudentRequest req) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học viên với ID: " + id));
+
+        if (req.getStudentCode() != null && !req.getStudentCode().isBlank()) {
+            String newCode = req.getStudentCode().toUpperCase().trim();
+            studentRepository.findByStudentCode(newCode).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new IllegalArgumentException("Số hiệu học viên '" + newCode + "' đã tồn tại!");
+                }
+            });
+            student.setStudentCode(newCode);
+        }
+
+        if (req.getFullName() != null && !req.getFullName().isBlank()) {
+            student.setFullName(req.getFullName().trim());
+        }
+
+        if (req.getDob() != null && !req.getDob().isBlank()) {
+            try {
+                if (req.getDob().contains("/")) {
+                    student.setDob(LocalDate.parse(req.getDob().trim(), DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                } else if (req.getDob().contains("-")) {
+                    student.setDob(LocalDate.parse(req.getDob().trim()));
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (req.getPob() != null) {
+            student.setPob(req.getPob().trim());
+        }
+
+        if (req.getGender() != null) {
+            student.setGender(req.getGender().trim());
+        }
+
+        if (req.getClassId() != null) {
+            ClassEntity clazz = classRepository.findById(req.getClassId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp với ID: " + req.getClassId()));
+            student.setClazz(clazz);
+        }
+
+        Student updated = studentRepository.save(student);
+        return toDTO(updated);
+    }
+
+    @Transactional
     public void deleteStudent(Long id) {
         studentRepository.deleteById(id);
     }

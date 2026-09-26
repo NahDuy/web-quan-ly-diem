@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Download } from 'lucide-react';
 
-export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
+export default function ExcelImportModal({
+  isOpen,
+  onClose,
+  onImportSuccess,
+  classId = 1,
+  semester = 1,
+  classCode = ''
+}) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState({ type: '', text: '' });
@@ -30,7 +37,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
       const token = localStorage.getItem('jwt_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      const response = await fetch('/api/v1/classes/1/import-excel', {
+      const response = await fetch(`/api/v1/classes/${classId || 1}/import-excel?semester=${semester || 1}`, {
         method: 'POST',
         headers,
         body: formData,
@@ -38,7 +45,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
 
       const data = await response.json();
       if (response.ok) {
-        setMsg({ type: 'success', text: 'Import file Excel và tạo ma trận lớp thành công!' });
+        setMsg({ type: 'success', text: 'Import file Excel điểm thành công!' });
         setTimeout(() => {
           onImportSuccess();
           onClose();
@@ -55,20 +62,38 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-      <div className="glass-panel w-full max-w-md p-6 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl relative">
+      <div className="glass-panel w-full max-w-lg p-6 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl relative">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
           <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center space-x-3 mb-4 text-emerald-400">
+        <div className="flex items-center space-x-3 mb-3 text-emerald-400">
           <FileSpreadsheet className="w-6 h-6" />
-          <h3 className="text-lg font-bold text-white">Import File Excel Ma trận Lớp</h3>
+          <h3 className="text-lg font-bold text-white">
+            Import File Excel Điểm {classCode ? `- Lớp ${classCode}` : ''}
+          </h3>
         </div>
 
-        <p className="text-xs text-slate-300 mb-4">
-          Tải lên file Excel mẫu chứa danh sách $x$ môn học và danh sách sinh viên lớp để tự động khởi tạo dữ liệu ma trận điểm.
-        </p>
+        <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 mb-4 space-y-1.5">
+          <p>
+            ℹ️ <strong className="text-emerald-300">Quy trình chuẩn:</strong> Danh sách môn học được tự động thiết lập từ <strong>Lộ trình Đào tạo</strong> của Chuyên ngành.
+          </p>
+          <p>
+            Tải lên file Excel để cập nhật điểm học phần cho học viên của lớp theo đúng các cột môn học đã được tạo.
+          </p>
+          <div className="pt-2 flex items-center justify-between border-t border-slate-700/60 mt-2">
+            <span className="text-slate-400">Chưa có file mẫu chuẩn của lớp này?</span>
+            <a
+              href={`/api/v1/classes/${classId || 1}/export-excel?semester=${semester || 1}`}
+              download
+              className="text-yellow-400 hover:text-yellow-300 font-bold inline-flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" />
+              Tải file mẫu Excel lớp
+            </a>
+          </div>
+        </div>
 
         {msg.text && (
           <div className={`p-3 rounded-lg text-xs mb-4 flex items-center gap-2 ${

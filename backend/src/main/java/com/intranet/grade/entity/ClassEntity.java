@@ -34,4 +34,12 @@ public class ClassEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "advisor_id")
     private User advisor;
+
+    public String getClassCode() {
+        return code;
+    }
+
+    public String getClassName() {
+        return name;
+    }
 }

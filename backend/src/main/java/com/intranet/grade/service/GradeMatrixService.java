@@ -30,8 +30,10 @@ public class GradeMatrixService {
     private final UserRepository userRepository;
     private final GradeLockRepository gradeLockRepository;
     private final ClassSubjectRepository classSubjectRepository;
+    private final CurriculumRepository curriculumRepository;
+    private final CurriculumSubjectRepository curriculumSubjectRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MatrixResponseDTO getClassMatrix(Integer classId, Integer semester) {
         ClassEntity clazz = classRepository.findById(classId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học có ID: " + classId));
@@ -53,6 +55,9 @@ public class GradeMatrixService {
                 subjects = subjectRepository.findSubjectsByClassIdAndSemester(classId, semester);
             } else {
                 subjects = subjectRepository.findSubjectsByClassId(classId);
+            }
+            if (subjects.isEmpty()) {
+                subjects = autoPopulateSubjectsFromCurriculum(clazz, sem);
             }
         }
 
@@ -353,6 +358,77 @@ public class GradeMatrixService {
                     .build();
             classSubjectRepository.save(cs);
         }
+    }
+
+    @Transactional
+    public List<Subject> initializeClassMatrixFromCurriculum(Integer classId, Integer semester) {
+        ClassEntity clazz = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học: " + classId));
+        int sem = semester != null ? semester : 1;
+        return autoPopulateSubjectsFromCurriculum(clazz, sem);
+    }
+
+    @Transactional
+    public List<Subject> autoPopulateSubjectsFromCurriculum(ClassEntity clazz, int sem) {
+        if (clazz.getMajor() == null) return Collections.emptyList();
+
+        Integer majorId = clazz.getMajor().getId();
+        Integer courseId = clazz.getCourse() != null ? clazz.getCourse().getId() : null;
+
+        Curriculum curriculum = null;
+        if (courseId != null) {
+            curriculum = curriculumRepository.findByMajorIdAndCourseId(majorId, courseId).orElse(null);
+        }
+        if (curriculum == null) {
+            List<Curriculum> list = curriculumRepository.findByMajorId(majorId);
+            if (!list.isEmpty()) {
+                curriculum = list.get(0);
+            }
+        }
+
+        if (curriculum == null) {
+            return Collections.emptyList();
+        }
+
+        List<CurriculumSubject> cSubs = curriculumSubjectRepository.findByCurriculumIdOrderBySemesterAsc(curriculum.getId());
+        List<CurriculumSubject> targetList = cSubs.stream()
+                .filter(cs -> cs.getSemester().equals(sem))
+                .toList();
+        if (targetList.isEmpty()) {
+            targetList = cSubs;
+        }
+
+        List<Subject> result = new ArrayList<>();
+        int order = 1;
+        for (CurriculumSubject cs : targetList) {
+            Subject s = cs.getSubject();
+            result.add(s);
+
+            if (!classSubjectRepository.existsByClazzIdAndSubjectIdAndSemester(clazz.getId(), s.getId(), sem)) {
+                classSubjectRepository.save(ClassSubject.builder()
+                        .clazz(clazz)
+                        .subject(s)
+                        .semester(sem)
+                        .isExtra(false)
+                        .displayOrder(order++)
+                        .build());
+            }
+
+            List<Student> students = studentRepository.findByClazzIdOrderByStudentCodeAsc(clazz.getId());
+            for (Student st : students) {
+                if (gradeRepository.findByStudentIdAndSubjectIdAndClazzId(st.getId(), s.getId(), clazz.getId()).isEmpty()) {
+                    gradeRepository.save(Grade.builder()
+                            .student(st)
+                            .subject(s)
+                            .clazz(clazz)
+                            .semester(sem)
+                            .score(null)
+                            .status("PENDING")
+                            .build());
+                }
+            }
+        }
+        return result;
     }
 
     private CustomUserDetails getCurrentUser() {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookmarkCheck, Plus, Edit2, Trash2, Search, Building2, 
-  Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles
+  Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles, Shield
 } from 'lucide-react';
 
 export default function MajorManagementView() {

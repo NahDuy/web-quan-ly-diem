@@ -17,10 +17,21 @@ import java.util.Map;
 public class StudentController {
 
     private final StudentService studentService;
+    private final com.intranet.grade.service.ExcelService excelService;
 
     @GetMapping
     public ResponseEntity<List<StudentDTO>> getAllStudents(@RequestParam(required = false) Integer classId) {
         return ResponseEntity.ok(studentService.getAllStudents(classId));
+    }
+
+    @GetMapping("/export-excel")
+    public ResponseEntity<byte[]> exportStudentsExcel(@RequestParam(required = false) Integer classId) throws java.io.IOException {
+        byte[] bytes = excelService.exportStudentsToExcel(classId);
+        String filename = classId != null ? "DanhSach_HocVien_Lop_" + classId + ".xlsx" : "DanhSach_HocVien_ToanBo.xlsx";
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(bytes);
     }
 
     @PostMapping
@@ -37,6 +48,24 @@ public class StudentController {
             return ResponseEntity.internalServerError().body(Map.of(
                     "success", false,
                     "message", "Lỗi lưu học viên: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateStudent(@PathVariable Long id, @Valid @RequestBody CreateStudentRequest request) {
+        try {
+            StudentDTO dto = studentService.updateStudent(id, request);
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi cập nhật học viên: " + e.getMessage()
             ));
         }
     }

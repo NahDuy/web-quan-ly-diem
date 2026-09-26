@@ -1,17 +1,15 @@
 package com.intranet.grade.config;
 
-import com.intranet.grade.entity.Department;
-import com.intranet.grade.entity.Role;
-import com.intranet.grade.entity.User;
-import com.intranet.grade.repository.DepartmentRepository;
-import com.intranet.grade.repository.RoleRepository;
-import com.intranet.grade.repository.UserRepository;
+import com.intranet.grade.entity.*;
+import com.intranet.grade.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -21,7 +19,11 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
-    private final com.intranet.grade.repository.MajorRepository majorRepository;
+    private final MajorRepository majorRepository;
+    private final SubjectRepository subjectRepository;
+    private final CourseRepository courseRepository;
+    private final CurriculumRepository curriculumRepository;
+    private final CurriculumSubjectRepository curriculumSubjectRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -55,6 +57,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Khởi tạo danh mục chuyên ngành chuẩn quân sự
         initDefaultMajors(pdt);
+
+        // Khởi tạo môn học quân sự và Lộ trình đào tạo chuẩn theo chuyên ngành
+        initMilitarySubjectsAndCurriculums(pdt);
 
         // Đồng bộ sequence tự tăng (PostgreSQL auto-increment sequence sync)
         syncPostgresSequences();
@@ -136,5 +141,101 @@ public class DataInitializer implements CommandLineRunner {
             user.setIsActive(true);
         }
         userRepository.save(user);
+    }
+
+    private void initMilitarySubjectsAndCurriculums(Department defaultDept) {
+        // 1. Get or Create Course SQDB2026
+        Course course = courseRepository.findByCode("SQDB2026").orElseGet(() ->
+                courseRepository.save(Course.builder()
+                        .code("SQDB2026")
+                        .name("Khóa Đào tạo Sĩ quan Dự bị Năm 2026")
+                        .startYear(2026)
+                        .endYear(2026)
+                        .build())
+        );
+
+        // 2. Foundation Subjects
+        Subject qs101 = getOrCreateSubject("QS101", "Giáo dục Chính trị Quân sự", 2, defaultDept);
+        Subject qs102 = getOrCreateSubject("QS102", "Điều lệnh Đội ngũ & Quản lý Bộ đội", 2, defaultDept);
+        Subject qs103 = getOrCreateSubject("QS103", "Bắn súng Quân dụng (K54 / Tiểu liên AK)", 3, defaultDept);
+        Subject qs104 = getOrCreateSubject("QS104", "Chiến thuật Từng người & Tổ Bộ binh", 3, defaultDept);
+        Subject qs105 = getOrCreateSubject("QS105", "Thể lực & Võ thuật Quân sự", 2, defaultDept);
+        Subject qs106 = getOrCreateSubject("QS106", "Công sự Ngụy trang & Địa hình Quân sự", 2, defaultDept);
+
+        // 3. Specialized Subjects
+        Subject ts101 = getOrCreateSubject("TS101", "Kỹ thuật & Chiến thuật Trinh sát Đặc nhiệm", 4, defaultDept);
+        Subject ts102 = getOrCreateSubject("TS102", "Võ thuật Chiến đấu & Bắt bắt địch", 3, defaultDept);
+        Subject ts103 = getOrCreateSubject("TS103", "Trinh sát Đêm & Khí tài Quan sát", 3, defaultDept);
+
+        Subject coi101 = getOrCreateSubject("COI101", "Cấu tạo & Quy tắc bắn Súng Cối 82mm", 4, defaultDept);
+        Subject coi102 = getOrCreateSubject("COI102", "Khí tài Đo đạc & Tính toán Phần tử bắn", 3, defaultDept);
+        Subject coi103 = getOrCreateSubject("COI103", "Chiến thuật Trung đội Hỏa lực Cối", 3, defaultDept);
+
+        Subject dkz101 = getOrCreateSubject("DKZ101", "Cấu tạo & Quy tắc bắn ĐKZ (82-K65, SPG-9)", 4, defaultDept);
+        Subject dkz102 = getOrCreateSubject("DKZ102", "Chiến thuật Phục kích Diệt tăng ĐKZ", 3, defaultDept);
+        Subject dkz103 = getOrCreateSubject("DKZ103", "Kỹ thuật Hiệu chỉnh & Ngắm bắn ĐKZ", 3, defaultDept);
+
+        Subject pk101 = getOrCreateSubject("PK101", "Cấu tạo SMPK 12,7mm & Quy tắc bắn", 4, defaultDept);
+        Subject pk102 = getOrCreateSubject("PK102", "Bắn Mục tiêu Bay thấp & Mặt đất", 3, defaultDept);
+        Subject pk103 = getOrCreateSubject("PK103", "Chiến thuật Phân đội SMPK 12,7mm", 3, defaultDept);
+
+        Subject bb101 = getOrCreateSubject("BB101", "Chiến thuật Trung đội Bộ binh Tiến công & Phòng ngự", 4, defaultDept);
+        Subject bb102 = getOrCreateSubject("BB102", "Sử dụng Hỏa lực Bộ binh (B40, B41, RPD)", 3, defaultDept);
+        Subject bb103 = getOrCreateSubject("BB103", "Tổ chức Chỉ huy Phân đội Bộ binh", 3, defaultDept);
+
+        Subject pb101 = getOrCreateSubject("PB101", "Lý thuyết & Quy tắc bắn Pháo binh", 4, defaultDept);
+        Subject pb102 = getOrCreateSubject("PB102", "Chỉ huy Hỏa lực & Đo đạc Trinh sát Pháo", 4, defaultDept);
+
+        Subject tt101 = getOrCreateSubject("TT101", "Khí tài Vô tuyến điện Quân sự", 3, defaultDept);
+        Subject tt102 = getOrCreateSubject("TT102", "Mạng Thông tin Chỉ huy Tác chiến", 4, defaultDept);
+
+        // 4. Curriculums by Major
+        initCurriculumForMajor("TSBB", "Lộ trình Đào tạo SQDB Trinh sát Bộ binh", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, ts101, ts102, ts103));
+        initCurriculumForMajor("COI", "Lộ trình Đào tạo SQDB Súng Cối 82mm", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, coi101, coi102, coi103));
+        initCurriculumForMajor("DKZ", "Lộ trình Đào tạo SQDB Súng ĐKZ", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, dkz101, dkz102, dkz103));
+        initCurriculumForMajor("PK127", "Lộ trình Đào tạo SQDB Súng máy Phòng không 12,7mm", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, pk101, pk102, pk103));
+        initCurriculumForMajor("BB", "Lộ trình Đào tạo SQDB Bộ binh", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, bb101, bb102, bb103));
+        initCurriculumForMajor("BCHT", "Lộ trình Đào tạo SQDB Binh chủng Hợp thành", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, bb101, bb102, bb103));
+        initCurriculumForMajor("HT", "Lộ trình Đào tạo SQDB Hợp thành", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, bb101, bb102, bb103));
+        initCurriculumForMajor("PB", "Lộ trình Đào tạo SQDB Pháo binh", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, pb101, pb102));
+        initCurriculumForMajor("TT", "Lộ trình Đào tạo SQDB Thông tin Kỹ thuật", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, tt101, tt102));
+    }
+
+    private Subject getOrCreateSubject(String code, String name, int credits, Department dept) {
+        return subjectRepository.findByCode(code).orElseGet(() ->
+                subjectRepository.save(Subject.builder()
+                        .code(code)
+                        .name(name)
+                        .credits(credits)
+                        .department(dept)
+                        .build())
+        );
+    }
+
+    private void initCurriculumForMajor(String majorCode, String currName, Course course, List<Subject> subjects) {
+        Major major = majorRepository.findByCode(majorCode).orElse(null);
+        if (major == null) return;
+
+        Curriculum curr = curriculumRepository.findByMajorIdAndCourseId(major.getId(), course.getId()).orElse(null);
+        if (curr == null) {
+            int totalCredits = subjects.stream().mapToInt(Subject::getCredits).sum();
+            curr = curriculumRepository.save(Curriculum.builder()
+                    .major(major)
+                    .course(course)
+                    .name(currName)
+                    .totalCredits(totalCredits)
+                    .build());
+            log.info("Initialized curriculum for major: {} - {}", majorCode, currName);
+
+            int order = 1;
+            for (Subject s : subjects) {
+                curriculumSubjectRepository.save(CurriculumSubject.builder()
+                        .curriculum(curr)
+                        .subject(s)
+                        .semester(1)
+                        .isCompulsory(true)
+                        .build());
+            }
+        }
     }
 }
