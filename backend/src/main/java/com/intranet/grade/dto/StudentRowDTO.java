@@ -32,6 +32,7 @@ public class StudentRowDTO {
     private String gradExamEligibilityText; // "Đủ điều kiện" / "Không đủ ĐK"
     
     private BigDecimal graduationExamScore; // Điểm Thi TN
+    private Map<Integer, BigDecimal> gradExamScores; // Map gradSubId (101, 102, 103) -> Score
     private BigDecimal finalGraduationScore; // Điểm TN = (TB*1 + TN*2)/3
     private String graduationClassification; // XUAT_SAC, GIOL, KHA, TRUNG_BINH, KHONG_DAT
 }

@@ -159,7 +159,7 @@ CREATE TABLE grade_audit_logs (
     modified_by_role VARCHAR(50) NOT NULL,
     modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),
-    metadata JSONB
+    metadata TEXT
 );
 
 -- 15. Bảng Môn học áp dụng cho Lớp (Class Subjects - Cột linh hoạt)

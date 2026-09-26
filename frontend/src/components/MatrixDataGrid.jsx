@@ -347,10 +347,27 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         };
       });
 
+      const evalUpdatesMap = {};
+      Object.entries(editedConducts).forEach(([sId, conduct]) => {
+        const studentId = parseInt(sId);
+        if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
+        evalUpdatesMap[studentId].conductGrade = conduct;
+      });
+      Object.entries(editedGradExamScores).forEach(([key, val]) => {
+        const [sId, gradSubId] = key.split('_');
+        const studentId = parseInt(sId);
+        if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
+        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = val;
+        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = val;
+        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = val;
+      });
+      const evaluationUpdates = Object.values(evalUpdatesMap);
+
       const body = {
         semester,
         reason: auditReason,
         gradeUpdates,
+        evaluationUpdates: evaluationUpdates.length > 0 ? evaluationUpdates : undefined,
       };
 
       const res = await fetch(`/api/v1/classes/${classId}/matrix/bulk-update`, {
@@ -363,6 +380,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         setSaveSuccessMsg('Lưu điểm và tạo Audit Log thành công!');
         setIsReasonModalOpen(false);
         setAuditReason('');
+        setEditedScores({});
+        setEditedConducts({});
+        setEditedGradExamScores({});
         fetchMatrix();
       } else {
         const resData = await res.json();

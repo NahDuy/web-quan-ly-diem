@@ -164,6 +164,11 @@ public class GradeMatrixService {
                 }
             }
 
+            Map<Integer, BigDecimal> gradExamScoresMap = new HashMap<>();
+            if (scorePol != null) gradExamScoresMap.put(101, scorePol);
+            if (scoreMil != null) gradExamScoresMap.put(102, scoreMil);
+            if (scoreSpe != null) gradExamScoresMap.put(103, scoreSpe);
+
             rows.add(StudentRowDTO.builder()
                     .stt(stt++)
                     .studentId(s.getId())
@@ -175,6 +180,7 @@ public class GradeMatrixService {
                     .grades(studentGrades)
                     .tbcScore(tbcScore)
                     .conductGrade(conduct)
+                    .gradExamScores(gradExamScoresMap)
                     .graduationExamScore(tbcGradExamScore)
                     .finalGraduationScore(finalGradScore)
                     .graduationClassification(classification)
@@ -233,7 +239,7 @@ public class GradeMatrixService {
                 BigDecimal oldScore = grade.getScore();
                 grade.setScore(item.getScore());
                 grade.setUpdatedBy(userEntity);
-                gradeRepository.save(grade);
+                grade = gradeRepository.saveAndFlush(grade);
 
                 // Record Audit Log
                 GradeAuditLog log = GradeAuditLog.builder()
@@ -250,6 +256,42 @@ public class GradeMatrixService {
                         .ipAddress(clientIp)
                         .build();
                 auditLogRepository.save(log);
+            }
+        }
+
+        if (request.getEvaluationUpdates() != null) {
+            for (EvaluationUpdateItem item : request.getEvaluationUpdates()) {
+                Student student = studentRepository.findById(item.getStudentId())
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học viên ID: " + item.getStudentId()));
+
+                StudentEvaluation eval = evaluationRepository.findByStudentId(item.getStudentId())
+                        .orElseGet(() -> StudentEvaluation.builder()
+                                .student(student)
+                                .clazz(clazz)
+                                .conductGrade("KHA")
+                                .graduationClassification("CHUA_XET")
+                                .build());
+
+                if (item.getConductGrade() != null) {
+                    eval.setConductGrade(item.getConductGrade());
+                }
+                if (item.getScorePolitical() != null) {
+                    eval.setScorePolitical(item.getScorePolitical());
+                }
+                if (item.getScoreMilitary() != null) {
+                    eval.setScoreMilitary(item.getScoreMilitary());
+                }
+                if (item.getScoreSpecialty() != null) {
+                    eval.setScoreSpecialty(item.getScoreSpecialty());
+                }
+                if (item.getGraduationExamScore() != null) {
+                    eval.setTbcGradExam(item.getGraduationExamScore());
+                } else if (eval.getScorePolitical() != null && eval.getScoreMilitary() != null && eval.getScoreSpecialty() != null) {
+                    BigDecimal sum = eval.getScorePolitical().add(eval.getScoreMilitary()).add(eval.getScoreSpecialty());
+                    eval.setTbcGradExam(sum.divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP));
+                }
+
+                evaluationRepository.save(eval);
             }
         }
     }

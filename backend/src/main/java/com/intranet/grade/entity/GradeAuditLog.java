@@ -54,7 +54,7 @@ public class GradeAuditLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata;
 
     @PrePersist

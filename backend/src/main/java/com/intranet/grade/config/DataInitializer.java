@@ -57,7 +57,19 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void syncPostgresSequences() {
-        String[] tables = {"students", "users", "classes", "subjects", "grades", "student_evaluations"};
+        try {
+            jdbcTemplate.execute("ALTER TABLE grade_audit_logs ALTER COLUMN metadata TYPE text;");
+            log.info("Ensured grade_audit_logs.metadata is column type TEXT");
+        } catch (Exception e) {
+            log.debug("Metadata column check notice: {}", e.getMessage());
+        }
+
+        String[] tables = {
+            "students", "users", "classes", "subjects", "grades", 
+            "student_evaluations", "grade_audit_logs", "class_subjects",
+            "courses", "majors", "departments", "roles", "curriculums", 
+            "curriculum_subjects", "grade_locks"
+        };
         for (String table : tables) {
             try {
                 jdbcTemplate.execute("SELECT setval(pg_get_serial_sequence('" + table + "', 'id'), COALESCE((SELECT max(id) FROM " + table + "), 1));");

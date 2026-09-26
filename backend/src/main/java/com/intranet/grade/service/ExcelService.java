@@ -123,7 +123,9 @@ public class ExcelService {
                 for (int c = subjectStartCol + 1; c <= subjectEndCol; c++) {
                     row1.createCell(c).setCellStyle(standardHeaderStyle);
                 }
-                sheet.addMergedRegion(new CellRangeAddress(2, 2, subjectStartCol, subjectEndCol));
+                if (subjectEndCol > subjectStartCol) {
+                    sheet.addMergedRegion(new CellRangeAddress(2, 2, subjectStartCol, subjectEndCol));
+                }
 
                 // Row 3: Sub-headers for Subjects with VERTICAL 90-degree TEXT
                 for (int i = 0; i < matrix.getColumns().size(); i++) {
