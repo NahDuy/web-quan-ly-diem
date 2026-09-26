@@ -21,6 +21,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
+    private final com.intranet.grade.repository.MajorRepository majorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -52,8 +53,42 @@ public class DataInitializer implements CommandLineRunner {
 
         log.info("Default security users initialized successfully! All users updated with password 'password123'.");
 
+        // Khởi tạo danh mục chuyên ngành chuẩn quân sự
+        initDefaultMajors(pdt);
+
         // Đồng bộ sequence tự tăng (PostgreSQL auto-increment sequence sync)
         syncPostgresSequences();
+    }
+
+    private void initDefaultMajors(Department defaultDept) {
+        String[][] defaultMajors = {
+            {"TSBB", "Trinh sát Bộ binh"},
+            {"COI", "Súng Cối 82mm / 100mm"},
+            {"DKZ", "Súng ĐKZ (82-K65, SPG-9)"},
+            {"PK127", "Súng máy Phòng không 12,7mm"},
+            {"BB", "Binh chủng Hợp thành (Bộ binh)"},
+            {"PB", "Binh chủng Pháo binh"},
+            {"TT", "Thông tin Kỹ thuật / Liên lạc"},
+            {"CB", "Binh chủng Công binh"},
+            {"TTG", "Binh chủng Tăng - Thiết giáp"},
+            {"HH", "Binh chủng Phòng hóa"},
+            {"HC", "Hậu cần Quân sự"},
+            {"KT", "Kỹ thuật Quân khí"},
+            {"QY", "Quân y"}
+        };
+
+        for (String[] item : defaultMajors) {
+            String code = item[0];
+            String name = item[1];
+            if (majorRepository.findByCode(code).isEmpty()) {
+                majorRepository.save(com.intranet.grade.entity.Major.builder()
+                        .code(code)
+                        .name(name)
+                        .department(defaultDept)
+                        .build());
+                log.info("Initialized default military major: {} - {}", code, name);
+            }
+        }
     }
 
     private void syncPostgresSequences() {

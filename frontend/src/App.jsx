@@ -7,6 +7,7 @@ import MatrixDataGrid from './components/MatrixDataGrid';
 import ExcelImportModal from './components/ExcelImportModal';
 import AuditLogView from './components/AuditLogView';
 import CurriculumRoadmapView from './components/CurriculumRoadmapView';
+import MajorManagementView from './components/MajorManagementView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('matrix');
@@ -73,6 +74,10 @@ export default function App() {
 
         {activeTab === 'roadmap' && (
           <CurriculumRoadmapView />
+        )}
+
+        {activeTab === 'majors' && (
+          <MajorManagementView />
         )}
 
         {activeTab === 'audit' && (

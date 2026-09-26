@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ClassRepository extends JpaRepository<ClassEntity, Integer> {
     Optional<ClassEntity> findByCode(String code);
+    long countByMajorId(Integer majorId);
 }

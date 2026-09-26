@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, LayoutDashboard, Users, Table, History, Compass, UserCheck, Star, Award } from 'lucide-react';
+import { Shield, LayoutDashboard, Users, Table, History, Compass, UserCheck, Star, Award, BookmarkCheck } from 'lucide-react';
 
 export default function Navbar({ currentUser, activeTab, setActiveTab, onOpenLogin }) {
   const getRoleBadge = (role) => {
@@ -82,6 +82,18 @@ export default function Navbar({ currentUser, activeTab, setActiveTab, onOpenLog
           >
             <Compass className="w-4 h-4 text-yellow-400" />
             Lộ trình Đào tạo
+          </button>
+
+          <button
+            onClick={() => setActiveTab('majors')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeTab === 'majors'
+                ? 'bg-gradient-to-r from-lime-700 to-emerald-700 text-yellow-200 border border-yellow-400 shadow-lg'
+                : 'text-slate-300 hover:text-yellow-300 hover:bg-slate-900'
+            }`}
+          >
+            <BookmarkCheck className="w-4 h-4 text-yellow-400" />
+            Chuyên ngành & Quy ước
           </button>
 
           {(currentUser?.role === 'ROLE_BGH' || currentUser?.role === 'ROLE_PDT' || currentUser?.role === 'ROLE_BOMON') && (
