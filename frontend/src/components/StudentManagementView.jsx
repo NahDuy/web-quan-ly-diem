@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Users, Upload, Download, Plus, Search, Shield, Edit, Trash2, ShieldCheck, Award, X, CheckCircle2, RefreshCw, Sparkles, FileSpreadsheet } from 'lucide-react';
 import AdmissionsImportModal from './AdmissionsImportModal';
 
-const MOCK_MILITARY_STUDENTS = [
-  { id: 1, studentCode: 'HV2026001', fullName: 'Nguyễn Văn An', rank: 'Học viên SQDB', dob: '15/05/2002', pob: 'Hà Nội', gender: 'Nam', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' },
-  { id: 2, studentCode: 'HV2026002', fullName: 'Trần Thị Bình', rank: 'Học viên SQDB', dob: '20/08/2002', pob: 'Hải Phòng', gender: 'Nữ', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' },
-  { id: 3, studentCode: 'HV2026003', fullName: 'Lê Hoàng Cường', rank: 'Học viên SQDB', dob: '10/11/2002', pob: 'Nam Định', gender: 'Nam', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' },
-  { id: 4, studentCode: 'HV2026004', fullName: 'Phạm Minh Đức', rank: 'Học viên SQDB', dob: '25/03/2002', pob: 'Thái Bình', gender: 'Nam', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' },
-  { id: 5, studentCode: 'HV2026005', fullName: 'Vũ Thị Hoa', rank: 'Học viên SQDB', dob: '05/12/2002', pob: 'Quảng Ninh', gender: 'Nữ', unit: 'SQDB2026-HT1', classCode: 'SQDB2026-HT1', classId: 1, status: 'DANG_HUAN_LUYEN' }
-];
-
 export default function StudentManagementView() {
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);
@@ -29,7 +21,7 @@ export default function StudentManagementView() {
     new Set(classList.map(c => c.academicYear).filter(Boolean))
   ).sort((a, b) => b - a);
 
-  const displayYears = availableYears.length > 0 ? availableYears : [2026, 2025, 2024];
+  const displayYears = availableYears.length > 0 ? availableYears : [2026];
 
   const filteredClasses = selectedYear
     ? classList.filter(c => !c.academicYear || c.academicYear === parseInt(selectedYear))
@@ -47,11 +39,11 @@ export default function StudentManagementView() {
   // Form State for Adding Student
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
-  const [newRank, setNewRank] = useState('Học viên / Binh nhất');
+  const [newRank, setNewRank] = useState('Học viên SQDB');
   const [newDob, setNewDob] = useState('');
   const [newPob, setNewPob] = useState('');
   const [newGender, setNewGender] = useState('Nam');
-  const [newClassId, setNewClassId] = useState(1);
+  const [newClassId, setNewClassId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Form State for Editing Student
@@ -59,11 +51,11 @@ export default function StudentManagementView() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [editCode, setEditCode] = useState('');
   const [editName, setEditName] = useState('');
-  const [editRank, setEditRank] = useState('Học viên / Binh nhất');
+  const [editRank, setEditRank] = useState('Học viên SQDB');
   const [editDob, setEditDob] = useState('');
   const [editPob, setEditPob] = useState('');
   const [editGender, setEditGender] = useState('Nam');
-  const [editClassId, setEditClassId] = useState(1);
+  const [editClassId, setEditClassId] = useState('');
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -79,20 +71,35 @@ export default function StudentManagementView() {
       const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setStudents(data);
         } else {
-          setStudents(MOCK_MILITARY_STUDENTS);
+          setStudents([]);
         }
       } else {
-        setStudents(MOCK_MILITARY_STUDENTS);
+        const errData = await res.json().catch(() => ({}));
+        setErrorMsg(errData.message || 'Không thể tải danh sách học viên');
+        setStudents([]);
       }
     } catch (err) {
       console.error('Error fetching students:', err);
-      setStudents(MOCK_MILITARY_STUDENTS);
+      setErrorMsg('Lỗi kết nối máy chủ khi tải danh sách học viên');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenAddModal = () => {
+    setErrorMsg('');
+    setNewCode('');
+    setNewName('');
+    setNewRank('Học viên SQDB');
+    setNewDob('');
+    setNewPob('');
+    setNewGender('Nam');
+    setNewClassId(selectedClassId || (classList[0]?.id ? String(classList[0].id) : ''));
+    setIsAddModalOpen(true);
   };
 
   const fetchClasses = async () => {
@@ -180,7 +187,11 @@ export default function StudentManagementView() {
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (!newCode.trim() || !newName.trim()) {
-      alert('Vui lòng nhập đầy đủ Số hiệu Học viên và Họ tên!');
+      setErrorMsg('Vui lòng nhập đầy đủ Số hiệu Học viên và Họ tên!');
+      return;
+    }
+    if (!newClassId) {
+      setErrorMsg('Vui lòng chọn Lớp Huấn luyện cho học viên!');
       return;
     }
 
@@ -196,11 +207,11 @@ export default function StudentManagementView() {
       const payload = {
         studentCode: newCode.toUpperCase().trim(),
         fullName: newName.trim(),
-        dob: newDob || '01/01/2003',
-        pob: newPob || 'Hà Nội',
+        dob: newDob ? newDob.trim() : '',
+        pob: newPob ? newPob.trim() : '',
         gender: newGender,
         rank: newRank,
-        classId: parseInt(newClassId) || 1
+        classId: parseInt(newClassId)
       };
 
       const res = await fetch('/api/v1/students', {
@@ -227,23 +238,7 @@ export default function StudentManagementView() {
       }
     } catch (err) {
       console.error('Error adding student:', err);
-      // Local fallback for smooth experience
-      const localStudent = {
-        id: Date.now(),
-        studentCode: newCode.toUpperCase(),
-        fullName: newName,
-        rank: newRank,
-        dob: newDob || '01/01/2003',
-        pob: newPob || 'Hà Nội',
-        gender: newGender,
-        classCode: 'SQDB2026-HT1',
-        unit: 'SQDB2026-HT1',
-        status: 'DANG_HUAN_LUYEN'
-      };
-      setStudents(prev => [localStudent, ...prev]);
-      setIsAddModalOpen(false);
-      setMsg(`Đã thêm mới học viên ${newName} (${newCode.toUpperCase()})`);
-      setTimeout(() => setMsg(''), 3500);
+      setErrorMsg('Không thể kết nối máy chủ để thêm học viên');
     } finally {
       setSubmitting(false);
     }
@@ -253,11 +248,11 @@ export default function StudentManagementView() {
     setEditingStudent(student);
     setEditCode(student.studentCode || '');
     setEditName(student.fullName || '');
-    setEditRank(student.rank || 'Học viên / Binh nhất');
+    setEditRank(student.rank || 'Học viên SQDB');
     setEditDob(student.dob || '');
     setEditPob(student.pob || '');
     setEditGender(student.gender || 'Nam');
-    setEditClassId(student.classId || (classList[0]?.id || 1));
+    setEditClassId(student.classId ? String(student.classId) : (classList[0]?.id ? String(classList[0].id) : ''));
     setErrorMsg('');
     setIsEditModalOpen(true);
   };
@@ -265,7 +260,11 @@ export default function StudentManagementView() {
   const handleEditStudentSubmit = async (e) => {
     e.preventDefault();
     if (!editCode.trim() || !editName.trim()) {
-      alert('Vui lòng nhập đầy đủ Số hiệu Học viên và Họ tên!');
+      setErrorMsg('Vui lòng nhập đầy đủ Số hiệu Học viên và Họ tên!');
+      return;
+    }
+    if (!editClassId) {
+      setErrorMsg('Vui lòng chọn Lớp Huấn luyện cho học viên!');
       return;
     }
 
@@ -281,11 +280,11 @@ export default function StudentManagementView() {
       const payload = {
         studentCode: editCode.toUpperCase().trim(),
         fullName: editName.trim(),
-        dob: editDob || '01/01/2003',
-        pob: editPob || 'Hà Nội',
+        dob: editDob ? editDob.trim() : '',
+        pob: editPob ? editPob.trim() : '',
         gender: editGender,
         rank: editRank,
-        classId: parseInt(editClassId) || 1
+        classId: parseInt(editClassId)
       };
 
       const res = await fetch(`/api/v1/students/${editingStudent.id}`, {
@@ -306,20 +305,7 @@ export default function StudentManagementView() {
       }
     } catch (err) {
       console.error('Error updating student:', err);
-      // Local fallback
-      setStudents(prev => prev.map(s => s.id === editingStudent.id ? {
-        ...s,
-        studentCode: editCode.toUpperCase().trim(),
-        fullName: editName.trim(),
-        dob: editDob,
-        pob: editPob,
-        gender: editGender,
-        rank: editRank,
-        classId: parseInt(editClassId) || 1
-      } : s));
-      setIsEditModalOpen(false);
-      setMsg(`Đã cập nhật thông tin học viên ${editName}`);
-      setTimeout(() => setMsg(''), 3500);
+      setErrorMsg('Không thể kết nối máy chủ để cập nhật học viên');
     } finally {
       setSubmitting(false);
     }
@@ -341,10 +327,13 @@ export default function StudentManagementView() {
         setMsg(`Đã xóa học viên ${name}`);
         setTimeout(() => setMsg(''), 3000);
       } else {
-        setStudents(prev => prev.filter(s => s.id !== id));
+        const errData = await res.json().catch(() => ({}));
+        setErrorMsg(errData.message || `Không thể xóa học viên ${name}`);
+        setTimeout(() => setErrorMsg(''), 4000);
       }
     } catch (err) {
-      setStudents(prev => prev.filter(s => s.id !== id));
+      setErrorMsg(`Lỗi kết nối khi xóa học viên: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 
@@ -455,7 +444,7 @@ export default function StudentManagementView() {
           </button>
 
           <button
-            onClick={() => { setErrorMsg(''); setIsAddModalOpen(true); }}
+            onClick={handleOpenAddModal}
             className="btn-primary"
           >
             <Plus className="w-4 h-4" />
@@ -466,9 +455,23 @@ export default function StudentManagementView() {
       </div>
 
       {msg && (
-        <div className="p-3 bg-emerald-950 border border-emerald-600 text-emerald-300 text-sm rounded-lg flex items-center gap-2 font-bold shadow-md">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          {msg}
+        <div className="p-3 bg-emerald-950 border border-emerald-600 text-emerald-300 text-sm rounded-lg flex items-center justify-between font-bold shadow-md">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            {msg}
+          </div>
+          <button onClick={() => setMsg('')} className="text-emerald-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3 bg-red-950 border border-red-600 text-red-300 text-sm rounded-lg flex items-center justify-between font-bold shadow-md">
+          <span>{errorMsg}</span>
+          <button onClick={() => setErrorMsg('')} className="text-red-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -503,14 +506,20 @@ export default function StudentManagementView() {
                   <td className="p-3 font-mono text-xs text-yellow-300 font-bold">{student.studentCode}</td>
                   <td className="p-3 font-bold text-slate-100">{student.fullName}</td>
                   <td className="p-3 text-center font-mono text-xs font-bold text-amber-300">
-                    {student.academicYear || (student.classCode?.includes('2026') ? 2026 : (student.classCode?.includes('2025') ? 2025 : 2026))}
+                    {student.academicYear || '-'}
                   </td>
-                  <td className="p-3 text-center text-xs font-semibold text-emerald-300">{student.rank || 'Học viên SQDB'}</td>
-                  <td className="p-3 text-center text-xs text-slate-400">{student.dob}</td>
-                  <td className="p-3 text-xs text-slate-300 font-semibold">{student.classCode || student.unit || 'SQDB2026-HT1'}</td>
-                  <td className="p-3 text-xs text-slate-400">{student.pob || 'Hà Nội'}</td>
+                  <td className="p-3 text-center text-xs font-semibold text-emerald-300">{student.rank || 'Học viên'}</td>
+                  <td className="p-3 text-center text-xs text-slate-400">{student.dob || '-'}</td>
+                  <td className="p-3 text-xs text-slate-300 font-semibold">{student.classCode || student.className || '-'}</td>
+                  <td className="p-3 text-xs text-slate-400">{student.pob || '-'}</td>
                   <td className="p-3 text-center">
-                    <span className="badge-success text-[10px]">Đang huấn luyện</span>
+                    {student.status === 'DA_TOT_NGHIEP' ? (
+                      <span className="badge-primary text-[10px]">Đã tốt nghiệp</span>
+                    ) : student.status === 'THOI_HOC' ? (
+                      <span className="badge-danger text-[10px]">Thôi học</span>
+                    ) : (
+                      <span className="badge-success text-[10px]">Đang huấn luyện</span>
+                    )}
                   </td>
                   <td className="p-3 text-center space-x-2">
                     <button
@@ -546,7 +555,7 @@ export default function StudentManagementView() {
 
             <div className="flex items-center space-x-3 mb-4 text-yellow-400">
               <Users className="w-6 h-6" />
-              <h3 className="font-military-title text-lg font-bold text-yellow-300">Thêm Mới Học Viên Quân Sự (Call API)</h3>
+              <h3 className="font-military-title text-lg font-bold text-yellow-300">Thêm Mới Học Viên Quân Sự</h3>
             </div>
 
             {errorMsg && (
@@ -562,7 +571,7 @@ export default function StudentManagementView() {
                   <input
                     type="text"
                     required
-                    placeholder="VD: HV2026006"
+                    placeholder="VD: 26BB001"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
@@ -590,6 +599,11 @@ export default function StudentManagementView() {
                     onChange={(e) => setNewRank(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
+                    <option value="Học viên SQDB">Học viên SQDB</option>
+                    <option value="Học viên TĐT">Học viên TĐT</option>
+                    <option value="Học viên KĐT">Học viên KĐT</option>
+                    <option value="Học viên NVKT">Học viên NVKT</option>
+                    <option value="Học viên HSQ">Học viên HSQ</option>
                     <option value="Học viên / Binh nhất">Học viên / Binh nhất</option>
                     <option value="Học viên / Hạ sĩ">Học viên / Hạ sĩ</option>
                     <option value="Học viên / Trung sĩ">Học viên / Trung sĩ</option>
@@ -601,7 +615,7 @@ export default function StudentManagementView() {
                   <label className="block text-xs font-bold text-slate-300 mb-1">Ngày sinh (DD/MM/YYYY)</label>
                   <input
                     type="text"
-                    placeholder="15/05/2002"
+                    placeholder="15/05/2003"
                     value={newDob}
                     onChange={(e) => setNewDob(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
@@ -625,16 +639,14 @@ export default function StudentManagementView() {
                   <label className="block text-xs font-bold text-slate-300 mb-1">Đơn vị / Lớp Huấn luyện *</label>
                   <select
                     value={newClassId}
-                    onChange={(e) => setNewClassId(parseInt(e.target.value))}
+                    onChange={(e) => setNewClassId(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                    required
                   >
-                    {classList.length > 0 ? (
-                      classList.map(c => (
-                        <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
-                      ))
-                    ) : (
-                      <option value={1}>SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
-                    )}
+                    <option value="">-- Chọn Lớp Huấn luyện --</option>
+                    {classList.map(c => (
+                      <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -653,7 +665,7 @@ export default function StudentManagementView() {
                   className="btn-primary"
                   disabled={submitting}
                 >
-                  {submitting ? 'Đang gửi API...' : 'Lưu Học Viên (Call API)'}
+                  {submitting ? 'Đang gửi...' : 'Lưu Học Viên'}
                 </button>
               </div>
             </form>
@@ -691,7 +703,7 @@ export default function StudentManagementView() {
                   <input
                     type="text"
                     required
-                    placeholder="VD: HV2026006"
+                    placeholder="VD: 26BB001"
                     value={editCode}
                     onChange={(e) => setEditCode(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
@@ -719,6 +731,11 @@ export default function StudentManagementView() {
                     onChange={(e) => setEditRank(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
+                    <option value="Học viên SQDB">Học viên SQDB</option>
+                    <option value="Học viên TĐT">Học viên TĐT</option>
+                    <option value="Học viên KĐT">Học viên KĐT</option>
+                    <option value="Học viên NVKT">Học viên NVKT</option>
+                    <option value="Học viên HSQ">Học viên HSQ</option>
                     <option value="Học viên / Binh nhất">Học viên / Binh nhất</option>
                     <option value="Học viên / Hạ sĩ">Học viên / Hạ sĩ</option>
                     <option value="Học viên / Trung sĩ">Học viên / Trung sĩ</option>
@@ -730,7 +747,7 @@ export default function StudentManagementView() {
                   <label className="block text-xs font-bold text-slate-300 mb-1">Ngày sinh (DD/MM/YYYY)</label>
                   <input
                     type="text"
-                    placeholder="15/05/2002"
+                    placeholder="15/05/2003"
                     value={editDob}
                     onChange={(e) => setEditDob(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
@@ -754,16 +771,14 @@ export default function StudentManagementView() {
                   <label className="block text-xs font-bold text-slate-300 mb-1">Đơn vị / Lớp Huấn luyện *</label>
                   <select
                     value={editClassId}
-                    onChange={(e) => setEditClassId(parseInt(e.target.value))}
+                    onChange={(e) => setEditClassId(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                    required
                   >
-                    {classList.length > 0 ? (
-                      classList.map(c => (
-                        <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
-                      ))
-                    ) : (
-                      <option value={1}>SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
-                    )}
+                    <option value="">-- Chọn Lớp Huấn luyện --</option>
+                    {classList.map(c => (
+                      <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+                    ))}
                   </select>
                 </div>
               </div>
