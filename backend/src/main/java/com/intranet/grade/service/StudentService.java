@@ -27,12 +27,18 @@ public class StudentService {
     private final ClassRepository classRepository;
     private final StudentEvaluationRepository studentEvaluationRepository;
 
-    public List<StudentDTO> getAllStudents(Integer classId) {
+    public List<StudentDTO> getAllStudents(Integer classId, Integer year) {
         List<Student> students;
         if (classId != null) {
             students = studentRepository.findByClazzIdOrderByStudentCodeAsc(classId);
         } else {
             students = studentRepository.findAll();
+        }
+
+        if (year != null) {
+            students = students.stream()
+                    .filter(s -> s.getClazz() != null && s.getClazz().getCourse() != null && year.equals(s.getClazz().getCourse().getAcademicYear()))
+                    .collect(Collectors.toList());
         }
 
         return students.stream()
@@ -145,6 +151,10 @@ public class StudentService {
 
     private StudentDTO toDTO(Student s) {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        Integer academicYear = null;
+        if (s.getClazz() != null && s.getClazz().getCourse() != null) {
+            academicYear = s.getClazz().getCourse().getAcademicYear();
+        }
         return StudentDTO.builder()
                 .id(s.getId())
                 .studentCode(s.getStudentCode())
@@ -155,6 +165,7 @@ public class StudentService {
                 .classId(s.getClazz() != null ? s.getClazz().getId() : null)
                 .className(s.getClazz() != null ? s.getClazz().getName() : "")
                 .classCode(s.getClazz() != null ? s.getClazz().getCode() : "")
+                .academicYear(academicYear)
                 .rank("Học viên SQDB")
                 .status(s.getStatus())
                 .build();

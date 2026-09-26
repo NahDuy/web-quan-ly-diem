@@ -19,6 +19,7 @@ public class StudentDTO {
     private Integer classId;
     private String className;
     private String classCode;
+    private Integer academicYear;
     private String rank;
     private String status;
 }

@@ -8,4 +8,5 @@ import java.util.List;
 public interface CurriculumSubjectRepository extends JpaRepository<CurriculumSubject, Integer> {
     List<CurriculumSubject> findByCurriculumIdOrderBySemesterAsc(Integer curriculumId);
     List<CurriculumSubject> findByCurriculumIdAndSemesterOrderBySubjectCodeAsc(Integer curriculumId, Integer semester);
+    java.util.Optional<CurriculumSubject> findByCurriculumIdAndSubjectId(Integer curriculumId, Integer subjectId);
 }

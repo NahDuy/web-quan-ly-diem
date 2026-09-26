@@ -34,6 +34,10 @@ public class ExcelService {
     private final GradeRepository gradeRepository;
     private final StudentEvaluationRepository evaluationRepository;
     private final DepartmentRepository departmentRepository;
+    private final CurriculumRepository curriculumRepository;
+    private final CurriculumSubjectRepository curriculumSubjectRepository;
+    private final MajorRepository majorRepository;
+    private final CourseRepository courseRepository;
 
     public byte[] exportClassMatrixToExcel(Integer classId, Integer semester) throws IOException {
         MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(classId, semester);
@@ -520,6 +524,345 @@ public class ExcelService {
 
             workbook.write(out);
             return out.toByteArray();
+        }
+    }
+
+    public byte[] exportCurriculumTemplate(String majorCode, String targetGroup) throws IOException {
+        String code = (majorCode != null && !majorCode.isBlank()) ? majorCode.trim().toUpperCase() : "TSBB";
+        Major major = majorRepository.findByCode(code).orElse(null);
+        String majorName = major != null ? major.getName() : "Trinh sát Bộ binh";
+
+        String tgName = "Sĩ quan Dự bị (SQDB)";
+        if ("KHAU_DOI_TRUONG".equalsIgnoreCase(targetGroup)) tgName = "Khẩu đội trưởng";
+        else if ("TIEU_DOI_TRUONG".equalsIgnoreCase(targetGroup)) tgName = "Tiểu đội trưởng";
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("KHUNG_CHUONG_TRINH_THI");
+            sheet.setDisplayGridlines(true);
+
+            // Fonts & Styles
+            Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            titleFont.setFontName("Times New Roman");
+
+            CellStyle titleStyle = workbook.createCellStyle();
+            titleStyle.setFont(titleFont);
+            titleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            Font subTitleFont = workbook.createFont();
+            subTitleFont.setBold(true);
+            subTitleFont.setFontHeightInPoints((short) 11);
+            subTitleFont.setFontName("Times New Roman");
+            CellStyle subTitleStyle = workbook.createCellStyle();
+            subTitleStyle.setFont(subTitleFont);
+            subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setFontHeightInPoints((short) 11);
+            headerFont.setFontName("Times New Roman");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+            headerStyle.setWrapText(true);
+
+            Font dataFont = workbook.createFont();
+            dataFont.setFontHeightInPoints((short) 11);
+            dataFont.setFontName("Times New Roman");
+
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setFont(dataFont);
+            dataStyle.setBorderTop(BorderStyle.THIN);
+            dataStyle.setBorderBottom(BorderStyle.THIN);
+            dataStyle.setBorderLeft(BorderStyle.THIN);
+            dataStyle.setBorderRight(BorderStyle.THIN);
+            dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle centerDataStyle = workbook.createCellStyle();
+            centerDataStyle.cloneStyleFrom(dataStyle);
+            centerDataStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            CellStyle examRowStyle = workbook.createCellStyle();
+            examRowStyle.cloneStyleFrom(dataStyle);
+            examRowStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+            examRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle examCenterRowStyle = workbook.createCellStyle();
+            examCenterRowStyle.cloneStyleFrom(centerDataStyle);
+            examCenterRowStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+            examCenterRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            // Title rows
+            Row r0 = sheet.createRow(0);
+            Cell c0 = r0.createCell(0);
+            c0.setCellValue("BỘ QUỐC PHÒNG - TRƯỜNG QUÂN SỰ");
+            c0.setCellStyle(subTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+
+            Row r1 = sheet.createRow(1);
+            Cell c1 = r1.createCell(0);
+            c1.setCellValue("LỘ TRÌNH ĐÀO TẠO & KHUNG NỘI DUNG THI ĐÁNH GIÁ TỐT NGHIỆP");
+            c1.setCellStyle(titleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 9));
+
+            Row r2 = sheet.createRow(2);
+            Cell c2 = r2.createCell(0);
+            c2.setCellValue("ĐỐI TƯỢNG: " + tgName.toUpperCase() + " | CHUYÊN NGÀNH: " + majorName.toUpperCase() + " (" + code + ")");
+            c2.setCellStyle(subTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 9));
+
+            // Headers
+            String[] headers = {
+                    "STT",
+                    "Mã môn / Mã thi",
+                    "Tên môn học / Nội dung kiểm tra, thi",
+                    "Số tín chỉ",
+                    "Số tiết quy đổi",
+                    "Học kỳ",
+                    "Phân loại",
+                    "Hình thức thi / kiểm tra",
+                    "Hệ số",
+                    "Khoa / Bộ môn phụ trách"
+            };
+            Row headerRow = sheet.createRow(4);
+            headerRow.setHeightInPoints(28);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Standard illustrated subjects according to Major
+            List<String[]> sampleRows = getSampleCurriculumRows(code);
+            int rowIdx = 5;
+            for (int i = 0; i < sampleRows.size(); i++) {
+                String[] r = sampleRows.get(i);
+                Row row = sheet.createRow(rowIdx++);
+                boolean isExam = "Môn thi tốt nghiệp".equalsIgnoreCase(r[5]);
+                CellStyle curStyle = isExam ? examRowStyle : dataStyle;
+                CellStyle curCenter = isExam ? examCenterRowStyle : centerDataStyle;
+
+                Cell cStt = row.createCell(0);
+                cStt.setCellValue(i + 1);
+                cStt.setCellStyle(curCenter);
+
+                Cell cCode = row.createCell(1);
+                cCode.setCellValue(r[0]);
+                cCode.setCellStyle(curCenter);
+
+                Cell cName = row.createCell(2);
+                cName.setCellValue(r[1]);
+                cName.setCellStyle(curStyle);
+
+                Cell cCredits = row.createCell(3);
+                cCredits.setCellValue(Integer.parseInt(r[2]));
+                cCredits.setCellStyle(curCenter);
+
+                Cell cHours = row.createCell(4);
+                cHours.setCellValue(Integer.parseInt(r[3]));
+                cHours.setCellStyle(curCenter);
+
+                Cell cSem = row.createCell(5);
+                cSem.setCellValue(Integer.parseInt(r[4]));
+                cSem.setCellStyle(curCenter);
+
+                Cell cType = row.createCell(6);
+                cType.setCellValue(r[5]);
+                cType.setCellStyle(curCenter);
+
+                Cell cFormat = row.createCell(7);
+                cFormat.setCellValue(r[6]);
+                cFormat.setCellStyle(curStyle);
+
+                Cell cWeight = row.createCell(8);
+                cWeight.setCellValue(r[7]);
+                cWeight.setCellStyle(curCenter);
+
+                Cell cDept = row.createCell(9);
+                cDept.setCellValue(r[8]);
+                cDept.setCellStyle(curStyle);
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // Sheet 2: Hướng dẫn
+            Sheet guideSheet = workbook.createSheet("HUONG_DAN_SU_DUNG");
+            guideSheet.setDisplayGridlines(true);
+            Row gr0 = guideSheet.createRow(0);
+            gr0.createCell(0).setCellValue("HƯỚNG DẪN ĐỊNH DẠNG IMPORT LỘ TRÌNH ĐÀO TẠO & DANH SÁCH THI");
+            gr0.getCell(0).setCellStyle(titleStyle);
+            guideSheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
+
+            String[] instructions = {
+                    "1. Mã môn / Mã thi: Mã định danh viết liền không dấu, ví dụ QS101, TS101, COI101, TN01...",
+                    "2. Tên môn học / Nội dung thi: Tên môn huấn luyện hoặc nội dung thi tốt nghiệp.",
+                    "3. Phân loại: Nhập chính xác 'Môn học phần' hoặc 'Môn thi tốt nghiệp'.",
+                    "4. Học kỳ: Nhập 1 hoặc 2.",
+                    "5. Hệ số: Nhập 1 hoặc 2.",
+                    "6. Sau khi điền thêm/sửa đổi, tải file lên hệ thống tại tab 'Lộ trình đào tạo' -> nút 'Import Lộ Trình Excel'."
+            };
+            for (int i = 0; i < instructions.length; i++) {
+                Row gr = guideSheet.createRow(i + 2);
+                gr.createCell(0).setCellValue(instructions[i]);
+            }
+            guideSheet.autoSizeColumn(0);
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private List<String[]> getSampleCurriculumRows(String majorCode) {
+        List<String[]> list = new ArrayList<>();
+        // Môn quân sự chung bắt buộc
+        list.add(new String[]{"QS101", "Bắn súng tiểu liên AK bài 1", "3", "45", "1", "Môn học phần", "Thực hành bắn đạn thật", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS102", "Điều lệnh Đội ngũ & Quản lý bộ đội", "2", "30", "1", "Môn học phần", "Thực hành thao trường", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS103", "Chiến thuật Từng người & Tổ Bộ binh", "3", "45", "1", "Môn học phần", "Thực hành thực địa", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS104", "Địa hình Quân sự & Bản đồ tác chiến", "3", "45", "1", "Môn học phần", "Đọc bản đồ & Định vị", "1", "Khoa Binh chủng"});
+        list.add(new String[]{"QS105", "Công sự & Ngụy trang Phòng ngự", "2", "30", "1", "Môn học phần", "Thực hành công sự", "1", "Khoa Binh chủng"});
+        list.add(new String[]{"QS106", "Quân y & Cấp cứu Thương binh Chiến trường", "2", "30", "1", "Môn học phần", "Băng bó cứu thương", "1", "Khoa Hậu cần"});
+
+        // Môn chuyên ngành
+        if ("TSBB".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"TS101", "Kỹ thuật Trinh sát Thực địa & Luồn sâu", "4", "60", "1", "Môn học phần", "Thực hành đêm & dã ngoại", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"TS102", "Chiến thuật Trung đội Trinh sát Bộ binh", "3", "45", "1", "Môn học phần", "Diễn tập chỉ huy", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"TS103", "Võ thuật Đặc nhiệm & Kỹ năng Sinh tồn", "3", "45", "1", "Môn học phần", "Thực hành đối kháng", "1", "Khoa Thể thao Quân sự"});
+        } else if ("COI".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"COI101", "Cấu tạo & Quy tắc bắn Súng Cối 82mm", "4", "60", "1", "Môn học phần", "Thực hành bắn cối", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"COI102", "Khí tài Đo đạc & Tính toán Phần tử bắn", "3", "45", "1", "Môn học phần", "Đo đạc thực địa", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"COI103", "Chiến thuật Trung đội Hỏa lực Cối", "3", "45", "1", "Môn học phần", "Diễn tập chiến thuật", "1", "Khoa Binh chủng"});
+        } else if ("DKZ".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"DKZ101", "Cấu tạo & Quy tắc bắn ĐKZ (82-K65, SPG-9)", "4", "60", "1", "Môn học phần", "Thực hành bắn ĐKZ", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"DKZ102", "Chiến thuật Phục kích Diệt tăng ĐKZ", "3", "45", "1", "Môn học phần", "Thao trường diệt tăng", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"DKZ103", "Kỹ thuật Hiệu chỉnh & Ngắm bắn ĐKZ", "3", "45", "1", "Môn học phần", "Hiệu chỉnh khí tài", "1", "Khoa Binh chủng"});
+        } else if ("PK127".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"PK101", "Cấu tạo SMPK 12,7mm & Quy tắc bắn", "4", "60", "1", "Môn học phần", "Bắn súng máy PK", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PK102", "Bắn Mục tiêu Bay thấp & Mặt đất", "3", "45", "1", "Môn học phần", "Bắn mục tiêu bay", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PK103", "Chiến thuật Phân đội SMPK 12,7mm", "3", "45", "1", "Môn học phần", "Trận địa phòng không", "1", "Khoa Binh chủng"});
+        } else if ("PB".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"PB101", "Lý thuyết & Quy tắc bắn Pháo binh", "4", "60", "1", "Môn học phần", "Bắn trận địa pháo", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PB102", "Chỉ huy Hỏa lực & Đo đạc Trinh sát Pháo", "4", "60", "1", "Môn học phần", "Đo đạc chỉ huy", "1", "Khoa Binh chủng"});
+        } else if ("TT".equalsIgnoreCase(majorCode)) {
+            list.add(new String[]{"TT101", "Khí tài Vô tuyến điện Quân sự", "3", "45", "1", "Môn học phần", "Khai thác khí tài", "1", "Khoa Thông tin"});
+            list.add(new String[]{"TT102", "Mạng Thông tin Chỉ huy Tác chiến", "4", "60", "1", "Môn học phần", "Thiết lập mạng thông tin", "1", "Khoa Thông tin"});
+        } else {
+            list.add(new String[]{"BB101", "Chiến thuật Trung đội Bộ binh Tiến công & Phòng ngự", "4", "60", "1", "Môn học phần", "Diễn tập chiến thuật", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"BB102", "Sử dụng Hỏa lực Bộ binh (B40, B41, RPD)", "3", "45", "1", "Môn học phần", "Thực hành bắn đạn thật", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"BB103", "Tổ chức Chỉ huy Phân đội Bộ binh", "3", "45", "1", "Môn học phần", "Bài tập chỉ huy", "1", "Khoa Binh chủng"});
+        }
+
+        // 3 Môn thi tốt nghiệp chuẩn
+        list.add(new String[]{"TN01", "Thi Tốt nghiệp môn Chính trị", "2", "30", "1", "Môn thi tốt nghiệp", "Vấn đáp lý thuyết", "1", "Khoa Chính trị"});
+        list.add(new String[]{"TN02", "Thi Tốt nghiệp môn Quân sự chung", "3", "45", "1", "Môn thi tốt nghiệp", "Thực hành thao trường", "2", "Khoa Quân sự chung"});
+        list.add(new String[]{"TN03", "Thi Tốt nghiệp môn Chuyên ngành", "4", "60", "1", "Môn thi tốt nghiệp", "Thực hành chuyên ngành tác chiến", "2", "Khoa Binh chủng"});
+
+        return list;
+    }
+
+    @Transactional
+    public Map<String, Object> importCurriculumFromExcel(MultipartFile file) throws IOException {
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // Read metadata from row 2 (e.g. "ĐỐI TƯỢNG: SQDB | CHUYÊN NGÀNH: TRINH SÁT BỘ BINH (TSBB)")
+            String subTitle = "";
+            Row r2 = sheet.getRow(2);
+            if (r2 != null && r2.getCell(0) != null) {
+                subTitle = getCellValueAsString(r2.getCell(0));
+            }
+
+            String majorCode = "TSBB";
+            if (subTitle.contains("(") && subTitle.contains(")")) {
+                majorCode = subTitle.substring(subTitle.lastIndexOf("(") + 1, subTitle.lastIndexOf(")")).trim();
+            }
+
+            Major major = majorRepository.findByCode(majorCode).orElseGet(() ->
+                    majorRepository.findAll().stream().findFirst().orElse(null));
+
+            if (major == null) {
+                throw new IllegalArgumentException("Không xác định được chuyên ngành từ file Excel!");
+            }
+
+            Course course = courseRepository.findByCode("SQDB2026").orElseGet(() ->
+                    courseRepository.findAll().stream().findFirst().orElse(null));
+
+            Curriculum curriculum = curriculumRepository.findByMajorIdAndCourseId(major.getId(), course.getId())
+                    .orElseGet(() -> curriculumRepository.save(Curriculum.builder()
+                            .major(major)
+                            .course(course)
+                            .name("Lộ trình Đào tạo & Thi TN " + major.getName())
+                            .totalCredits(0)
+                            .build()));
+
+            Department dept = departmentRepository.findAll().stream().findFirst().orElse(null);
+
+            int importedCount = 0;
+            int totalCredits = 0;
+
+            for (int r = 5; r <= sheet.getLastRowNum(); r++) {
+                Row row = sheet.getRow(r);
+                if (row == null) continue;
+
+                String code = getCellValueAsString(row.getCell(1));
+                String name = getCellValueAsString(row.getCell(2));
+                if (code.isBlank() || name.isBlank()) continue;
+
+                int credits = 3;
+                try {
+                    String credStr = getCellValueAsString(row.getCell(3));
+                    if (!credStr.isBlank()) credits = Integer.parseInt(credStr);
+                } catch (Exception ignored) {}
+
+                int semester = 1;
+                try {
+                    String semStr = getCellValueAsString(row.getCell(5));
+                    if (!semStr.isBlank()) semester = Integer.parseInt(semStr);
+                } catch (Exception ignored) {}
+
+                final int finalCredits = credits;
+                Subject subject = subjectRepository.findByCode(code).orElseGet(() ->
+                        subjectRepository.save(Subject.builder()
+                                .code(code)
+                                .name(name)
+                                .credits(finalCredits)
+                                .department(dept)
+                                .build()));
+
+                if (curriculumSubjectRepository.findByCurriculumIdAndSubjectId(curriculum.getId(), subject.getId()).isEmpty()) {
+                    curriculumSubjectRepository.save(CurriculumSubject.builder()
+                            .curriculum(curriculum)
+                            .subject(subject)
+                            .semester(semester)
+                            .isCompulsory(true)
+                            .build());
+                }
+
+                importedCount++;
+                totalCredits += credits;
+            }
+
+            curriculum.setTotalCredits(totalCredits);
+            curriculumRepository.save(curriculum);
+
+            return Map.of(
+                    "success", true,
+                    "message", "Đã nạp thành công " + importedCount + " môn học & nội dung thi vào Lộ trình đào tạo!",
+                    "importedCount", importedCount,
+                    "majorName", major.getName(),
+                    "majorCode", major.getCode(),
+                    "totalCredits", totalCredits
+            );
         }
     }
 }

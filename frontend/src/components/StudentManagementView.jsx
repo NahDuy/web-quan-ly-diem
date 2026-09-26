@@ -14,6 +14,7 @@ export default function StudentManagementView() {
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -24,10 +25,22 @@ export default function StudentManagementView() {
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const availableYears = Array.from(
+    new Set(classList.map(c => c.academicYear).filter(Boolean))
+  ).sort((a, b) => b - a);
+
+  const displayYears = availableYears.length > 0 ? availableYears : [2026, 2025, 2024];
+
+  const filteredClasses = selectedYear
+    ? classList.filter(c => !c.academicYear || c.academicYear === parseInt(selectedYear))
+    : classList;
+
   const handleExportStudents = () => {
-    const url = selectedClassId 
-      ? `/api/v1/students/export-excel?classId=${selectedClassId}`
-      : `/api/v1/students/export-excel`;
+    let url = '/api/v1/students/export-excel';
+    const params = [];
+    if (selectedClassId) params.push(`classId=${selectedClassId}`);
+    if (selectedYear) params.push(`year=${selectedYear}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
     window.location.href = url;
   };
 
@@ -57,7 +70,12 @@ export default function StudentManagementView() {
     try {
       const token = localStorage.getItem('jwt_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const url = selectedClassId ? `/api/v1/students?classId=${selectedClassId}` : '/api/v1/students';
+      let url = '/api/v1/students';
+      const params = [];
+      if (selectedClassId) params.push(`classId=${selectedClassId}`);
+      if (selectedYear) params.push(`year=${selectedYear}`);
+      if (params.length > 0) url += `?${params.join('&')}`;
+
       const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
@@ -91,7 +109,7 @@ export default function StudentManagementView() {
 
   useEffect(() => {
     fetchStudents();
-  }, [selectedClassId]);
+  }, [selectedClassId, selectedYear]);
 
   useEffect(() => {
     fetchClasses();
@@ -347,25 +365,37 @@ export default function StudentManagementView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Filter by Academic Year */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1">
+            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Khóa:</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                setSelectedClassId('');
+              }}
+              className="bg-transparent text-xs text-white focus:outline-none font-semibold cursor-pointer"
+            >
+              <option value="" className="bg-slate-900 text-white">Tất cả năm</option>
+              {displayYears.map(yr => (
+                <option key={yr} value={yr} className="bg-slate-900 text-white">Khóa {yr}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Filter by Class */}
           <select
             value={selectedClassId}
             onChange={(e) => setSelectedClassId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold max-w-xs truncate"
           >
-            <option value="">Tất cả các lớp ({students.length} học viên)</option>
-            {classList.length > 0 ? (
-              classList.map(c => (
+            <option value="">Tất cả các lớp {selectedYear ? `(Khóa ${selectedYear})` : ''} ({students.length} học viên)</option>
+            {filteredClasses.length > 0 ? (
+              filteredClasses.map(c => (
                 <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
               ))
             ) : (
-              <>
-                <option value="1">SQDB2026-HT1 (Binh chủng Hợp thành 1)</option>
-                <option value="2">SQDB2026-PB1 (Pháo binh 1)</option>
-                <option value="3">SQDB2026-TT1 (Thông tin Kỹ thuật 1)</option>
-                <option value="4">SQDB2025-HT1 (Hợp thành 2025)</option>
-                <option value="5">SQDB2024-HT1 (Hợp thành 2024)</option>
-              </>
+              <option value="" disabled>Không có lớp nào trong năm {selectedYear}</option>
             )}
           </select>
 
@@ -450,6 +480,7 @@ export default function StudentManagementView() {
               <th className="p-3 text-center w-12">TT</th>
               <th className="p-3">Số hiệu Học viên (SHHV)</th>
               <th className="p-3">Họ và tên Học viên</th>
+              <th className="p-3 text-center">Khóa / Năm</th>
               <th className="p-3 text-center">Cấp bậc / Chức vụ</th>
               <th className="p-3 text-center">Ngày sinh</th>
               <th className="p-3">Đơn vị Quản lý / Lớp</th>
@@ -461,7 +492,7 @@ export default function StudentManagementView() {
           <tbody className="divide-y divide-slate-800 text-sm">
             {filteredStudents.length === 0 ? (
               <tr>
-                <td colSpan={9} className="p-8 text-center text-slate-400 text-xs italic">
+                <td colSpan={10} className="p-8 text-center text-slate-400 text-xs italic">
                   Không tìm thấy học viên nào phù hợp
                 </td>
               </tr>
@@ -471,6 +502,9 @@ export default function StudentManagementView() {
                   <td className="p-3 text-center text-xs text-slate-500 font-mono">{idx + 1}</td>
                   <td className="p-3 font-mono text-xs text-yellow-300 font-bold">{student.studentCode}</td>
                   <td className="p-3 font-bold text-slate-100">{student.fullName}</td>
+                  <td className="p-3 text-center font-mono text-xs font-bold text-amber-300">
+                    {student.academicYear || (student.classCode?.includes('2026') ? 2026 : (student.classCode?.includes('2025') ? 2025 : 2026))}
+                  </td>
                   <td className="p-3 text-center text-xs font-semibold text-emerald-300">{student.rank || 'Học viên SQDB'}</td>
                   <td className="p-3 text-center text-xs text-slate-400">{student.dob}</td>
                   <td className="p-3 text-xs text-slate-300 font-semibold">{student.classCode || student.unit || 'SQDB2026-HT1'}</td>

@@ -20,8 +20,10 @@ public class StudentController {
     private final com.intranet.grade.service.ExcelService excelService;
 
     @GetMapping
-    public ResponseEntity<List<StudentDTO>> getAllStudents(@RequestParam(required = false) Integer classId) {
-        return ResponseEntity.ok(studentService.getAllStudents(classId));
+    public ResponseEntity<List<StudentDTO>> getAllStudents(
+            @RequestParam(required = false) Integer classId,
+            @RequestParam(required = false) Integer year) {
+        return ResponseEntity.ok(studentService.getAllStudents(classId, year));
     }
 
     @GetMapping("/export-excel")

@@ -27,4 +27,8 @@ public class Course {
 
     @Column(name = "end_year", nullable = false)
     private Integer endYear;
+
+    public Integer getAcademicYear() {
+        return startYear != null ? startYear : 2026;
+    }
 }
