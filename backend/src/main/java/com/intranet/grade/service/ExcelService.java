@@ -1384,8 +1384,11 @@ public class ExcelService {
         String majorName = major != null ? major.getName() : "Trinh sát Bộ binh";
 
         String tgName = "Sĩ quan Dự bị (SQDB)";
-        if ("KHAU_DOI_TRUONG".equalsIgnoreCase(targetGroup)) tgName = "Khẩu đội trưởng";
-        else if ("TIEU_DOI_TRUONG".equalsIgnoreCase(targetGroup)) tgName = "Tiểu đội trưởng";
+        if ("KHAU_DOI_TRUONG".equalsIgnoreCase(targetGroup) || "KDT".equalsIgnoreCase(targetGroup)) tgName = "Khẩu đội trưởng (KĐT)";
+        else if ("TIEU_DOI_TRUONG".equalsIgnoreCase(targetGroup) || "TDT".equalsIgnoreCase(targetGroup)) tgName = "Tiểu đội trưởng (TĐT)";
+        else if ("NVKT".equalsIgnoreCase(targetGroup)) tgName = "Nhân viên Kỹ thuật (NVKT)";
+        else if ("HSQ".equalsIgnoreCase(targetGroup)) tgName = "Hạ sĩ quan Chỉ huy (HSQ)";
+        else if (targetGroup != null && !targetGroup.isBlank()) tgName = targetGroup;
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("KHUNG_CHUONG_TRINH_THI");

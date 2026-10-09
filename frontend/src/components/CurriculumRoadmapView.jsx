@@ -1,13 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X, Plus, Trash2 } from 'lucide-react';
 
-const TARGET_GROUPS = [
-  { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', desc: 'Thời gian 03 tháng' },
-  { code: 'KHAU_DOI_TRUONG', name: 'Khẩu đội trưởng (KĐT)', desc: 'Thời gian 06 tháng' },
-  { code: 'TIEU_DOI_TRUONG', name: 'Tiểu đội trưởng (TĐT)', desc: 'Thời gian 06 tháng' },
+const DEFAULT_TARGET_GROUPS = [
+  { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', desc: 'Thời gian 03 - 04 tháng' },
+  { code: 'TDT', name: 'Tiểu đội trưởng (TĐT)', desc: 'Thời gian 06 tháng' },
+  { code: 'KDT', name: 'Khẩu đội trưởng (KĐT)', desc: 'Thời gian 06 tháng' },
+  { code: 'NVKT', name: 'Nhân viên Kỹ thuật (NVKT)', desc: 'Thời gian 06 tháng' },
+  { code: 'HSQ', name: 'Hạ sĩ quan Chỉ huy (HSQ)', desc: 'Thời gian 06 tháng' },
 ];
 
 export default function CurriculumRoadmapView() {
+  const [targetGroups, setTargetGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('military_target_groups');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading target groups from localStorage', e);
+    }
+    return DEFAULT_TARGET_GROUPS;
+  });
+
   const [targetGroup, setTargetGroup] = useState('SQDB');
   const [selectedMajor, setSelectedMajor] = useState('TSBB');
   const [filterType, setFilterType] = useState('ALL'); // ALL, MON_HOC_PHAN, MON_THI_TOT_NGHIEP
@@ -15,6 +30,13 @@ export default function CurriculumRoadmapView() {
   const [curriculums, setCurriculums] = useState([]);
   const [majors, setMajors] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // New Target Group Modal State
+  const [isAddTargetModalOpen, setIsAddTargetModalOpen] = useState(false);
+  const [newTargetCode, setNewTargetCode] = useState('');
+  const [newTargetName, setNewTargetName] = useState('');
+  const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
+  const [addTargetError, setAddTargetError] = useState('');
 
   // Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -120,6 +142,54 @@ export default function CurriculumRoadmapView() {
     }
   };
 
+  const handleAddTargetGroup = (e) => {
+    e.preventDefault();
+    const code = newTargetCode.trim().toUpperCase();
+    const name = newTargetName.trim();
+    const desc = newTargetDesc.trim() || 'Thời gian 06 tháng';
+
+    if (!code || !name) {
+      setAddTargetError('Vui lòng nhập đầy đủ Mã quy ước và Tên đối tượng');
+      return;
+    }
+
+    if (targetGroups.some(g => g.code === code)) {
+      setAddTargetError(`Mã đối tượng "${code}" đã tồn tại!`);
+      return;
+    }
+
+    const updated = [...targetGroups, { code, name, desc, custom: true }];
+    setTargetGroups(updated);
+    try {
+      localStorage.setItem('military_target_groups', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
+    }
+
+    setTargetGroup(code);
+    setIsAddTargetModalOpen(false);
+    setNewTargetCode('');
+    setNewTargetName('');
+    setNewTargetDesc('Thời gian 06 tháng');
+    setAddTargetError('');
+  };
+
+  const handleDeleteTargetGroup = (e, codeToDelete) => {
+    e.stopPropagation();
+    if (window.confirm(`Bạn có chắc chắn muốn xóa đối tượng đào tạo "${codeToDelete}"?`)) {
+      const updated = targetGroups.filter(g => g.code !== codeToDelete);
+      setTargetGroups(updated);
+      try {
+        localStorage.setItem('military_target_groups', JSON.stringify(updated));
+      } catch (err) {
+        console.error(err);
+      }
+      if (targetGroup === codeToDelete) {
+        setTargetGroup(updated.length > 0 ? updated[0].code : 'SQDB');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -166,32 +236,59 @@ export default function CurriculumRoadmapView() {
 
       {/* Target Group & Major Selection Bar */}
       <div className="glass-panel p-5 bg-white border border-slate-200 space-y-4">
-        {/* Row 1: Target Groups (SQDB, Khẩu đội trưởng, Tiểu đội trưởng) */}
+        {/* Row 1: Target Groups with Add Target Button */}
         <div>
-          <label className="form-label text-[11px] mb-2">
-            1. Chọn Đối tượng đào tạo
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {TARGET_GROUPS.map((tg) => {
+          <div className="flex items-center justify-between mb-2">
+            <label className="form-label text-[11px] mb-0">
+              1. Chọn Đối tượng đào tạo
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setAddTargetError('');
+                setIsAddTargetModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition shadow-sm cursor-pointer"
+              title="Thêm đối tượng đào tạo mới vào hệ thống"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm Đối tượng Mới</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {targetGroups.map((tg) => {
               const active = targetGroup === tg.code;
+              const isDefault = DEFAULT_TARGET_GROUPS.some(d => d.code === tg.code);
               return (
-                <button
+                <div
                   key={tg.code}
                   onClick={() => setTargetGroup(tg.code)}
-                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  className={`relative group p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                     active
                       ? 'bg-amber-50 border-amber-400 shadow-sm ring-1 ring-amber-300'
                       : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <div>
-                    <h4 className={`text-sm font-bold ${active ? 'text-amber-900' : 'text-slate-900'}`}>
+                  <div className="flex items-start justify-between gap-1">
+                    <h4 className={`text-xs font-bold leading-tight ${active ? 'text-amber-900' : 'text-slate-900'}`}>
                       {tg.name}
                     </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{tg.desc}</p>
+                    {active && <Shield className="w-4 h-4 text-amber-600 shrink-0" />}
                   </div>
-                  {active && <Shield className="w-5 h-5 text-amber-600 shrink-0" />}
-                </button>
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
+                    <p className="text-[10px] text-slate-500">{tg.desc}</p>
+                    {!isDefault && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteTargetGroup(e, tg.code)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition"
+                        title="Xóa đối tượng đào tạo này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -476,6 +573,97 @@ export default function CurriculumRoadmapView() {
                   disabled={uploading}
                 >
                   {uploading ? 'Đang nạp dữ liệu...' : 'Bắt đầu Import Lộ Trình'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL THÊM ĐỐI TƯỢNG ĐÀO TẠO MỚI */}
+      {isAddTargetModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsAddTargetModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2 text-amber-700">
+                <Shield className="w-5 h-5" />
+                <h3 className="font-military text-base font-bold text-slate-900">Thêm Đối Tượng Đào Tạo Mới</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddTargetModalOpen(false)}
+                className="btn btn-icon btn-secondary btn-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {addTargetError && (
+              <div className="alert alert-error mb-4 text-xs font-semibold">
+                <AlertCircle className="w-4 h-4" />
+                <span>{addTargetError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAddTargetGroup} className="space-y-4">
+              <div>
+                <label className="form-label text-xs mb-1">
+                  Mã Quy Ước Đối Tượng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: NVKT, HSQ, BOMON, SQCH..."
+                  value={newTargetCode}
+                  onChange={(e) => setNewTargetCode(e.target.value.toUpperCase())}
+                  className="form-input text-xs font-mono font-bold uppercase"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Mã viết tắt chuẩn hóa (hệ thống sẽ tự động viết hoa)
+                </p>
+              </div>
+
+              <div>
+                <label className="form-label text-xs mb-1">
+                  Tên Đầy Đủ Đối Tượng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Nhân viên Chuyên môn Kỹ thuật, Sĩ quan Chỉ huy..."
+                  value={newTargetName}
+                  onChange={(e) => setNewTargetName(e.target.value)}
+                  className="form-input text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs mb-1">
+                  Thời Gian / Mô Tả Khóa Học
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Thời gian 06 tháng, Thời gian 03 tháng..."
+                  value={newTargetDesc}
+                  onChange={(e) => setNewTargetDesc(e.target.value)}
+                  className="form-input text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTargetModalOpen(false)}
+                  className="btn btn-secondary text-xs"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary text-xs"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Lưu & Áp Dụng
                 </button>
               </div>
             </form>

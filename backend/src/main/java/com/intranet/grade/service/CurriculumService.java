@@ -105,17 +105,30 @@ public class CurriculumService {
             String tg = "SQDB";
             String tgName = "Sĩ quan Dự bị";
             if (c.getName() != null) {
-                if (c.getName().contains("Khẩu đội trưởng") || (c.getCourse() != null && c.getCourse().getName() != null && c.getCourse().getName().contains("Khẩu đội trưởng"))) {
-                    tg = "KHAU_DOI_TRUONG";
+                String cNameUpper = c.getName().toUpperCase();
+                String courseNameUpper = (c.getCourse() != null && c.getCourse().getName() != null) ? c.getCourse().getName().toUpperCase() : "";
+                if (cNameUpper.contains("KHẨU ĐỘI") || courseNameUpper.contains("KHẨU ĐỘI") || cNameUpper.contains("KDT")) {
+                    tg = "KDT";
                     tgName = "Khẩu đội trưởng";
-                } else if (c.getName().contains("Tiểu đội trưởng") || (c.getCourse() != null && c.getCourse().getName() != null && c.getCourse().getName().contains("Tiểu đội trưởng"))) {
-                    tg = "TIEU_DOI_TRUONG";
+                } else if (cNameUpper.contains("TIỂU ĐỘI") || courseNameUpper.contains("TIỂU ĐỘI") || cNameUpper.contains("TDT")) {
+                    tg = "TDT";
                     tgName = "Tiểu đội trưởng";
+                } else if (cNameUpper.contains("KỸ THUẬT") || courseNameUpper.contains("KỸ THUẬT") || cNameUpper.contains("NVKT") || cNameUpper.contains("QUÂN Y")) {
+                    tg = "NVKT";
+                    tgName = "Nhân viên Kỹ thuật";
+                } else if (cNameUpper.contains("HẠ SĨ QUAN") || courseNameUpper.contains("HẠ SĨ QUAN") || cNameUpper.contains("HSQ")) {
+                    tg = "HSQ";
+                    tgName = "Hạ sĩ quan Chỉ huy";
                 }
             }
 
             if (targetGroup != null && !targetGroup.isBlank()) {
-                if (!targetGroup.equalsIgnoreCase(tg)) {
+                boolean match = targetGroup.equalsIgnoreCase(tg)
+                        || ("KDT".equalsIgnoreCase(targetGroup) && "KHAU_DOI_TRUONG".equalsIgnoreCase(tg))
+                        || ("KHAU_DOI_TRUONG".equalsIgnoreCase(targetGroup) && "KDT".equalsIgnoreCase(tg))
+                        || ("TDT".equalsIgnoreCase(targetGroup) && "TIEU_DOI_TRUONG".equalsIgnoreCase(tg))
+                        || ("TIEU_DOI_TRUONG".equalsIgnoreCase(targetGroup) && "TDT".equalsIgnoreCase(tg));
+                if (!match) {
                     continue;
                 }
             }
