@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Users, Upload, Download, Plus, Search, Shield, Edit, Trash2, ShieldCheck, Award, X, CheckCircle2, RefreshCw, Sparkles, FileSpreadsheet } from 'lucide-react';
 import AdmissionsImportModal from './AdmissionsImportModal';
 
-export default function StudentManagementView() {
+export default function StudentManagementView({ currentUser }) {
+  // Quyền xóa lớp học: Chỉ dành riêng cho 2 role cao nhất (ROLE_BGH và ROLE_BOMON hoặc ROLE_ADMIN/ROLE_PDT)
+  // 4 vai trò:
+  // 1. Ban Giám Đốc / Ban Giám Hiệu & Phòng Đào Tạo (ROLE_BGH, ROLE_PDT, ROLE_ADMIN) -> CÓ QUYỀN XÓA LỚP
+  // 2. Chủ nhiệm Bộ môn (ROLE_BOMON) -> CÓ QUYỀN XÓA LỚP
+  // 3. Giáo viên Huấn luyện (ROLE_GIANGVIEN) -> KHÔNG ĐƯỢC XÓA LỚP
+  // 4. Học viên Quân sự (ROLE_SINHVIEN) -> KHÔNG ĐƯỢC XÓA LỚP
+  const userRole = currentUser?.role || 'ROLE_GIANGVIEN';
+  const canDeleteClasses = ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN', 'ROLE_BOMON'].includes(userRole);
+
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -388,27 +397,29 @@ export default function StudentManagementView() {
             )}
           </select>
 
-          {/* Delete Single Selected Class */}
-          {selectedClassId && (
+          {/* Delete Single Selected Class (Chỉ hiển thị cho 2 vai trò cao nhất: BGH / Bộ Môn) */}
+          {canDeleteClasses && selectedClassId && (
             <button
               onClick={() => setIsDeleteClassModalOpen(true)}
               className="btn btn-danger btn-xs"
-              title="Xóa lớp học đang chọn và các học viên thuộc lớp"
+              title="Xóa lớp học đang chọn và các học viên thuộc lớp (Chỉ huy / Bộ môn)"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Xóa lớp này
             </button>
           )}
 
-          {/* Delete All Classes */}
-          <button
-            onClick={() => setIsDeleteAllModalOpen(true)}
-            className="btn btn-danger btn-xs"
-            title="Xóa toàn bộ các lớp học và học viên hiện có để chuẩn bị nạp lại từ Excel"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Xóa toàn bộ lớp
-          </button>
+          {/* Delete All Classes (Chỉ hiển thị cho 2 vai trò cao nhất: BGH / Bộ Môn) */}
+          {canDeleteClasses && (
+            <button
+              onClick={() => setIsDeleteAllModalOpen(true)}
+              className="btn btn-danger btn-xs"
+              title="Xóa toàn bộ các lớp học và học viên hiện có để chuẩn bị nạp lại từ Excel (Chỉ huy / Bộ môn)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Xóa toàn bộ lớp
+            </button>
+          )}
 
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />

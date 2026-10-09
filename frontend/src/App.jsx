@@ -198,7 +198,7 @@ export default function App() {
           )}
 
           {activeTab === 'students' && (
-            <StudentManagementView />
+            <StudentManagementView currentUser={currentUser} />
           )}
 
           {activeTab === 'matrix' && (
