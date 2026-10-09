@@ -1,5 +1,7 @@
 package com.intranet.grade.controller;
 
+import com.intranet.grade.entity.ClassEntity;
+import com.intranet.grade.repository.ClassRepository;
 import com.intranet.grade.service.ExcelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +21,15 @@ import java.util.Map;
 public class ExcelExportImportController {
 
     private final ExcelService excelService;
+    private final ClassRepository classRepository;
+
+    private String getSafeClassIdentifier(Integer classId) {
+        if (classId == null) return "Lop_Chung";
+        return classRepository.findById(classId)
+                .map(ClassEntity::getCode)
+                .filter(code -> !code.trim().isEmpty())
+                .orElse("Lop_" + classId);
+    }
 
     @GetMapping("/{classId}/export-excel")
     public ResponseEntity<byte[]> exportExcel(
@@ -33,9 +44,11 @@ public class ExcelExportImportController {
         }
 
         byte[] excelBytes = excelService.exportClassMatrixToExcel(classId, semester);
+        String classIdent = getSafeClassIdentifier(classId);
+        String filename = "BangDiem_MaTran_" + classIdent + ".xlsx";
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"BangDiem_MaTran_Lop_" + classId + ".xlsx\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(excelBytes);
     }
@@ -46,7 +59,8 @@ public class ExcelExportImportController {
             @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
 
         byte[] excelBytes = excelService.exportKetQuaHocPhanExcel(classId, semester);
-        String filename = "KetQuaHocPhan_Lop_" + classId + ".xlsx";
+        String classIdent = getSafeClassIdentifier(classId);
+        String filename = "KetQuaHocPhan_" + classIdent + ".xlsx";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -60,7 +74,8 @@ public class ExcelExportImportController {
             @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
 
         byte[] excelBytes = excelService.exportKetQuaTotNghiepExcel(classId, semester);
-        String filename = "KetQuaTotNghiep_Lop_" + classId + ".xlsx";
+        String classIdent = getSafeClassIdentifier(classId);
+        String filename = "KetQuaTotNghiep_" + classIdent + ".xlsx";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
