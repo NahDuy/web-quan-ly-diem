@@ -212,6 +212,25 @@ export default function CurriculumRoadmapView() {
 
           {/* Quick Action Buttons */}
           <div className="flex items-center space-x-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setAddTargetError('');
+                setIsAddTargetModalOpen(true);
+              }}
+              className="btn btn-sm"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#b45309',
+                border: '1px solid #fde047',
+                fontWeight: 700
+              }}
+              title="Thêm đối tượng đào tạo mới vào hệ thống (SQDB, NVKT, HSQ...)"
+            >
+              <Plus className="w-4 h-4 text-amber-600" />
+              <span>+ Thêm Đối Tượng Đào Tạo</span>
+            </button>
+
             <a
               href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}`}
               download
@@ -238,9 +257,9 @@ export default function CurriculumRoadmapView() {
       <div className="glass-panel p-5 bg-white border border-slate-200 space-y-4">
         {/* Row 1: Target Groups with Add Target Button */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="form-label text-[11px] mb-0">
-              1. Chọn Đối tượng đào tạo
+          <div className="flex items-center justify-between mb-2.5">
+            <label className="form-label text-xs font-bold text-slate-800 mb-0">
+              1. Chọn Đối tượng đào tạo ({targetGroups.length} đối tượng)
             </label>
             <button
               type="button"
@@ -248,11 +267,11 @@ export default function CurriculumRoadmapView() {
                 setAddTargetError('');
                 setIsAddTargetModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-400 rounded-lg transition shadow-xs cursor-pointer"
               title="Thêm đối tượng đào tạo mới vào hệ thống"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Thêm Đối tượng Mới</span>
+              <Plus className="w-4 h-4 text-amber-700" />
+              <span>+ Thêm Đối tượng Mới</span>
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">

@@ -184,10 +184,19 @@ export default function AuditLogView() {
 
         <button 
           onClick={fetchLogs} 
-          className="btn btn-secondary text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+          disabled={loading}
+          className="btn btn-sm"
+          style={{
+            backgroundColor: '#f8fafc',
+            color: '#15803d',
+            border: '1px solid #86efac',
+            fontWeight: 700,
+            padding: '7px 14px'
+          }}
+          title="Tải lại dữ liệu nhật ký mới nhất từ máy chủ"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-          <span>Làm mới dữ liệu</span>
+          <RefreshCw className={`w-4 h-4 text-emerald-600 ${loading ? 'animate-spin' : ''}`} />
+          <span>{loading ? 'Đang tải lại...' : 'Làm mới dữ liệu'}</span>
         </button>
       </div>
 
