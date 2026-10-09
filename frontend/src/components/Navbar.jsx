@@ -9,16 +9,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  UserCheck,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 
 const NAV_TABS = [
-  { id: 'dashboard', label: 'Dashboard Chỉ Huy',    icon: LayoutDashboard },
-  { id: 'students',  label: 'Quản lý Học viên',     icon: Users },
-  { id: 'matrix',    label: 'Bảng Quản lý Điểm',    icon: Table },
-  { id: 'roadmap',   label: 'Lộ trình Đào tạo',     icon: Compass },
+  { id: 'dashboard', label: 'Dashboard Chỉ Huy',      icon: LayoutDashboard },
+  { id: 'students',  label: 'Quản lý Học viên',       icon: Users },
+  { id: 'matrix',    label: 'Bảng Quản lý Điểm',      icon: Table },
+  { id: 'roadmap',   label: 'Lộ trình Đào tạo',       icon: Compass },
   { id: 'majors',    label: 'Chuyên ngành & Quy ước', icon: BookmarkCheck },
-  { id: 'audit',     label: 'Nhật ký Audit Log',    icon: History },
+  { id: 'audit',     label: 'Nhật ký Audit Log',      icon: History },
 ];
 
 export default function Navbar({
@@ -26,6 +27,7 @@ export default function Navbar({
   activeTab,
   setActiveTab,
   onOpenLogin,
+  onLogout,
   collapsed = false,
   setCollapsed,
 }) {
@@ -63,7 +65,7 @@ export default function Navbar({
         boxShadow: '1px 0 4px rgba(0,0,0,0.03)',
       }}
     >
-      {/* Brand Header with Academy Logo */}
+      {/* Brand Header with Circular Logo (Cut off white border & rounded) */}
       <div
         style={{
           padding: collapsed ? '16px 8px' : '16px 14px',
@@ -77,17 +79,15 @@ export default function Navbar({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
           <img
-            src="/logo.jpg"
+            src="/logo.png"
             alt="Logo Học Viện Quân Sự"
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '8px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
               objectFit: 'contain',
-              border: '1px solid #cbd5e1',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-              background: '#ffffff',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
             }}
           />
           {!collapsed && (
@@ -218,7 +218,7 @@ export default function Navbar({
         })}
       </nav>
 
-      {/* Footer / User Profile */}
+      {/* Footer / User Profile & Logout (No duplicate login button) */}
       <div
         style={{
           padding: collapsed ? '12px 6px' : '14px 10px',
@@ -226,7 +226,7 @@ export default function Navbar({
           background: '#f8fafc',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '8px',
         }}
       >
         {!collapsed ? (
@@ -259,7 +259,7 @@ export default function Navbar({
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {currentUser?.fullName ?? 'Thượng úy Nguyễn Văn Giảng'}
+                  {currentUser?.fullName ?? 'Cán bộ chưa đăng nhập'}
                 </p>
                 <span
                   className="badge"
@@ -277,34 +277,62 @@ export default function Navbar({
               </div>
             </div>
 
-            <button
-              id="btn-switch-role"
-              onClick={onOpenLogin}
-              className="btn btn-secondary btn-sm"
-              style={{
-                width: '100%',
-                justifyContent: 'center',
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#b45309',
-                fontSize: '0.78rem',
-              }}
-            >
-              <UserCheck size={15} />
-              Đổi vai trò / Đăng nhập
-            </button>
+            {currentUser ? (
+              <button
+                id="btn-sidebar-logout"
+                onClick={onLogout}
+                className="btn btn-secondary btn-xs"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  border: '1px solid #fecaca',
+                  background: '#ffffff',
+                  color: '#dc2626',
+                  fontSize: '0.75rem',
+                }}
+                title="Đăng xuất khỏi hệ thống"
+              >
+                <LogOut size={13} />
+                Đăng xuất
+              </button>
+            ) : (
+              <button
+                id="btn-sidebar-login"
+                onClick={onOpenLogin}
+                className="btn btn-primary btn-xs"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  fontSize: '0.75rem',
+                }}
+              >
+                <LogIn size={13} />
+                Đăng nhập / Đăng ký
+              </button>
+            )}
           </>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <button
-              id="btn-switch-role-collapsed"
-              onClick={onOpenLogin}
-              className="btn btn-icon btn-secondary btn-sm"
-              title={`Tài khoản: ${currentUser?.fullName ?? 'Khách'} - Đổi vai trò`}
-              style={{ border: '1px solid #cbd5e1', color: '#b45309', background: '#ffffff' }}
-            >
-              <UserCheck size={16} />
-            </button>
+            {currentUser ? (
+              <button
+                id="btn-sidebar-logout-collapsed"
+                onClick={onLogout}
+                className="btn btn-icon btn-secondary btn-sm"
+                title={`Đăng xuất: ${currentUser?.fullName ?? ''}`}
+                style={{ border: '1px solid #fecaca', color: '#dc2626', background: '#ffffff' }}
+              >
+                <LogOut size={16} />
+              </button>
+            ) : (
+              <button
+                id="btn-sidebar-login-collapsed"
+                onClick={onOpenLogin}
+                className="btn btn-icon btn-primary btn-sm"
+                title="Đăng nhập / Đăng ký"
+              >
+                <LogIn size={16} />
+              </button>
+            )}
           </div>
         )}
       </div>

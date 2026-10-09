@@ -71,9 +71,18 @@ export default function DashboardView() {
       {/* Top Header Banner */}
       <div className="glass-panel" style={{ padding: '24px', background: 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)', border: '1px solid #86efac' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ padding: '12px', background: 'linear-gradient(135deg, #d97706, #ca8a04)', borderRadius: '16px', border: '1px solid rgba(253,224,71,0.6)', boxShadow: '0 4px 12px rgba(217,119,6,0.2)' }}>
-            <LayoutDashboard size={28} style={{ color: '#ffffff' }} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Logo Học Viện Quân Sự"
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              objectFit: 'contain',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+              flexShrink: 0,
+            }}
+          />
           <div>
             <h2 className="font-military" style={{ fontSize: '1.15rem', color: '#0f172a' }}>
               DASHBOARD BÁO CÁO CHỈ HUY — TỔNG QUAN KẾT QUẢ ĐÀO TẠO & HUẤN LUYỆN

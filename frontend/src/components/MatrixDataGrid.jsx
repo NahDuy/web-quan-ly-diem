@@ -462,42 +462,43 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
       {/* Lock Banner */}
       {matrixData.isLocked ? (
-        <div className="p-3 bg-red-900 border border-red-600 text-white text-xs rounded-lg flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-2 font-bold">
-            <Lock className="w-5 h-5 text-red-300" />
-            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA (LOCKED): Bảng điểm lớp đã được niêm phong. Chỉ Ban Giám Đốc/PĐT mới có quyền mở khóa.</span>
+        <div className="alert alert-error flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 font-bold text-xs">
+            <Lock className="w-4 h-4 text-red-600" />
+            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA: Bảng điểm lớp đã được niêm phong. Chỉ Ban Giám Đốc/PĐT mới có quyền mở khóa.</span>
           </div>
 
           {(currentUser?.role === 'ROLE_BGH' || currentUser?.role === 'ROLE_PDT') && (
-            <button onClick={handleUnlockMatrix} className="btn-secondary bg-red-950 hover:bg-red-900 border-red-700 text-xs py-1.5 font-bold">
-              <Unlock className="w-4 h-4 text-emerald-400" />
+            <button onClick={handleUnlockMatrix} className="btn btn-danger btn-xs font-bold">
+              <Unlock className="w-3.5 h-3.5" />
               Mở Khóa Bảng Điểm
             </button>
           )}
         </div>
       ) : (
-        <div className="p-3 bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2 font-semibold">
-            <Unlock className="w-4 h-4 text-emerald-400" />
-            <span>Trạng thái: Bảng điểm mở (UNLOCKED). Giáo viên/Cán bộ huấn luyện có thể nhập và chỉnh sửa điểm.</span>
+        <div className="alert alert-success flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 font-semibold text-xs">
+            <Unlock className="w-4 h-4 text-emerald-600" />
+            <span>Trạng thái: Bảng điểm mở. Giáo viên/Cán bộ huấn luyện có thể nhập và chỉnh sửa điểm.</span>
           </div>
 
-          <button onClick={handleLockMatrix} className="btn-secondary bg-amber-950 border-amber-700 hover:bg-amber-900 text-xs py-1.5 font-bold">
-            <Lock className="w-4 h-4 text-amber-400" />
+          <button onClick={handleLockMatrix} className="btn btn-secondary btn-xs font-bold" style={{ color: '#b45309', borderColor: '#fde047' }}>
+            <Lock className="w-3.5 h-3.5 text-amber-600" />
             Xác nhận & Khóa Bảng Điểm
           </button>
         </div>
       )}
       
       {/* Control Bar */}
-      <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-4 border-slate-700">
+      <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-4 border border-slate-200 bg-white">
         <div className="flex items-center space-x-4">
           <div>
-            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Chọn Lớp học / Đại đội</label>
+            <label className="form-label text-[11px] mb-1">Chọn Lớp học / Đại đội</label>
             <select
               value={classId}
               onChange={(e) => setClassId(parseInt(e.target.value))}
-              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold max-w-xs truncate"
+              className="form-input text-xs font-semibold max-w-xs truncate"
+              style={{ cursor: 'pointer' }}
             >
               {classList.length > 0 ? (
                 classList.map((cls) => (
@@ -518,11 +519,12 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Học kỳ</label>
+            <label className="form-label text-[11px] mb-1">Học kỳ</label>
             <select
               value={semester}
               onChange={(e) => setSemester(parseInt(e.target.value))}
-              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+              className="form-input text-xs font-semibold"
+              style={{ cursor: 'pointer' }}
             >
               <option value={1}>Học kỳ 1</option>
               <option value={2}>Học kỳ 2</option>
@@ -532,54 +534,57 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+        <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
           <button
             onClick={handleInitFromCurriculum}
             disabled={loading}
-            className="btn-secondary bg-indigo-950/80 hover:bg-indigo-900 border-indigo-600 text-indigo-300 font-bold text-xs"
+            className="btn btn-secondary btn-sm"
+            style={{ color: '#4338ca', borderColor: '#c7d2fe' }}
             title="Tự động đồng bộ các môn học theo Lộ trình Đào tạo của Chuyên ngành vào Lớp này"
           >
-            <RefreshCw className={`w-4 h-4 text-indigo-400 ${loading ? 'animate-spin' : ''}`} />
-            ⚡ Lấy Môn từ Lộ Trình
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Lấy Môn từ Lộ Trình</span>
           </button>
 
           <button
             onClick={() => setIsAddSubjectModalOpen(true)}
-            className="btn-secondary bg-emerald-950/80 hover:bg-emerald-900 border-emerald-600 text-emerald-300 font-bold text-xs"
+            className="btn btn-secondary btn-sm"
+            style={{ color: '#15803d', borderColor: '#bbf7d0' }}
           >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            Thêm Cột Môn Học Linh Hoạt
+            <Plus className="w-3.5 h-3.5" />
+            <span>Thêm Cột Môn</span>
           </button>
 
           {hasUnsavedChanges && (
             <button
               onClick={() => setIsReasonModalOpen(true)}
-              className="btn-primary bg-amber-600 hover:bg-amber-700 border-amber-500 text-white font-bold"
+              className="btn btn-primary btn-sm"
+              style={{ background: '#b45309', borderColor: '#92400e' }}
             >
-              <Save className="w-4 h-4" />
-              Lưu Điểm Hàng Loạt
+              <Save className="w-3.5 h-3.5" />
+              <span>Lưu Điểm Hàng Loạt</span>
             </button>
           )}
 
           <button
             onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
-            className="btn-secondary"
+            className="btn btn-secondary btn-sm"
           >
-            <Upload className="w-4 h-4 text-emerald-400" />
-            Import Excel Điểm
+            <Upload className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Import Excel Điểm</span>
           </button>
 
-          <button onClick={handleExportExcel} className="btn-secondary">
-            <Download className="w-4 h-4 text-yellow-400" />
-            Xuất File Excel Mẫu
+          <button onClick={handleExportExcel} className="btn btn-secondary btn-sm">
+            <Download className="w-3.5 h-3.5 text-amber-600" />
+            <span>Xuất File Excel</span>
           </button>
         </div>
       </div>
 
       {saveSuccessMsg && (
-        <div className="p-3 bg-emerald-950 border border-emerald-600 text-emerald-300 text-sm rounded-lg flex items-center gap-2 font-bold shadow-md">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          {saveSuccessMsg}
+        <div className="alert alert-success font-bold text-xs shadow-sm">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>{saveSuccessMsg}</span>
         </div>
       )}
 

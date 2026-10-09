@@ -437,19 +437,19 @@ export default function StudentManagementView() {
 
           <button
             onClick={handleExportStudents}
-            className="btn-secondary"
+            className="btn btn-secondary btn-sm"
             title="Xuất danh sách học viên quân sự ra file Excel"
           >
-            <Download className="w-4 h-4 text-yellow-400" />
-            Xuất Excel
+            <Download className="w-4 h-4 text-amber-600" />
+            <span>Xuất Excel</span>
           </button>
 
           <button
             onClick={handleOpenAddModal}
-            className="btn-primary"
+            className="btn btn-primary btn-sm"
           >
             <Plus className="w-4 h-4" />
-            Thêm Học viên
+            <span>Thêm Học viên</span>
           </button>
         </div>
 

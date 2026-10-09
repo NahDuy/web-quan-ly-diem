@@ -8,7 +8,7 @@ import ExcelImportModal from './components/ExcelImportModal';
 import AuditLogView from './components/AuditLogView';
 import CurriculumRoadmapView from './components/CurriculumRoadmapView';
 import MajorManagementView from './components/MajorManagementView';
-import { UserCheck } from 'lucide-react';
+import { User, LogIn, LogOut } from 'lucide-react';
 
 const TAB_NAMES = {
   dashboard: 'Dashboard Chỉ Huy',
@@ -31,33 +31,39 @@ export default function App() {
     classCode: ''
   });
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('jwt_token');
-      if (token) {
-        try {
-          const res = await fetch('/api/v1/auth/me', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setCurrentUser(data);
-            return;
-          }
-        } catch (e) {
-          console.error('Error fetching auth/me:', e);
+  const checkAuth = async () => {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      try {
+        const res = await fetch('/api/v1/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data);
+          return;
         }
+      } catch (e) {
+        console.error('Error fetching auth/me:', e);
       }
-      // Default fallback officer
-      setCurrentUser({
-        username: 'giangvien_a',
-        fullName: 'Thượng úy Nguyễn Văn Giảng',
-        role: 'ROLE_GIANGVIEN',
-        departmentId: 2
-      });
-    };
+    }
+    // Default initial state or demo officer
+    setCurrentUser({
+      username: 'giangvien_a',
+      fullName: 'Thượng úy Nguyễn Văn Giảng',
+      role: 'ROLE_GIANGVIEN',
+      departmentId: 2
+    });
+  };
+
+  useEffect(() => {
     checkAuth();
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('jwt_token');
+    setCurrentUser(null);
+  };
 
   const pageTitle = TAB_NAMES[activeTab] || 'Bảng Quản lý Điểm';
 
@@ -69,13 +75,14 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />
 
       {/* Right Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Top Header Bar with Breadcrumb and Logo */}
+        {/* Top Header Bar with Breadcrumb and Circular Logo */}
         <header
           style={{
             padding: '14px 28px',
@@ -92,16 +99,15 @@ export default function App() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img
-              src="/logo.jpg"
+              src="/logo.png"
               alt="Học Viện Quân Sự"
               style={{
-                width: '38px',
-                height: '38px',
+                width: '40px',
+                height: '40px',
                 objectFit: 'contain',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                background: '#ffffff',
+                borderRadius: '50%',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                flexShrink: 0,
               }}
             />
             <div>
@@ -116,39 +122,72 @@ export default function App() {
             </div>
           </div>
 
-          {/* User profile & Switch role quick button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ textAlign: 'right' }} className="hidden sm:block">
-              <p style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>
-                {currentUser?.fullName || 'Thượng úy Nguyễn Văn Giảng'}
-              </p>
-              <p style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 600 }}>
-                {currentUser?.role === 'ROLE_BGH' ? 'Ban Giám Đốc / PĐT Quân sự' :
-                 currentUser?.role === 'ROLE_BOMON' ? 'Chủ nhiệm Bộ môn' :
-                 currentUser?.role === 'ROLE_GIANGVIEN' ? 'Giáo viên Huấn luyện' :
-                 currentUser?.role === 'ROLE_SINHVIEN' ? 'Học viên Quân sự' : 'Cán bộ Quân sự'}
-              </p>
-            </div>
-            <button
-              onClick={() => setIsLoginModalOpen(true)}
-              className="btn btn-secondary btn-sm"
-              style={{
-                padding: '6px 12px',
-                fontSize: '0.78rem',
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#b45309',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-              }}
-              title="Đổi vai trò Cán bộ / Chỉ huy"
-            >
-              <UserCheck size={16} />
-              <span>Đổi vai trò</span>
-            </button>
+          {/* User profile & Action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {currentUser ? (
+              <>
+                <div style={{ textAlign: 'right' }} className="hidden sm:block">
+                  <p style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>
+                    {currentUser.fullName}
+                  </p>
+                  <p style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 600 }}>
+                    {currentUser.role === 'ROLE_BGH' ? 'Ban Giám Đốc / PĐT Quân sự' :
+                     currentUser.role === 'ROLE_BOMON' ? 'Chủ nhiệm Bộ môn' :
+                     currentUser.role === 'ROLE_GIANGVIEN' ? 'Giáo viên Huấn luyện' :
+                     currentUser.role === 'ROLE_SINHVIEN' ? 'Học viên Quân sự' : 'Cán bộ Quân sự'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                  }}
+                  title="Đổi tài khoản đăng nhập"
+                >
+                  <User size={15} />
+                  <span>Đổi tài khoản</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    background: '#ffffff',
+                    borderRadius: '8px',
+                  }}
+                  title="Đăng xuất khỏi hệ thống"
+                >
+                  <LogOut size={15} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="btn btn-primary btn-sm"
+                style={{
+                  padding: '7px 16px',
+                  fontSize: '0.825rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <LogIn size={16} />
+                <span>Đăng nhập / Đăng ký</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -190,7 +229,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* Modals */}
+      {/* Auth Modal (Login / Register) */}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
