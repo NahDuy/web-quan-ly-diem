@@ -618,50 +618,65 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             {/* Header Row 1 */}
             <tr>
               <th rowSpan={2} className="w-12 sticky-col-1">TT</th>
-              <th rowSpan={2} className="min-w-[180px] text-left sticky-col-2">Họ và tên Học viên</th>
-              <th rowSpan={2} className="min-w-[100px]">Ngày sinh</th>
+              <th rowSpan={2} className="min-w-[170px] text-left sticky-col-2">Họ và tên Học viên</th>
+              <th rowSpan={2} className="min-w-[90px]">Ngày sinh</th>
               
               {/* MERGED GROUP HEADER 1: KẾT QUẢ HỌC TẬP TOÀN KHÓA */}
               <th
                 colSpan={safeColumns.length}
-                className="py-2.5 px-4 bg-slate-800 text-yellow-300 font-extrabold text-xs border-b border-slate-700 tracking-wider uppercase"
+                className="py-2 px-3 bg-slate-100 text-slate-800 font-extrabold text-xs border-b border-slate-300 tracking-wider uppercase"
               >
                 KẾT QUẢ HỌC TẬP TOÀN KHÓA ({safeColumns.length} MÔN)
               </th>
 
-              <th rowSpan={2} className="min-w-[85px]">TB</th>
-              <th rowSpan={2} className="min-w-[125px]">Phân loại Rèn luyện</th>
+              <th rowSpan={2} className="min-w-[70px] text-center">
+                <span>Điểm TB</span>
+                <span className="block text-[10px] text-slate-500 font-normal">Toàn khóa</span>
+              </th>
+              <th rowSpan={2} className="min-w-[110px] text-center">
+                <span>Rèn Luyện</span>
+                <span className="block text-[10px] text-slate-500 font-normal">Kỷ luật</span>
+              </th>
 
               {/* MERGED GROUP HEADER 2: ĐIỂM THI TỐT NGHIỆP (3 MÔN THI TN) */}
               <th
                 colSpan={safeGradExamSubjects.length}
-                className="py-2.5 px-4 bg-slate-800 text-amber-300 font-extrabold text-xs border-b border-slate-700 tracking-wider uppercase"
+                className="py-2 px-3 bg-amber-50 text-amber-800 font-extrabold text-xs border-b border-amber-300 tracking-wider uppercase"
               >
                 ĐIỂM THI TỐT NGHIỆP ({safeGradExamSubjects.length} MÔN THI)
               </th>
 
-              <th rowSpan={2} className="min-w-[90px]">Điểm TN (TBC 3 môn TN)</th>
-              <th rowSpan={2} className="min-w-[115px]">Điểm Tốt Nghiệp (TB*1+TN*2)/3</th>
-              <th rowSpan={2} className="min-w-[100px]">Xét TN</th>
-              <th rowSpan={2} className="min-w-[120px]">Quê quán</th>
+              <th rowSpan={2} className="min-w-[80px] text-center">
+                <span>Điểm TN</span>
+                <span className="block text-[10px] text-slate-500 font-normal">TBC 3 môn</span>
+              </th>
+              <th rowSpan={2} className="min-w-[95px] text-center">
+                <span>Điểm Xét TN</span>
+                <span className="block text-[10px] text-slate-500 font-normal">(TB×1+TN×2)/3</span>
+              </th>
+              <th rowSpan={2} className="min-w-[95px] text-center">
+                <span>Xếp Loại</span>
+                <span className="block text-[10px] text-slate-500 font-normal">Tốt nghiệp</span>
+              </th>
+              <th rowSpan={2} className="min-w-[110px]">Quê quán</th>
             </tr>
 
-            {/* Header Row 2: VERTICAL SUBJECT HEADERS (XOAY DỌC 90 ĐỘ NHỎ GỌN) */}
+            {/* Header Row 2: VERTICAL SUBJECT HEADERS */}
             <tr>
               {/* Sub-headers for Course Subjects */}
               {safeColumns.map((col) => (
-                <th key={col.subjectId} className="p-0 border-t border-slate-700 min-w-[50px] align-bottom">
-                  <div className="th-vertical-subject" title={`${col.subjectName} (${col.subjectCode})`}>
-                    {col.subjectName} <span className="text-emerald-400 text-[10px]">({col.subjectCode})</span>
+                <th key={col.subjectId} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
+                  <div className="th-vertical-subject" title={`${col.subjectName} (${col.subjectCode}) - ${col.credits} tín chỉ`}>
+                    {col.subjectName} <span className="text-emerald-700 text-[10px]">({col.credits}TC)</span>
                   </div>
                 </th>
               ))}
 
               {/* Sub-headers for 3 Graduation Exam Subjects */}
               {safeGradExamSubjects.map((sub) => (
-                <th key={sub.id} className="p-0 border-t border-slate-700 min-w-[50px] align-bottom">
-                  <div className="th-vertical-subject text-amber-300" title={`${sub.name} (${sub.code})`}>
-                    {sub.name} <span className="text-amber-400 text-[10px]">({sub.code})</span>
+                <th key={sub.id} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
+                  <div className="th-vertical-subject text-amber-700" title={`${sub.name} (${sub.code})`}>
+                    {sub.name} <span className="text-amber-800 text-[10px]">({sub.code})</span>
                   </div>
                 </th>
               ))}
@@ -702,10 +717,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               }
 
               return (
-                <tr key={row.studentId} className="hover:bg-slate-800/60">
-                  <td className="text-slate-400 text-xs font-mono sticky-col-1">{row.stt}</td>
-                  <td className="text-left font-bold text-slate-100 sticky-col-2">{row.fullName}</td>
-                  <td className="text-xs text-slate-300">{row.dob}</td>
+                <tr key={row.studentId} className="hover:bg-slate-50 transition">
+                  <td className="text-slate-500 text-xs font-mono sticky-col-1">{row.stt}</td>
+                  <td className="text-left font-bold text-slate-900 sticky-col-2">{row.fullName}</td>
+                  <td className="text-xs text-slate-600">{row.dob}</td>
 
                   {/* COURSE SUBJECT GRADE INPUTS */}
                   {safeColumns.map((col) => {
@@ -725,14 +740,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           value={currentScoreVal !== null && currentScoreVal !== undefined ? currentScoreVal : ''}
                           onChange={(e) => handleScoreChange(row.studentId, col.subjectId, e.target.value)}
                           placeholder="-"
-                          className={`cell-input ${isEdited ? 'text-amber-300 font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                          className={`cell-input ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />
                       </td>
                     );
                   })}
 
                   {/* TB (TRUNG BÌNH CỘNG TOÀN KHÓA) */}
-                  <td className="font-bold text-base text-yellow-300 bg-slate-900">
+                  <td className="font-bold text-sm text-amber-800 bg-amber-50/60">
                     {row.tbcScore !== null ? row.tbcScore.toFixed(2) : '-'}
                   </td>
 
@@ -742,7 +757,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
                       value={currentConduct || 'KHA'}
                       onChange={(e) => handleConductChange(row.studentId, e.target.value)}
-                      className="bg-slate-900 border border-slate-600 text-xs rounded px-1.5 py-1 text-yellow-200 focus:outline-none disabled:opacity-50 font-semibold"
+                      className="form-input text-xs rounded px-1.5 py-1 text-slate-800 focus:outline-none disabled:opacity-50 font-semibold"
+                      style={{ cursor: 'pointer', minWidth: '95px' }}
                     >
                       <option value="XUAT_SAC">Xuất sắc</option>
                       <option value="TOT">Tốt</option>
@@ -769,28 +785,35 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           value={val !== null && val !== undefined ? val : ''}
                           onChange={(e) => handleGradExamScoreChange(row.studentId, gradSub.id, e.target.value)}
                           placeholder="-"
-                          className={`cell-input text-amber-300 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                          className={`cell-input text-amber-800 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />
                       </td>
                     );
                   })}
 
                   {/* ĐIỂM TN (TBC 3 MÔN THI TN) */}
-                  <td className="font-bold text-sm text-cyan-300 bg-slate-900">
+                  <td className="font-bold text-sm text-blue-700 bg-blue-50/60">
                     {tbcGradExamScore !== null ? tbcGradExamScore.toFixed(2) : '-'}
                   </td>
 
                   {/* ĐIỂM TỐT NGHIỆP CHUNG: (TB*1 + TN*2)/3 */}
-                  <td className="font-extrabold text-base text-yellow-300 bg-slate-950">
+                  <td className="font-extrabold text-sm text-emerald-800 bg-emerald-50/60">
                     {calculatedGradScore !== null ? calculatedGradScore.toFixed(2) : '-'}
                   </td>
 
                   {/* XÉT TN */}
-                  <td className="text-xs font-bold text-emerald-400">
-                    {gradClassification}
+                  <td>
+                    <span className={`badge ${
+                      gradClassification === 'XUẤT SẮC' ? 'badge-warning' :
+                      gradClassification === 'GIỎI' ? 'badge-success' :
+                      gradClassification === 'KHÁ' ? 'badge-info' :
+                      gradClassification === 'TRUNG BÌNH' ? 'badge' : 'badge-danger'
+                    }`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+                      {gradClassification}
+                    </span>
                   </td>
 
-                  <td className="text-xs text-slate-300">{row.pob || 'Hà Nội'}</td>
+                  <td className="text-xs text-slate-600">{row.pob || 'Hà Nội'}</td>
                 </tr>
               );
             })}
@@ -800,103 +823,101 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
       {/* MANDATORY AUDIT REASON MODAL */}
       {isReasonModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="glass-panel w-full max-w-lg p-6 bg-slate-900 border border-slate-700 shadow-2xl rounded-xl">
-            
-            <div className="flex items-center space-x-3 mb-4 text-amber-400">
+        <div className="modal-overlay" onClick={() => setIsReasonModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center space-x-3 mb-4 text-amber-700">
               <ShieldAlert className="w-6 h-6" />
-              <h3 className="text-lg font-bold text-white">Yêu cầu Ghi Lý do Điều chỉnh Điểm (Audit Log)</h3>
+              <h3 className="font-military text-base font-bold text-slate-900">Yêu cầu Ghi Lý do Điều chỉnh Điểm (Audit Log)</h3>
             </div>
 
-            <p className="text-xs text-slate-300 mb-4">
-              Mọi thao tác thay đổi ô điểm đều được tự động lưu vết chi tiết vào bảng kiểm toán <code className="text-amber-300">grade_audit_logs</code>.
+            <p className="text-xs text-slate-600 mb-4">
+              Mọi thao tác thay đổi ô điểm đều được tự động lưu vết chi tiết vào bảng kiểm toán <code className="text-amber-700 font-mono">grade_audit_logs</code>.
             </p>
 
             <div className="mb-4">
-              <label className="block text-xs font-bold text-amber-400 mb-1.5">
-                Lý do chỉnh sửa điểm <span className="text-red-400">*</span>
+              <label className="form-label">
+                Lý do chỉnh sửa điểm <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={auditReason}
                 onChange={(e) => setAuditReason(e.target.value)}
                 placeholder="Nhập lý do hoặc quyết định phúc khảo bài thi..."
                 rows={4}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500"
+                className="form-input text-sm"
               />
             </div>
 
             <div className="flex justify-end space-x-3">
-              <button onClick={() => setIsReasonModalOpen(false)} className="btn-secondary" disabled={saving}>Hủy bỏ</button>
-              <button onClick={handleSaveBatch} className="btn-primary bg-amber-600 hover:bg-amber-700" disabled={saving}>
+              <button onClick={() => setIsReasonModalOpen(false)} className="btn btn-secondary" disabled={saving}>Hủy bỏ</button>
+              <button onClick={handleSaveBatch} className="btn btn-primary" disabled={saving} style={{ background: '#b45309', borderColor: '#92400e' }}>
                 {saving ? 'Đang lưu...' : 'Xác nhận & Lưu Audit Log'}
               </button>
             </div>
-
           </div>
         </div>
       )}
 
       {/* MODAL THÊM CỘT MÔN HỌC LINH HOẠT CHO LỚP */}
       {isAddSubjectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="glass-panel w-full max-w-md p-6 bg-slate-900 border border-slate-700 shadow-2xl rounded-xl">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-              <div className="flex items-center space-x-2 text-emerald-400">
+        <div className="modal-overlay" onClick={() => setIsAddSubjectModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2 text-emerald-700">
                 <Plus className="w-5 h-5" />
-                <h3 className="text-base font-bold text-white">Thêm Cột Môn Học Linh Hoạt cho Lớp</h3>
+                <h3 className="font-military text-base font-bold text-slate-900">Thêm Cột Môn Học Linh Hoạt cho Lớp</h3>
               </div>
-              <button onClick={() => setIsAddSubjectModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsAddSubjectModalOpen(false)} className="btn btn-icon btn-secondary btn-xs">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleAddDynamicSubject} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Tên môn học mới <span className="text-red-400">*</span></label>
+                <label className="form-label">Tên môn học mới <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={newSubName}
                   onChange={(e) => setNewSubName(e.target.value)}
                   placeholder="VD: Điều lệnh Đội ngũ, Kỹ thuật Bắn súng..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                  className="form-input text-sm font-semibold"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Mã môn học <span className="text-red-400">*</span></label>
+                  <label className="form-label">Mã môn học <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={newSubCode}
                     onChange={(e) => setNewSubCode(e.target.value)}
                     placeholder="VD: QS2001"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="form-input text-sm font-mono"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Số lượng Tín chỉ <span className="text-red-400">*</span></label>
+                  <label className="form-label">Số lượng Tín chỉ <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     min="1"
                     max="10"
                     value={newSubCredits}
                     onChange={(e) => setNewSubCredits(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="form-input text-sm font-mono"
                     required
                   />
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-400 italic bg-slate-950 p-2.5 rounded border border-slate-800">
+              <p className="text-[11px] text-slate-500 italic bg-slate-50 p-2.5 rounded border border-slate-200">
                 📌 Cột môn học linh hoạt này sẽ được gán riêng cho lớp <strong>{matrixData.classCode}</strong> (Học kỳ {semester}) mà không ảnh hưởng tới khung đào tạo chuẩn của các lớp khác.
               </p>
 
               <div className="flex justify-end space-x-3 pt-2">
-                <button type="button" onClick={() => setIsAddSubjectModalOpen(false)} className="btn-secondary">Hủy bỏ</button>
-                <button type="submit" className="btn-primary bg-emerald-600 hover:bg-emerald-700 font-bold">
+                <button type="button" onClick={() => setIsAddSubjectModalOpen(false)} className="btn btn-secondary">Hủy bỏ</button>
+                <button type="submit" className="btn btn-primary font-bold">
                   Thêm Cột Vào Bảng Điểm
                 </button>
               </div>

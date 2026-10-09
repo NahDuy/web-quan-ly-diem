@@ -84,7 +84,6 @@ export default function MajorManagementView() {
     e.preventDefault();
     if (!formCode.trim() || !formName.trim()) {
       showNotification('', 'Vui lòng nhập đầy đủ Mã và Tên chuyên ngành');
-      return;
     }
 
     setSubmitting(true);
@@ -159,25 +158,25 @@ export default function MajorManagementView() {
     <div className="space-y-6">
       
       {/* Header Banner */}
-      <div className="glass-panel p-6 bg-slate-900 border border-amber-500/30 shadow-xl">
+      <div className="glass-panel p-6 bg-white border border-slate-200 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-br from-amber-600 to-yellow-600 text-yellow-100 rounded-xl border border-yellow-400 shadow-md">
+            <div className="p-3 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 shadow-xs">
               <BookmarkCheck className="w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 font-military-title flex items-center gap-2">
                 Quản lý Danh mục Chuyên ngành & Quy ước Đào tạo
               </h2>
-              <p className="text-xs text-slate-400">
-                Khai báo mã quy ước và tên các chuyên ngành phục vụ tự động sinh <b className="text-yellow-300">Mã Lớp</b> và <b className="text-yellow-300">Mã Học viên (MSSV)</b> khi import đầu khóa
+              <p className="text-xs text-slate-500">
+                Khai báo mã quy ước và tên các chuyên ngành phục vụ tự động sinh <b className="text-amber-800">Mã Lớp</b> và <b className="text-amber-800">Mã Học viên (MSSV)</b> khi import đầu khóa
               </p>
             </div>
           </div>
 
           <button
             onClick={handleOpenAdd}
-            className="btn-primary flex items-center gap-2 px-4 py-2.5 shadow-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Thêm Chuyên ngành Mới
@@ -187,104 +186,104 @@ export default function MajorManagementView() {
 
       {/* Notifications */}
       {msg && (
-        <div className="p-3 bg-emerald-950 border border-emerald-600 text-emerald-300 text-sm rounded-lg flex items-center gap-2 font-bold shadow-md">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+        <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm rounded-lg flex items-center gap-2 font-bold shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
           {msg}
         </div>
       )}
       {errorMsg && (
-        <div className="p-3 bg-red-950 border border-red-600 text-red-300 text-sm rounded-lg flex items-center gap-2 font-bold shadow-md">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+        <div className="p-3 bg-red-50 border border-red-300 text-red-800 text-sm rounded-lg flex items-center gap-2 font-bold shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
           {errorMsg}
         </div>
       )}
 
       {/* Quick Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-panel p-4 bg-slate-900/80 border border-slate-700 rounded-xl">
-          <p className="text-xs text-slate-400 font-bold uppercase">Tổng số Chuyên ngành</p>
-          <p className="text-2xl font-extrabold text-yellow-300 mt-1">{majors.length}</p>
+        <div className="glass-panel p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <p className="text-xs text-slate-500 font-bold uppercase">Tổng số Chuyên ngành</p>
+          <p className="text-2xl font-extrabold text-amber-700 mt-1">{majors.length}</p>
           <p className="text-[11px] text-slate-500 mt-0.5">Bao quát Bộ binh, Hỏa lực & Binh chủng</p>
         </div>
-        <div className="glass-panel p-4 bg-slate-900/80 border border-slate-700 rounded-xl">
-          <p className="text-xs text-slate-400 font-bold uppercase">Chuyên ngành Đang Đào tạo</p>
-          <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+        <div className="glass-panel p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <p className="text-xs text-slate-500 font-bold uppercase">Chuyên ngành Đang Đào tạo</p>
+          <p className="text-2xl font-extrabold text-emerald-700 mt-1">
             {majors.filter(m => m.classCount > 0).length}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">Có ít nhất 1 lớp học trực thuộc</p>
         </div>
-        <div className="glass-panel p-4 bg-slate-900/80 border border-slate-700 rounded-xl">
-          <p className="text-xs text-slate-400 font-bold uppercase">Khoa / Bộ môn Phụ trách</p>
-          <p className="text-2xl font-extrabold text-blue-400 mt-1">{departments.length}</p>
+        <div className="glass-panel p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <p className="text-xs text-slate-500 font-bold uppercase">Khoa / Bộ môn Phụ trách</p>
+          <p className="text-2xl font-extrabold text-blue-700 mt-1">{departments.length}</p>
           <p className="text-[11px] text-slate-500 mt-0.5">Đơn vị quản lý chương trình khung</p>
         </div>
       </div>
 
       {/* Military Training Targets Showcase */}
-      <div className="glass-panel p-5 bg-slate-900/90 border border-amber-500/40 rounded-xl space-y-3 shadow-lg">
+      <div className="glass-panel p-5 bg-white border border-amber-200 rounded-xl space-y-3 shadow-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-yellow-400" />
-            <h3 className="text-sm font-bold text-yellow-200 uppercase font-military-title">
+            <Shield className="w-5 h-5 text-amber-600" />
+            <h3 className="text-sm font-bold text-amber-900 uppercase font-military-title">
               QUY ƯỚC CÁC ĐỐI TƯỢNG ĐÀO TẠO TẠI NHÀ TRƯỜNG
             </h3>
           </div>
-          <span className="text-[11px] text-emerald-400 font-semibold">
+          <span className="text-[11px] text-emerald-700 font-semibold">
             Được tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
-            <span className="px-2 py-0.5 bg-amber-950 text-yellow-300 border border-amber-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
               SQDB
             </span>
-            <p className="text-xs font-bold text-white">Sĩ quan Dự bị</p>
-            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">SQDB2026-TSBB1</code></p>
-            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26TSBB001</code></p>
+            <p className="text-xs font-bold text-slate-900">Sĩ quan Dự bị</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB2026-TSBB1</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TSBB001</code></p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
-            <span className="px-2 py-0.5 bg-blue-950 text-blue-300 border border-blue-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition">
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
               TDT
             </span>
-            <p className="text-xs font-bold text-white">Tiểu đội trưởng</p>
-            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">TDT2026-BB1</code></p>
-            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26TDT-BB001</code></p>
+            <p className="text-xs font-bold text-slate-900">Tiểu đội trưởng</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">TDT2026-BB1</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TDT-BB001</code></p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
-            <span className="px-2 py-0.5 bg-red-950 text-red-300 border border-red-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-red-400 hover:bg-red-50/30 transition">
+            <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
               KDT
             </span>
-            <p className="text-xs font-bold text-white">Khẩu đội trưởng</p>
-            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">KDT2026-COI1</code></p>
-            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26KDT-COI001</code></p>
+            <p className="text-xs font-bold text-slate-900">Khẩu đội trưởng</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">KDT2026-COI1</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26KDT-COI001</code></p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
-            <span className="px-2 py-0.5 bg-purple-950 text-purple-300 border border-purple-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-purple-400 hover:bg-purple-50/30 transition">
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 border border-purple-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
               NVKT
             </span>
-            <p className="text-xs font-bold text-white">Nhân viên Kỹ thuật</p>
-            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">NVKT2026-TT1</code></p>
-            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26NVKT-TT001</code></p>
+            <p className="text-xs font-bold text-slate-900">Nhân viên Kỹ thuật</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">NVKT2026-TT1</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26NVKT-TT001</code></p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-yellow-500/60 transition">
-            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-emerald-400 hover:bg-emerald-50/30 transition">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
               HSQ
             </span>
-            <p className="text-xs font-bold text-white">Hạ sĩ quan Chỉ huy</p>
-            <p className="text-[10px] text-slate-400 mt-1">Mã lớp: <code className="text-emerald-400 font-mono">HSQ2026-BB1</code></p>
-            <p className="text-[10px] text-slate-400">Mã HV: <code className="text-yellow-300 font-mono">26HSQ-BB001</code></p>
+            <p className="text-xs font-bold text-slate-900">Hạ sĩ quan Chỉ huy</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">HSQ2026-BB1</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26HSQ-BB001</code></p>
           </div>
         </div>
       </div>
 
       {/* Main Table Panel */}
-      <div className="glass-panel bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+      <div className="glass-panel bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-slate-200 bg-slate-50/60 flex flex-wrap items-center justify-between gap-3">
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
             <input
@@ -292,32 +291,32 @@ export default function MajorManagementView() {
               placeholder="Tìm theo mã ngành, tên chuyên ngành, bộ môn..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-yellow-500"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
             />
           </div>
-          <span className="text-xs text-slate-400 font-semibold">
-            Hiển thị <b className="text-yellow-400">{filteredMajors.length}</b> / {majors.length} chuyên ngành
+          <span className="text-xs text-slate-500 font-semibold">
+            Hiển thị <b className="text-amber-800">{filteredMajors.length}</b> / {majors.length} chuyên ngành
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="p-3 w-12 text-center">STT</th>
                 <th className="p-3 w-28 text-center">Mã Quy Ước</th>
                 <th className="p-3">Tên Chuyên ngành</th>
                 <th className="p-3">Khoa / Bộ môn Quản lý</th>
                 <th className="p-3 text-center w-24">Số Lớp</th>
-                <th className="p-3 text-emerald-400">Mẫu Mã Lớp (2026)</th>
-                <th className="p-3 text-yellow-400">Mẫu Mã Học viên (2026)</th>
+                <th className="p-3 text-emerald-800">Mẫu Mã Lớp (2026)</th>
+                <th className="p-3 text-amber-800">Mẫu Mã Học viên (2026)</th>
                 <th className="p-3 w-28 text-center">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-400">
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
                     Đang tải danh sách chuyên ngành...
                   </td>
                 </tr>
@@ -329,47 +328,47 @@ export default function MajorManagementView() {
                 </tr>
               ) : (
                 filteredMajors.map((major, idx) => (
-                  <tr key={major.id} className="hover:bg-slate-800/40 transition">
+                  <tr key={major.id} className="hover:bg-slate-50/80 transition">
                     <td className="p-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                     <td className="p-3 text-center">
-                      <span className="px-2.5 py-1 bg-amber-950/80 text-yellow-300 border border-amber-600/60 rounded font-mono font-bold text-xs shadow-sm">
+                      <span className="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-300 rounded font-mono font-bold text-xs shadow-xs">
                         {major.code}
                       </span>
                     </td>
-                    <td className="p-3 font-bold text-white text-sm">
+                    <td className="p-3 font-bold text-slate-900 text-sm">
                       {major.name}
                     </td>
-                    <td className="p-3 text-slate-300 flex items-center gap-1.5">
+                    <td className="p-3 text-slate-700 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                      {major.departmentName}
+                      {major.departmentName || 'Chưa phân khoa'}
                     </td>
                     <td className="p-3 text-center font-bold">
                       {major.classCount > 0 ? (
-                        <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-600/40 rounded-full text-[11px]">
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[11px]">
                           {major.classCount} lớp
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-[11px]">0</span>
+                        <span className="text-slate-400 text-[11px]">0</span>
                       )}
                     </td>
-                    <td className="p-3 font-mono text-[11px] text-emerald-300">
+                    <td className="p-3 font-mono text-[11px] text-emerald-700 font-semibold">
                       SQDB2026-{major.code}1
                     </td>
-                    <td className="p-3 font-mono text-[11px] text-yellow-300 font-semibold">
+                    <td className="p-3 font-mono text-[11px] text-amber-800 font-bold">
                       26{major.code}001
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleOpenEdit(major)}
-                          className="p-1.5 text-slate-400 hover:text-yellow-300 hover:bg-slate-800 rounded transition"
+                          className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-slate-100 rounded transition cursor-pointer"
                           title="Sửa chuyên ngành"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(major.id, major.name)}
-                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded transition"
+                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
                           title="Xóa chuyên ngành"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -386,22 +385,22 @@ export default function MajorManagementView() {
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="p-5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center justify-between">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-500/20 text-yellow-300 rounded-lg border border-yellow-500/40">
+                <div className="p-2 bg-amber-100 text-amber-800 rounded-lg border border-amber-300">
                   <BookmarkCheck className="w-5 h-5" />
                 </div>
-                <h3 className="text-md font-bold text-white">
+                <h3 className="text-base font-bold text-slate-900 font-military-title">
                   {editingMajor ? 'Chỉnh sửa Chuyên ngành' : 'Thêm mới Chuyên ngành Đào tạo'}
                 </h3>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -411,8 +410,8 @@ export default function MajorManagementView() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               
               <div>
-                <label className="block text-xs font-bold text-yellow-300 uppercase mb-1">
-                  Mã Quy ước Chuyên ngành <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Mã Quy ước Chuyên ngành <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -420,16 +419,16 @@ export default function MajorManagementView() {
                   placeholder="Ví dụ: TSBB, COI, DKZ, PK127, PB, TT, CB..."
                   value={formCode}
                   onChange={(e) => setFormCode(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-yellow-200 font-mono font-bold uppercase focus:outline-none focus:border-yellow-400"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-amber-900 font-mono font-bold uppercase focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-500 mt-1">
                   Mã ngắn gọn (2-5 ký tự viết hoa) dùng để sinh Mã Lớp và Mã Học viên
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-yellow-300 uppercase mb-1">
-                  Tên Chuyên ngành <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Tên Chuyên ngành <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -437,18 +436,18 @@ export default function MajorManagementView() {
                   placeholder="Ví dụ: Trinh sát Bộ binh, Súng Cối 82mm, Súng ĐKZ..."
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white font-semibold focus:outline-none focus:border-yellow-400"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-yellow-300 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Khoa / Bộ môn Quản lý
                 </label>
                 <select
                   value={formDeptId}
                   onChange={(e) => setFormDeptId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white font-semibold focus:outline-none focus:border-yellow-400"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 cursor-pointer"
                 >
                   <option value="">-- Chưa gán khoa bộ môn --</option>
                   {departments.map((d) => (
@@ -461,37 +460,37 @@ export default function MajorManagementView() {
 
               {/* Dynamic Preview Box */}
               {formCode.trim() && (
-                <div className="p-3.5 bg-slate-950 border border-amber-500/30 rounded-xl space-y-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-yellow-400 uppercase">
-                    <Sparkles className="w-3.5 h-3.5" />
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-900 uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     Xem trước Quy ước Mã Tự động Năm 2026:
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2 bg-slate-900 border border-slate-800 rounded">
-                      <span className="text-[10px] text-slate-400 block">Mã Lớp dự kiến:</span>
-                      <span className="font-mono text-emerald-400 font-bold">SQDB2026-{formCode.trim().toUpperCase()}1</span>
+                    <div className="p-2.5 bg-white border border-amber-200 rounded">
+                      <span className="text-[10px] text-slate-500 block">Mã Lớp dự kiến:</span>
+                      <span className="font-mono text-emerald-700 font-bold">SQDB2026-{formCode.trim().toUpperCase()}1</span>
                     </div>
-                    <div className="p-2 bg-slate-900 border border-slate-800 rounded">
-                      <span className="text-[10px] text-slate-400 block">Mã Học viên dự kiến:</span>
-                      <span className="font-mono text-yellow-300 font-bold">26{formCode.trim().toUpperCase()}001</span>
+                    <div className="p-2.5 bg-white border border-amber-200 rounded">
+                      <span className="text-[10px] text-slate-500 block">Mã Học viên dự kiến:</span>
+                      <span className="font-mono text-amber-800 font-bold">26{formCode.trim().toUpperCase()}001</span>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Modal Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="btn-secondary px-4 py-2 text-xs"
+                  className="btn btn-secondary px-4 py-2 text-xs cursor-pointer"
                   disabled={submitting}
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary px-5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white"
+                  className="btn btn-primary px-5 py-2 text-xs font-bold cursor-pointer"
                   disabled={submitting}
                 >
                   {submitting ? 'Đang lưu...' : (editingMajor ? 'Cập nhật Chuyên ngành' : 'Thêm mới Chuyên ngành')}

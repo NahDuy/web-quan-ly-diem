@@ -280,6 +280,7 @@ body {
   left: 48px;
   z-index: 10;
   background-color: #ffffff !important;
+  box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.08);
   border-right: 2px solid #cbd5e1 !important;
 }
 
@@ -288,24 +289,25 @@ body {
   background-color: #f8fafc !important;
 }
 
-/* VERTICAL SUBJECT HEADER */
+/* VERTICAL SUBJECT HEADER (GỌN GÀNG, TUYỆT ĐỐI KHÔNG BỊ TRÀN CỘT) */
 .th-vertical-subject {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  text-align: left;
   white-space: nowrap;
-  height: 155px;
+  max-height: 165px;
+  height: 165px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   width: 100%;
-  min-width: 48px;
-  padding: 10px 4px;
+  padding: 8px 2px;
   font-weight: 700;
   font-size: 0.72rem;
   letter-spacing: 0.01em;
   color: #b45309;
   text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  display: block;
+  margin: 0 auto;
+  line-height: 1.2;
 }
 
 /* INLINE CELL INPUTS */
