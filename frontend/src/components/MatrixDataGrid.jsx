@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X } from 'lucide-react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet } from 'lucide-react';
 
 const INITIAL_MILITARY_MOCK_MATRIX = {
   classId: 1,
@@ -163,6 +163,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [newSubName, setNewSubName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubCredits, setNewSubCredits] = useState('3');
+
+  // State for Export Format Dropdown
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   const fetchClasses = async () => {
     try {
@@ -441,12 +444,24 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportHocPhan = () => {
     if (isDemoMode) {
-      alert('Tải file Excel mẫu tiêu đề chữ xoay dọc 90 độ tự động khi kết nối Backend.');
+      alert('Tải file Kết quả Học phần mẫu (KetQuaHocPhan.xlsx) tự động khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/${classId}/export-excel?semester=${semester}`;
+    window.location.href = `/api/v1/classes/${classId}/export-hoc-phan?semester=${semester}`;
+  };
+
+  const handleExportTotNghiep = () => {
+    if (isDemoMode) {
+      alert('Tải file Kết quả Tốt nghiệp mẫu (KetQuaTotNghiep.xls/.xlsx) tự động khi kết nối Backend.');
+      return;
+    }
+    window.location.href = `/api/v1/classes/${classId}/export-tot-nghiep?semester=${semester}`;
+  };
+
+  const handleExportExcel = () => {
+    handleExportHocPhan();
   };
 
   const safeColumns = matrixData?.columns || [];
@@ -574,10 +589,80 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Import Excel Điểm</span>
           </button>
 
-          <button onClick={handleExportExcel} className="btn btn-secondary btn-sm">
-            <Download className="w-3.5 h-3.5 text-amber-600" />
-            <span>Xuất File Excel</span>
-          </button>
+          {/* Dropdown 2 dạng xuất file Excel */}
+          <div className="relative">
+            <button
+              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+              className="btn btn-secondary btn-sm flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Chọn 1 trong 2 định dạng xuất file Excel"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-600" />
+              <span>Xuất File Excel</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            </button>
+
+            {exportDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setExportDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
+                  <div className="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Chọn loại báo cáo Excel xuất ra
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportHocPhan();
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-amber-50/80 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-2 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 shrink-0 mt-0.5">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>1. Kết quả Học phần</span>
+                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-mono font-semibold rounded">
+                          KetQuaHocPhan
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Kiểm tra thường xuyên theo môn, TBC học phần, rèn luyện & ĐK thi TN
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-slate-100 my-1"></div>
+
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportTotNghiep();
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50/80 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0 mt-0.5">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>2. Kết quả Tốt nghiệp</span>
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-semibold rounded">
+                          KetQuaTotNghiep
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Số vào sổ gốc, điểm thi TN (CTĐ-CTCT, Kỹ thuật), TB khóa & xếp loại TN
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

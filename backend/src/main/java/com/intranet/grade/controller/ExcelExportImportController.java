@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
@@ -21,12 +23,47 @@ public class ExcelExportImportController {
     @GetMapping("/{classId}/export-excel")
     public ResponseEntity<byte[]> exportExcel(
             @PathVariable Integer classId,
-            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+            @RequestParam(required = false, defaultValue = "1") Integer semester,
+            @RequestParam(required = false, defaultValue = "matrix") String type) throws IOException {
+
+        if ("hoc_phan".equalsIgnoreCase(type) || "hocphan".equalsIgnoreCase(type)) {
+            return exportHocPhan(classId, semester);
+        } else if ("tot_nghiep".equalsIgnoreCase(type) || "totnghiep".equalsIgnoreCase(type)) {
+            return exportTotNghiep(classId, semester);
+        }
 
         byte[] excelBytes = excelService.exportClassMatrixToExcel(classId, semester);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=BangDiem_MaTran_Lop_" + classId + ".xlsx")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"BangDiem_MaTran_Lop_" + classId + ".xlsx\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @GetMapping("/{classId}/export-hoc-phan")
+    public ResponseEntity<byte[]> exportHocPhan(
+            @PathVariable Integer classId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+
+        byte[] excelBytes = excelService.exportKetQuaHocPhanExcel(classId, semester);
+        String filename = "KetQuaHocPhan_Lop_" + classId + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @GetMapping("/{classId}/export-tot-nghiep")
+    public ResponseEntity<byte[]> exportTotNghiep(
+            @PathVariable Integer classId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+
+        byte[] excelBytes = excelService.exportKetQuaTotNghiepExcel(classId, semester);
+        String filename = "KetQuaTotNghiep_Lop_" + classId + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(excelBytes);
     }
