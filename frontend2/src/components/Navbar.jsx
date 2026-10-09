@@ -1,69 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  LayoutDashboard,
-  Users,
-  Table,
-  Compass,
-  BookmarkCheck,
-  History,
-  ChevronLeft,
-  ChevronRight,
-  Shield,
-  UserCheck,
+  LayoutDashboard, Users, Table, Compass,
+  Star, ChevronLeft, ChevronRight, UserCheck, Shield
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+const ROLE_BADGES = {
+  ROLE_BGH:       { label: 'Ban Giám Đốc / PĐT', bg: '#2d1b00', color: '#fde047', border: '#a16207' },
+  ROLE_BOMON:     { label: 'Chủ nhiệm Bộ môn',   bg: '#052e16', color: '#6ee7b7', border: '#166534' },
+  ROLE_GIANGVIEN: { label: 'Giáo viên Huấn luyện',bg: '#1a2e05', color: '#bef264', border: '#4d7c0f' },
+  ROLE_SINHVIEN:  { label: 'Học viên Quân sự',   bg: '#1e293b', color: '#94a3b8', border: '#475569' },
+};
 
 const NAV_TABS = [
-  { id: 'dashboard', label: 'Dashboard Chỉ Huy',    icon: LayoutDashboard },
-  { id: 'students',  label: 'Quản lý Học viên',     icon: Users },
-  { id: 'matrix',    label: 'Bảng Quản lý Điểm',    icon: Table },
-  { id: 'roadmap',   label: 'Lộ trình Đào tạo',     icon: Compass },
-  { id: 'majors',    label: 'Chuyên ngành & Quy ước', icon: BookmarkCheck },
-  { id: 'audit',     label: 'Nhật ký Audit Log',    icon: History },
+  { id: 'dashboard', label: 'Dashboard Chỉ Huy',  icon: LayoutDashboard },
+  { id: 'students',  label: 'Quản lý Học viên',   icon: Users },
+  { id: 'matrix',    label: 'Bảng Quản lý Điểm',  icon: Table },
+  { id: 'roadmap',   label: 'Lộ trình Đào tạo',   icon: Compass },
 ];
 
-export default function Navbar({
-  currentUser,
-  activeTab,
-  setActiveTab,
-  onOpenLogin,
-  collapsed = false,
-  setCollapsed,
-}) {
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'ROLE_BGH':
-        return { label: 'Ban Giám Đốc / PĐT', bg: '#fef3c7', color: '#b45309', border: '#fde047' };
-      case 'ROLE_BOMON':
-        return { label: 'Chủ nhiệm Bộ môn', bg: '#dcfce7', color: '#15803d', border: '#86efac' };
-      case 'ROLE_GIANGVIEN':
-        return { label: 'Giáo viên Huấn luyện', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' };
-      case 'ROLE_SINHVIEN':
-        return { label: 'Học viên Quân sự', bg: '#e0f2fe', color: '#0284c7', border: '#7dd3fc' };
-      default:
-        return { label: 'Cán bộ Quân sự', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-    }
-  };
-
-  const badge = getRoleBadge(currentUser?.role);
+export default function Navbar({ activeTab, setActiveTab, onOpenLogin, collapsed, setCollapsed }) {
+  const { currentUser } = useAuth();
+  const badge = currentUser ? (ROLE_BADGES[currentUser.role] ?? ROLE_BADGES.ROLE_SINHVIEN) : ROLE_BADGES.ROLE_SINHVIEN;
 
   return (
     <aside
       style={{
         width: collapsed ? '72px' : '260px',
         minWidth: collapsed ? '72px' : '260px',
-        background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 40,
         height: '100vh',
         position: 'sticky',
         top: 0,
-        boxShadow: '1px 0 4px rgba(0,0,0,0.03)',
+        zIndex: 40,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 0,
+        background: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflow: 'hidden',
+        boxShadow: '4px 0 20px rgba(0, 0, 0, 0.04)',
       }}
     >
-      {/* Brand Header with Academy Logo */}
+      {/* Brand Header */}
       <div
         style={{
           padding: collapsed ? '16px 8px' : '16px 14px',
@@ -92,7 +71,7 @@ export default function Navbar({
           />
           {!collapsed && (
             <div style={{ whitespace: 'nowrap', overflow: 'hidden' }}>
-              <h1 className="font-military" style={{ fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.2 }}>
+              <h1 className="font-military" style={{ fontSize: '0.85rem', color: '#0f172a', lineHeight: 1.2 }}>
                 QUẢN LÝ ĐÀO TẠO
               </h1>
               <p style={{ fontSize: '0.62rem', color: '#15803d', fontWeight: 700, letterSpacing: '0.08em', marginTop: '2px' }}>
@@ -102,7 +81,7 @@ export default function Navbar({
           )}
         </div>
 
-        {!collapsed && setCollapsed && (
+        {!collapsed && (
           <button
             id="btn-toggle-sidebar"
             onClick={() => setCollapsed(true)}
@@ -122,7 +101,7 @@ export default function Navbar({
       </div>
 
       {/* Expand button when collapsed */}
-      {collapsed && setCollapsed && (
+      {collapsed && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
           <button
             id="btn-expand-sidebar"
@@ -148,7 +127,7 @@ export default function Navbar({
           padding: collapsed ? '12px 6px' : '16px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px',
+          gap: '8px',
           overflowY: 'auto',
         }}
       >
@@ -190,7 +169,7 @@ export default function Navbar({
                   : '1px solid #e2e8f0',
                 borderRadius: '10px',
                 fontWeight: isActive ? 700 : 600,
-                fontSize: '0.825rem',
+                fontSize: '0.85rem',
                 boxShadow: isActive ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none',
                 transition: 'all 0.15s ease',
               }}
@@ -259,13 +238,13 @@ export default function Navbar({
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {currentUser?.fullName ?? 'Thượng úy Nguyễn Văn Giảng'}
+                  {currentUser?.fullName ?? 'Cán bộ chưa đăng nhập'}
                 </p>
                 <span
                   className="badge"
                   style={{
-                    background: badge.bg,
-                    color: badge.color,
+                    background: badge.bg === '#2d1b00' ? '#fef3c7' : badge.bg === '#052e16' ? '#dcfce7' : '#f1f5f9',
+                    color: badge.color === '#fde047' ? '#b45309' : badge.color === '#6ee7b7' ? '#15803d' : '#334155',
                     borderColor: badge.border,
                     fontSize: '0.62rem',
                     padding: '1px 6px',
@@ -311,3 +290,4 @@ export default function Navbar({
     </aside>
   );
 }
+

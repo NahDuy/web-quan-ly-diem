@@ -344,30 +344,30 @@ export default function StudentManagementView() {
       <div className="glass-panel p-5 flex flex-wrap items-center justify-between gap-4">
         
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-gradient-to-br from-amber-600 to-yellow-600 text-slate-950 rounded-xl shadow-lg border border-yellow-300/40">
+          <div className="p-2.5 bg-gradient-to-br from-amber-600 to-yellow-600 text-white rounded-xl shadow-md">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="font-military-title text-lg font-bold text-yellow-300">QUẢN LÝ QUÂN SỐ HỌC VIÊN QUÂN SỰ</h2>
-            <p className="text-xs text-emerald-400">Import danh sách từ Excel, quản lý số hiệu học viên, cấp bậc, chức vụ và đơn vị huấn luyện</p>
+            <h2 className="font-military text-lg font-bold text-slate-900">QUẢN LÝ QUÂN SỐ HỌC VIÊN QUÂN SỰ</h2>
+            <p className="text-xs text-emerald-700 font-semibold">Import danh sách từ Excel, quản lý số hiệu học viên, cấp bậc, chức vụ và đơn vị huấn luyện</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Filter by Academic Year */}
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1">
-            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Khóa:</span>
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1">
+            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Khóa:</span>
             <select
               value={selectedYear}
               onChange={(e) => {
                 setSelectedYear(e.target.value);
                 setSelectedClassId('');
               }}
-              className="bg-transparent text-xs text-white focus:outline-none font-semibold cursor-pointer"
+              className="bg-transparent text-xs text-slate-800 focus:outline-none font-semibold cursor-pointer"
             >
-              <option value="" className="bg-slate-900 text-white">Tất cả năm</option>
+              <option value="" className="bg-white text-slate-800">Tất cả năm</option>
               {displayYears.map(yr => (
-                <option key={yr} value={yr} className="bg-slate-900 text-white">Khóa {yr}</option>
+                <option key={yr} value={yr} className="bg-white text-slate-800">Khóa {yr}</option>
               ))}
             </select>
           </div>
@@ -376,7 +376,7 @@ export default function StudentManagementView() {
           <select
             value={selectedClassId}
             onChange={(e) => setSelectedClassId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold max-w-xs truncate"
+            className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold max-w-xs truncate"
           >
             <option value="">Tất cả các lớp {selectedYear ? `(Khóa ${selectedYear})` : ''} ({students.length} học viên)</option>
             {filteredClasses.length > 0 ? (
@@ -392,10 +392,10 @@ export default function StudentManagementView() {
           {selectedClassId && (
             <button
               onClick={() => setIsDeleteClassModalOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800 rounded-lg text-xs font-semibold transition-all shadow-sm"
+              className="btn btn-danger btn-xs"
               title="Xóa lớp học đang chọn và các học viên thuộc lớp"
             >
-              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+              <Trash2 className="w-3.5 h-3.5" />
               Xóa lớp này
             </button>
           )}
@@ -403,10 +403,10 @@ export default function StudentManagementView() {
           {/* Delete All Classes */}
           <button
             onClick={() => setIsDeleteAllModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/90 hover:bg-red-900 text-red-300 border border-red-700 hover:border-red-500 rounded-lg text-xs font-bold transition-all shadow-sm"
+            className="btn btn-danger btn-xs"
             title="Xóa toàn bộ các lớp học và học viên hiện có để chuẩn bị nạp lại từ Excel"
           >
-            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            <Trash2 className="w-3.5 h-3.5" />
             Xóa toàn bộ lớp
           </button>
 
@@ -417,17 +417,18 @@ export default function StudentManagementView() {
               placeholder="Tìm tên hoặc Số hiệu (SHHV)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 w-52"
+              className="bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 w-52"
             />
           </div>
 
-          <button onClick={() => { fetchStudents(); fetchClasses(); }} className="btn-secondary" title="Làm mới">
-            <RefreshCw className={`w-4 h-4 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={() => { fetchStudents(); fetchClasses(); }} className="btn btn-secondary btn-sm" title="Làm mới">
+            <RefreshCw className={`w-4 h-4 text-emerald-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button 
             onClick={() => setIsAdmissionsModalOpen(true)}
-            className="btn-primary flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold text-xs rounded-lg shadow-md"
+            className="btn btn-primary btn-sm"
+            style={{ background: 'linear-gradient(135deg, #d97706, #ca8a04)', border: '1px solid #b45309' }}
             title="Nhập danh sách học viên đầu vào từ file Excel (.xls / .xlsx)"
           >
             <Sparkles className="w-4 h-4 text-slate-950" />
@@ -476,10 +477,10 @@ export default function StudentManagementView() {
       )}
 
       {/* Military Student List Table */}
-      <div className="glass-panel overflow-hidden rounded-xl border border-slate-700 shadow-2xl">
+      <div className="glass-panel overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-800 border-b border-slate-700 text-xs font-bold text-yellow-300 uppercase tracking-wider">
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700 uppercase tracking-wider">
               <th className="p-3 text-center w-12">TT</th>
               <th className="p-3">Số hiệu Học viên (SHHV)</th>
               <th className="p-3">Họ và tên Học viên</th>
@@ -492,46 +493,46 @@ export default function StudentManagementView() {
               <th className="p-3 text-center">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800 text-sm">
+          <tbody className="divide-y divide-slate-100 text-sm">
             {filteredStudents.length === 0 ? (
               <tr>
-                <td colSpan={10} className="p-8 text-center text-slate-400 text-xs italic">
+                <td colSpan={10} className="p-8 text-center text-slate-500 text-xs italic">
                   Không tìm thấy học viên nào phù hợp
                 </td>
               </tr>
             ) : (
               filteredStudents.map((student, idx) => (
-                <tr key={student.id || idx} className="hover:bg-slate-800/60 transition">
+                <tr key={student.id || idx} className="hover:bg-slate-50 transition">
                   <td className="p-3 text-center text-xs text-slate-500 font-mono">{idx + 1}</td>
-                  <td className="p-3 font-mono text-xs text-yellow-300 font-bold">{student.studentCode}</td>
-                  <td className="p-3 font-bold text-slate-100">{student.fullName}</td>
-                  <td className="p-3 text-center font-mono text-xs font-bold text-amber-300">
+                  <td className="p-3 font-mono text-xs text-amber-700 font-bold">{student.studentCode}</td>
+                  <td className="p-3 font-bold text-slate-900">{student.fullName}</td>
+                  <td className="p-3 text-center font-mono text-xs font-bold text-amber-800">
                     {student.academicYear || '-'}
                   </td>
-                  <td className="p-3 text-center text-xs font-semibold text-emerald-300">{student.rank || 'Học viên'}</td>
-                  <td className="p-3 text-center text-xs text-slate-400">{student.dob || '-'}</td>
-                  <td className="p-3 text-xs text-slate-300 font-semibold">{student.classCode || student.className || '-'}</td>
-                  <td className="p-3 text-xs text-slate-400">{student.pob || '-'}</td>
+                  <td className="p-3 text-center text-xs font-semibold text-emerald-700">{student.rank || 'Học viên'}</td>
+                  <td className="p-3 text-center text-xs text-slate-600">{student.dob || '-'}</td>
+                  <td className="p-3 text-xs text-slate-800 font-semibold">{student.classCode || student.className || '-'}</td>
+                  <td className="p-3 text-xs text-slate-600">{student.pob || '-'}</td>
                   <td className="p-3 text-center">
                     {student.status === 'DA_TOT_NGHIEP' ? (
-                      <span className="badge-primary text-[10px]">Đã tốt nghiệp</span>
+                      <span className="badge badge-info text-[10px]">Đã tốt nghiệp</span>
                     ) : student.status === 'THOI_HOC' ? (
-                      <span className="badge-danger text-[10px]">Thôi học</span>
+                      <span className="badge badge-danger text-[10px]">Thôi học</span>
                     ) : (
-                      <span className="badge-success text-[10px]">Đang huấn luyện</span>
+                      <span className="badge badge-success text-[10px]">Đang huấn luyện</span>
                     )}
                   </td>
                   <td className="p-3 text-center space-x-2">
                     <button
                       onClick={() => handleOpenEditModal(student)}
-                      className="p-1 text-slate-400 hover:text-yellow-400 transition"
+                      className="p-1 text-slate-400 hover:text-amber-600 transition"
                       title="Sửa hồ sơ"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteStudent(student.id, student.fullName)}
-                      className="p-1 text-slate-400 hover:text-red-400 transition"
+                      className="p-1 text-slate-400 hover:text-red-600 transition"
                       title="Xóa học viên"
                     >
                       <Trash2 className="w-4 h-4" />

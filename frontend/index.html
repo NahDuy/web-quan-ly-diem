@@ -2,14 +2,14 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hệ thống Quản lý Đào tạo & Điểm Quân sự Intranet</title>
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Be Vietnam Pro + Oswald + Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS Script CDN for instant, perfect utility class styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,15 +18,15 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              military: ['Oswald', 'sans-serif'],
+              sans: ['"Be Vietnam Pro"', 'Inter', 'sans-serif'],
+              military: ['Oswald', '"Be Vietnam Pro"', 'sans-serif'],
             },
           }
         }
       }
     </script>
   </head>
-  <body class="bg-[#0b140c] text-slate-100 font-sans antialiased min-h-screen">
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

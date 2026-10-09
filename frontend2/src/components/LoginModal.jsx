@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, UserCheck } from 'lucide-react';
+import { X, UserCheck, Star } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const QUICK_ROLES = [
   {
@@ -7,90 +8,54 @@ const QUICK_ROLES = [
     password: 'password123',
     label: 'Ban Giám Đốc / PĐT',
     desc: 'Đại tá Trần Văn Thủ (Quyền khóa/mở khóa điểm)',
-    color: '#b45309',
-    borderColor: '#fde047',
+    color: '#fde047',
+    borderColor: 'rgba(234,179,8,0.45)',
   },
   {
     username: 'bomon_cntt',
     password: 'password123',
     label: 'Chủ nhiệm Bộ môn',
     desc: 'Thượng tá Lê Văn Bộ (Quản lý môn quân sự)',
-    color: '#15803d',
-    borderColor: '#86efac',
+    color: '#6ee7b7',
+    borderColor: 'rgba(52,211,153,0.45)',
   },
   {
     username: 'giangvien_a',
     password: 'password123',
     label: 'Giáo viên Huấn luyện',
     desc: 'Thượng úy Nguyễn Văn Giảng (Nhập điểm ma trận)',
-    color: '#166534',
-    borderColor: '#bbf7d0',
+    color: '#bef264',
+    borderColor: 'rgba(190,242,100,0.45)',
   },
   {
     username: 'sv001',
     password: 'password123',
     label: 'Học viên Quân sự',
     desc: 'Thượng sĩ Nguyễn Văn An (Xem bảng điểm cá nhân)',
-    color: '#0284c7',
-    borderColor: '#7dd3fc',
+    color: '#fbbf24',
+    borderColor: 'rgba(251,191,36,0.45)',
   },
 ];
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+  const { login } = useAuth();
   const [username, setUsername] = useState('giangvien_a');
   const [password, setPassword] = useState('password123');
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleQuickLogin = (roleUser, rolePass) => {
-    setUsername(roleUser);
-    setPassword(rolePass);
-    submitLogin(roleUser, rolePass);
-  };
-
-  const submitLogin = async (usr = username, pwd = password) => {
-    setError('');
+  const handleSubmit = async (usr = username, pwd = password) => {
     setSubmitting(true);
-    try {
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: usr, password: pwd }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.token) {
-          localStorage.setItem('jwt_token', data.token);
-        }
-        onLoginSuccess(data);
-        onClose();
-      } else {
-        // Fallback for Demo Mode
-        const demoUserMap = {
-          'admin': { username: 'admin', fullName: 'Đại tá Trần Văn Thủ', role: 'ROLE_BGH' },
-          'bomon_cntt': { username: 'bomon_cntt', fullName: 'Thượng tá Lê Văn Bộ', role: 'ROLE_BOMON' },
-          'giangvien_a': { username: 'giangvien_a', fullName: 'Thượng úy Nguyễn Văn Giảng', role: 'ROLE_GIANGVIEN' },
-          'sv001': { username: 'sv001', fullName: 'Thượng sĩ Nguyễn Văn An', role: 'ROLE_SINHVIEN' }
-        };
-        const demoUser = demoUserMap[usr] || demoUserMap['giangvien_a'];
-        onLoginSuccess(demoUser);
-        onClose();
-      }
-    } catch (err) {
-      const demoUserMap = {
-        'admin': { username: 'admin', fullName: 'Đại tá Trần Văn Thủ', role: 'ROLE_BGH' },
-        'bomon_cntt': { username: 'bomon_cntt', fullName: 'Thượng tá Lê Văn Bộ', role: 'ROLE_BOMON' },
-        'giangvien_a': { username: 'giangvien_a', fullName: 'Thượng úy Nguyễn Văn Giảng', role: 'ROLE_GIANGVIEN' },
-        'sv001': { username: 'sv001', fullName: 'Thượng sĩ Nguyễn Văn An', role: 'ROLE_SINHVIEN' }
-      };
-      const demoUser = demoUserMap[usr] || demoUserMap['giangvien_a'];
-      onLoginSuccess(demoUser);
+    setError('');
+    const result = await login(usr, pwd);
+    setSubmitting(false);
+    if (result.success) {
+      if (onLoginSuccess) onLoginSuccess();
       onClose();
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError('Thông tin đăng nhập không hợp lệ.');
     }
   };
 
@@ -98,30 +63,25 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-panel"
-        style={{ maxWidth: '460px', padding: '24px' }}
+        style={{ maxWidth: '440px', padding: '24px' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with Academy Logo */}
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img
-              src="/logo.jpg"
-              alt="Học Viện Quân Sự"
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '8px',
-                objectFit: 'contain',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                background: '#ffffff',
-              }}
-            />
+            <div style={{
+              padding: '8px',
+              background: 'linear-gradient(135deg, #d97706, #ca8a04)',
+              borderRadius: '10px', border: '1px solid #fde047',
+              boxShadow: '0 2px 8px rgba(217,119,6,0.25)',
+            }}>
+              <Star size={20} style={{ color: '#ffffff', fill: '#ffffff' }} />
+            </div>
             <div>
-              <h3 className="font-military" style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+              <h3 className="font-military" style={{ fontSize: '1rem', color: '#0f172a' }}>
                 Chuyển đổi Cấp bậc / Vai trò
               </h3>
-              <p style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600, marginTop: '2px' }}>
+              <p style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 600, marginTop: '2px' }}>
                 Chọn vai trò cán bộ chỉ huy hoặc học viên
               </p>
             </div>
@@ -136,18 +96,18 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
         </div>
 
         {error && (
-          <div className="alert alert-error" style={{ marginBottom: '16px', fontSize: '0.8rem' }}>
+          <div className="alert alert-error" style={{ marginBottom: '16px' }}>
             {error}
           </div>
         )}
 
-        {/* Quick Role Switcher Buttons */}
+        {/* Quick role buttons */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
           {QUICK_ROLES.map((r) => (
             <button
               key={r.username}
               id={`btn-quick-login-${r.username}`}
-              onClick={() => handleQuickLogin(r.username, r.password)}
+              onClick={() => handleSubmit(r.username, r.password)}
               disabled={submitting}
               style={{
                 padding: '10px 12px',
@@ -158,22 +118,22 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 cursor: 'pointer',
                 transition: 'background 0.15s, border-color 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#e2e8f0')}
               onMouseLeave={(e) => (e.currentTarget.style.background = '#f8fafc')}
             >
-              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: r.color, marginBottom: '2px' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: r.username === 'admin' ? '#b45309' : r.username === 'bomon_cntt' ? '#15803d' : r.username === 'giangvien_a' ? '#166534' : '#0284c7', marginBottom: '2px' }}>
                 {r.label}
               </p>
-              <p style={{ fontSize: '0.67rem', color: '#64748b', lineHeight: 1.4 }}>
+              <p style={{ fontSize: '0.65rem', color: '#64748b', lineHeight: 1.4 }}>
                 {r.desc}
               </p>
             </button>
           ))}
         </div>
 
-        {/* Form Login */}
+        {/* Manual login form */}
         <form
-          onSubmit={(e) => { e.preventDefault(); submitLogin(); }}
+          onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
           style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
         >
           <div>
@@ -187,7 +147,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               placeholder="username"
             />
           </div>
-
           <div>
             <label className="form-label" htmlFor="login-password">Mật khẩu</label>
             <input
@@ -199,16 +158,15 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               placeholder="••••••••"
             />
           </div>
-
           <button
             id="btn-submit-login"
             type="submit"
             className="btn btn-primary"
             disabled={submitting}
-            style={{ justifyContent: 'center', marginTop: '6px', padding: '10px' }}
+            style={{ justifyContent: 'center', marginTop: '4px', padding: '10px' }}
           >
             <UserCheck size={16} />
-            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập Hệ thống Quân sự'}
+            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập Hệ thống'}
           </button>
         </form>
       </div>

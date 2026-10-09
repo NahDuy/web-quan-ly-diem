@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Award, CheckCircle2, XCircle, TrendingUp, ShieldCheck, Shield, Star, Medal } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, XCircle, TrendingUp, Medal } from 'lucide-react';
 
 const MOCK_MILITARY_DASHBOARD = {
   totalStudents: 150,
@@ -14,6 +14,37 @@ const MOCK_MILITARY_DASHBOARD = {
     KHONG_DAT: 10
   }
 };
+
+const CLASSIFICATIONS = [
+  { key: 'XUAT_SAC', label: 'Xuất sắc',   desc: 'Điểm TN ≥ 9.0', bg: '#fef3c7', color: '#b45309', border: '#fde047' },
+  { key: 'GIOL',     label: 'Giỏi',       desc: '8.0 ≤ TN < 9.0', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+  { key: 'KHA',      label: 'Khá',        desc: '6.5 ≤ TN < 8.0', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+  { key: 'TRUNG_BINH', label: 'Trung bình', desc: '5.0 ≤ TN < 6.5', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  { key: 'KHONG_DAT', label: 'Không đạt', desc: 'TN < 5.0',       bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
+];
+
+function KpiCard({ icon: Icon, iconColor, label, value, unit, sub, barValue }) {
+  return (
+    <div className="glass-panel" style={{ padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {label}
+        </span>
+        <Icon size={18} style={{ color: iconColor }} />
+      </div>
+      <p style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+        {value}{' '}
+        {unit && <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>{unit}</span>}
+      </p>
+      {sub && <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '6px' }}>{sub}</p>}
+      {barValue != null && (
+        <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', marginTop: '10px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+          <div style={{ height: '100%', background: '#15803d', borderRadius: '3px', width: `${barValue}%`, transition: 'width 0.8s ease' }} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardView() {
   const [data, setData] = useState(MOCK_MILITARY_DASHBOARD);
@@ -36,112 +67,78 @@ export default function DashboardView() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Top Header Banner */}
-      <div className="glass-panel p-6 bg-gradient-to-r from-slate-950 via-emerald-950/60 to-slate-950 border border-amber-500/30">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-gradient-to-br from-amber-600 to-yellow-600 text-yellow-950 rounded-2xl border border-yellow-300/40 shadow-lg">
-            <LayoutDashboard className="w-8 h-8 text-slate-950" />
+      <div className="glass-panel" style={{ padding: '24px', background: 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)', border: '1px solid #86efac' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ padding: '12px', background: 'linear-gradient(135deg, #d97706, #ca8a04)', borderRadius: '16px', border: '1px solid rgba(253,224,71,0.6)', boxShadow: '0 4px 12px rgba(217,119,6,0.2)' }}>
+            <LayoutDashboard size={28} style={{ color: '#ffffff' }} />
           </div>
           <div>
-            <h2 className="font-military-title text-xl font-bold text-yellow-300 tracking-wide">
+            <h2 className="font-military" style={{ fontSize: '1.15rem', color: '#0f172a' }}>
               DASHBOARD BÁO CÁO CHỈ HUY — TỔNG QUAN KẾT QUẢ ĐÀO TẠO & HUẤN LUYỆN
             </h2>
-            <p className="text-xs text-emerald-400 font-medium">
+            <p style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 600, marginTop: '4px' }}>
               Báo cáo quân số học viên, tỷ lệ đủ điều kiện thi tốt nghiệp quân sự và phân loại rèn luyện kỷ luật
             </p>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Card 1: Total Cadets */}
-        <div className="glass-panel p-5 border border-amber-500/30 bg-slate-950/90 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Quân số Học viên</span>
-            <Users className="w-5 h-5 text-yellow-400" />
-          </div>
-          <p className="text-3xl font-black text-white">{data.totalStudents} <span className="text-xs font-normal text-slate-400">đồng chí</span></p>
-          <p className="text-[11px] text-emerald-400 mt-1">Đang tham gia huấn luyện toàn khóa</p>
-        </div>
-
-        {/* Card 2: Pass Rate */}
-        <div className="glass-panel p-5 border border-amber-500/30 bg-slate-950/90 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Tỷ lệ Đạt Điều kiện TN</span>
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-          </div>
-          <p className="text-3xl font-black text-emerald-400">{data.passRatePercentage}%</p>
-          <div className="w-full h-1.5 bg-slate-900 rounded-full mt-2 overflow-hidden border border-emerald-900">
-            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${data.passRatePercentage}%` }}></div>
-          </div>
-        </div>
-
-        {/* Card 3: Eligible Cadets */}
-        <div className="glass-panel p-5 border border-amber-500/30 bg-slate-950/90 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Đủ Điều Kiện Dự Thi TN</span>
-            <CheckCircle2 className="w-5 h-5 text-cyan-400" />
-          </div>
-          <p className="text-3xl font-black text-cyan-400">{data.eligibleStudentsCount} <span className="text-xs font-normal text-slate-400">đồng chí</span></p>
-          <p className="text-[11px] text-slate-400 mt-1">Rèn luyện Quân sự $\ge$ Khá & TB $\ge$ 6.5</p>
-        </div>
-
-        {/* Card 4: Ineligible Cadets */}
-        <div className="glass-panel p-5 border border-amber-500/30 bg-slate-950/90 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Chưa Đủ Điều Kiện</span>
-            <XCircle className="w-5 h-5 text-red-400" />
-          </div>
-          <p className="text-3xl font-black text-red-400">{data.ineligibleStudentsCount} <span className="text-xs font-normal text-slate-400">đồng chí</span></p>
-          <p className="text-[11px] text-slate-400 mt-1">Cần ôn luyện bổ sung kỷ luật / quân sự</p>
-        </div>
-
+      {/* KPI Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <KpiCard
+          icon={Users}
+          iconColor="#b45309"
+          label="Quân số Học viên"
+          value={data.totalStudents}
+          unit="đồng chí"
+          sub="Đang tham gia huấn luyện toàn khóa"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          iconColor="#15803d"
+          label="Tỷ lệ Đạt Điều kiện TN"
+          value={`${data.passRatePercentage}%`}
+          barValue={data.passRatePercentage}
+          sub="Chỉ số hoàn thành chỉ tiêu khóa học"
+        />
+        <KpiCard
+          icon={CheckCircle2}
+          iconColor="#0284c7"
+          label="Đủ Điều Kiện Dự Thi TN"
+          value={data.eligibleStudentsCount}
+          unit="đồng chí"
+          sub="Rèn luyện Quân sự ≥ Khá & Điểm TB ≥ 6.5"
+        />
+        <KpiCard
+          icon={XCircle}
+          iconColor="#dc2626"
+          label="Chưa Đủ Điều Kiện"
+          value={data.ineligibleStudentsCount}
+          unit="đồng chí"
+          sub="Cần ôn luyện bổ sung kỷ luật / quân sự"
+        />
       </div>
 
       {/* Military Honors Breakdown */}
-      <div className="glass-panel p-6 border border-amber-500/30 rounded-2xl">
-        <h3 className="font-military-title text-md font-bold text-yellow-300 mb-4 flex items-center gap-2">
-          <Medal className="w-5 h-5 text-yellow-400" />
+      <div className="glass-panel" style={{ padding: '24px', border: '1px solid #e2e8f0' }}>
+        <h3 className="font-military" style={{ fontSize: '0.98rem', color: '#b45309', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Medal size={20} style={{ color: '#b45309' }} />
           PHÂN PHỐI XẾP LOẠI TỐT NGHIỆP QUÂN SỰ
         </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="bg-amber-950/40 border border-yellow-500/40 p-4 rounded-xl text-center shadow-md">
-            <p className="text-xs text-yellow-300 font-bold mb-1">Xuất sắc</p>
-            <p className="text-2xl font-black text-yellow-400">{data.classificationCounts.XUAT_SAC}</p>
-            <p className="text-[10px] text-slate-400 mt-1">Điểm TN $\ge$ 9.0</p>
-          </div>
-
-          <div className="bg-emerald-950/40 border border-emerald-500/40 p-4 rounded-xl text-center shadow-md">
-            <p className="text-xs text-emerald-300 font-bold mb-1">Giỏi</p>
-            <p className="text-2xl font-black text-emerald-400">{data.classificationCounts.GIOL}</p>
-            <p className="text-[10px] text-slate-400 mt-1">8.0 $\le$ TN &lt; 9.0</p>
-          </div>
-
-          <div className="bg-lime-950/40 border border-lime-500/40 p-4 rounded-xl text-center shadow-md">
-            <p className="text-xs text-lime-300 font-bold mb-1">Khá</p>
-            <p className="text-2xl font-black text-lime-400">{data.classificationCounts.KHA}</p>
-            <p className="text-[10px] text-slate-400 mt-1">6.5 $\le$ TN &lt; 8.0</p>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-700 p-4 rounded-xl text-center shadow-md">
-            <p className="text-xs text-slate-300 font-bold mb-1">Trung bình</p>
-            <p className="text-2xl font-black text-slate-300">{data.classificationCounts.TRUNG_BINH}</p>
-            <p className="text-[10px] text-slate-400 mt-1">5.0 $\le$ TN &lt; 6.5</p>
-          </div>
-
-          <div className="bg-red-950/40 border border-red-500/40 p-4 rounded-xl text-center shadow-md">
-            <p className="text-xs text-red-300 font-bold mb-1">Không đạt</p>
-            <p className="text-2xl font-black text-red-400">{data.classificationCounts.KHONG_DAT}</p>
-            <p className="text-[10px] text-slate-400 mt-1">TN &lt; 5.0 / Chưa đủ ĐK</p>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+          {CLASSIFICATIONS.map(({ key, label, desc, bg, color, border }) => (
+            <div key={key} style={{ background: bg, border: `1px solid ${border}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.78rem', color, fontWeight: 700, marginBottom: '6px' }}>{label}</p>
+              <p style={{ fontSize: '1.85rem', fontWeight: 900, color, lineHeight: 1 }}>
+                {data.classificationCounts?.[key] ?? 0}
+              </p>
+              <p style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '6px' }}>{desc}</p>
+            </div>
+          ))}
         </div>
       </div>
-
     </div>
   );
 }
