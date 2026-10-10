@@ -754,7 +754,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Kiểm tra thường xuyên theo môn, TBC học phần, rèn luyện & ĐK thi TN
+                        Kiểm tra thường xuyên theo môn, TBC học phần & phân loại rèn luyện
                       </div>
                     </div>
                   </button>

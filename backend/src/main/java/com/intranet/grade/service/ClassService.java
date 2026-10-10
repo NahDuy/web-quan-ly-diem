@@ -9,6 +9,7 @@ import com.intranet.grade.repository.ClassRepository;
 import com.intranet.grade.repository.CourseRepository;
 import com.intranet.grade.repository.DepartmentRepository;
 import com.intranet.grade.repository.MajorRepository;
+import com.intranet.grade.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
