@@ -16,4 +16,6 @@ public interface SubjectRepository extends JpaRepository<Subject, Integer> {
 
     @Query("SELECT cs.subject FROM CurriculumSubject cs JOIN cs.curriculum c JOIN ClassEntity cl ON cl.major = c.major AND cl.course = c.course WHERE cl.id = :classId AND cs.semester = :semester ORDER BY cs.subject.code")
     List<Subject> findSubjectsByClassIdAndSemester(@Param("classId") Integer classId, @Param("semester") Integer semester);
+    List<Subject> findByDepartmentId(Integer departmentId);
+    List<Subject> findByDepartmentIdOrderByCode(Integer departmentId);
 }

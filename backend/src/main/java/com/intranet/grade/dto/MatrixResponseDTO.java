@@ -30,4 +30,7 @@ public class MatrixResponseDTO {
 
     private Boolean isTeacherView;
     private String departmentFilterName;
+    private List<Integer> assignedSubjectIds;
+    private String userRole;
+    private Boolean canEdit;
 }

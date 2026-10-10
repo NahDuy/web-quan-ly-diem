@@ -16,4 +16,5 @@ public class AuthResponse {
     private String role;
     private Integer departmentId;
     private String departmentName;
+    private java.util.List<Integer> assignedSubjectIds;
 }

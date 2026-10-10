@@ -8,15 +8,17 @@ import ExcelImportModal from './components/ExcelImportModal';
 import AuditLogView from './components/AuditLogView';
 import CurriculumRoadmapView from './components/CurriculumRoadmapView';
 import MajorManagementView from './components/MajorManagementView';
+import DepartmentUnitManagementView from './components/DepartmentUnitManagementView';
 import { User, LogIn, LogOut } from 'lucide-react';
 
 const TAB_NAMES = {
-  dashboard: 'Dashboard Chỉ Huy',
-  students:  'Quản lý Học viên',
-  matrix:    'Bảng Quản lý Điểm',
-  roadmap:   'Lộ trình Đào tạo',
-  majors:    'Chuyên ngành & Quy ước',
-  audit:     'Nhật ký Audit Log',
+  dashboard:   'Dashboard Chỉ Huy',
+  departments: 'Quản lý Khoa & Đơn vị',
+  students:    'Quản lý Học viên',
+  matrix:      'Bảng Quản lý Điểm',
+  roadmap:     'Lộ trình Đào tạo',
+  majors:      'Chuyên ngành & Quy ước',
+  audit:       'Nhật ký Audit Log',
 };
 
 export default function App() {
@@ -133,9 +135,12 @@ export default function App() {
                     {currentUser.fullName}
                   </p>
                   <p style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 600 }}>
-                    {currentUser.role === 'ROLE_BGH' ? 'Ban Giám Đốc / PĐT Quân sự' :
+                    {currentUser.role === 'ROLE_BGH' ? 'Ban Giám Hiệu' :
+                     currentUser.role === 'ROLE_PDT' ? 'Phòng Đào Tạo' :
+                     currentUser.role === 'ROLE_TRUONGKHOA' ? 'Trưởng Khoa' :
                      currentUser.role === 'ROLE_BOMON' ? 'Chủ nhiệm Bộ môn' :
-                     currentUser.role === 'ROLE_GIANGVIEN' ? 'Giáo viên Huấn luyện' :
+                     currentUser.role === 'ROLE_GIANGVIEN' ? 'Giáo viên bộ môn' :
+                     currentUser.role === 'ROLE_DONVI' ? 'Cán bộ Đơn vị (Tiểu đoàn)' :
                      currentUser.role === 'ROLE_SINHVIEN' ? 'Học viên Quân sự' : 'Cán bộ Quân sự'}
                   </p>
                 </div>
@@ -197,6 +202,10 @@ export default function App() {
         <main style={{ flex: 1, padding: '24px 28px 48px', overflowY: 'auto' }}>
           {activeTab === 'dashboard' && (
             <DashboardView />
+          )}
+
+          {activeTab === 'departments' && (
+            <DepartmentUnitManagementView currentUser={currentUser} />
           )}
 
           {activeTab === 'students' && (

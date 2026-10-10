@@ -179,6 +179,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [editSubCode, setEditSubCode] = useState('');
   const [editSubCredits, setEditSubCredits] = useState('3');
   const [editingSubject, setEditingSubject] = useState(false);
+  const [deleteSubjectId, setDeleteSubjectId] = useState('');
 
   // State for Export Format Dropdown & Class Selection Modal
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -283,7 +284,12 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     fetchMatrix();
   }, [classId, semester]);
 
-  const isPrivilegedUser = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role);
+  const userRole = currentUser?.role || matrixData?.userRole || '';
+  const isPrivilegedUser = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(userRole);
+  const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
+  const isDonVi = userRole === 'ROLE_DONVI';
+  const isGiangVien = userRole === 'ROLE_GIANGVIEN';
+  const canManageSubjects = isPrivilegedUser || isTruongKhoa;
 
   // Navigation between grid cells using Arrow keys & Enter (giống Excel)
   const handleGridKeyDown = (e, rowIdx, colIdx, isGradExam = false) => {
@@ -1110,66 +1116,73 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
 
         {/* KHỐI 2: THAO TÁC NHẬP LIỆU (LƯU ĐIỂM / LƯU CÓ LÝ DO / ĐỔI MÔN) */}
-        <div className="flex items-center gap-2">
-          {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP */}
-          <button
-            onClick={handleSaveDirect}
-            disabled={!hasUnsavedChanges || saving}
-            className={`btn btn-sm h-9 flex items-center gap-1.5 transition ${
-              hasUnsavedChanges
-                ? 'btn-primary font-bold shadow-sm cursor-pointer'
-                : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-            }`}
-            style={hasUnsavedChanges ? { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' } : {}}
-            title={
-              hasUnsavedChanges
-                ? `Lưu nhanh ${totalChangesCount} ô điểm vừa nhập vào hệ thống`
-                : 'Chưa có thay đổi điểm nào cần lưu'
-            }
-          >
-            <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
-            <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
-          </button>
-
-          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Admin/PĐT) */}
-          {isPrivilegedUser && hasUnsavedChanges && (
+        {!isDonVi ? (
+          <div className="flex items-center gap-2">
+            {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP */}
             <button
-              onClick={() => {
-                setAuditReason('');
-                setIsReasonModalOpen(true);
-              }}
-              disabled={saving}
-              className="btn btn-sm h-9 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
-              style={{
-                backgroundColor: '#fef3c7',
-                color: '#b45309',
-                border: '1px solid #fde047'
-              }}
-              title="Lưu kèm ghi lý do/quyết định sửa điểm vào Nhật ký Audit Log"
+              onClick={handleSaveDirect}
+              disabled={!hasUnsavedChanges || saving}
+              className={`btn btn-sm h-9 flex items-center gap-1.5 transition ${
+                hasUnsavedChanges
+                  ? 'btn-primary font-bold shadow-sm cursor-pointer'
+                  : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+              }`}
+              style={hasUnsavedChanges ? { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' } : {}}
+              title={
+                hasUnsavedChanges
+                  ? `Lưu nhanh ${totalChangesCount} ô điểm vừa nhập vào hệ thống`
+                  : 'Chưa có thay đổi điểm nào cần lưu'
+              }
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
-              <span>Lưu Kèm Lý Do</span>
+              <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
+              <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
             </button>
-          )}
 
-          {/* Nút 3: THÊM / SỬA MÔN (Admin/PĐT) */}
-          {isPrivilegedUser && (
-            <button
-              type="button"
-              onClick={() => {
-                fetchAvailableSubjects();
-                setAddSubjectTab('existing');
-                setIsAddSubjectModalOpen(true);
-              }}
-              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
-              style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
-              title="Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp"
-            >
-              <Plus className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="font-semibold text-emerald-800">Thêm / Sửa Môn</span>
-            </button>
-          )}
-        </div>
+            {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Admin/PĐT) */}
+            {isPrivilegedUser && hasUnsavedChanges && (
+              <button
+                onClick={() => {
+                  setAuditReason('');
+                  setIsReasonModalOpen(true);
+                }}
+                disabled={saving}
+                className="btn btn-sm h-9 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+                style={{
+                  backgroundColor: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde047'
+                }}
+                title="Lưu kèm ghi lý do/quyết định sửa điểm vào Nhật ký Audit Log"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
+                <span>Lưu Kèm Lý Do</span>
+              </button>
+            )}
+
+            {/* Nút 3: THÊM / SỬA MÔN (Admin/PĐT/Trưởng Khoa) */}
+            {canManageSubjects && (
+              <button
+                type="button"
+                onClick={() => {
+                  fetchAvailableSubjects();
+                  setAddSubjectTab('existing');
+                  setIsAddSubjectModalOpen(true);
+                }}
+                className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+                title="Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp"
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="font-semibold text-emerald-800">Thêm / Sửa Môn</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs font-bold">
+            <Shield className="w-4 h-4 text-blue-600" />
+            <span>Quyền Đơn vị: Xem điểm các đối tượng</span>
+          </div>
+        )}
 
         {/* KHỐI 3: TIỆN ÍCH EXCEL (XUẤT MẪU NHẬP ĐIỂM / IMPORT ĐIỂM / XUẤT BÁO CÁO) */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-lg">
@@ -1185,15 +1198,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Xuất Mẫu Nhập Điểm</span>
           </a>
 
-          {/* Nút B: IMPORT EXCEL ĐIỂM */}
-          <button
-            onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
-            className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
-            title="Nhập điểm hàng loạt từ file Excel"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Import Điểm</span>
-          </button>
+          {/* Nút B: IMPORT EXCEL ĐIỂM (Ẩn với Đơn vị vì chỉ có quyền tra cứu) */}
+          {!isDonVi && (
+            <button
+              onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
+              className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
+              title="Nhập điểm hàng loạt từ file Excel"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Import Điểm</span>
+            </button>
+          )}
 
           {/* Nút C: DROPDOWN XUẤT BÁO CÁO KẾT QUẢ */}
           <div className="relative">
@@ -1493,10 +1508,16 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             {/* Header Row 2: VERTICAL SUBJECT HEADERS */}
             <tr>
               {/* Sub-headers for Course Subjects */}
-              {safeColumns.map((col) => (
+              {safeColumns.map((col) => {
+                const userAssignedSubjects = currentUser?.assignedSubjectIds || matrixData?.assignedSubjectIds || [];
+                const isAssignedToTeacher = isGiangVien && userAssignedSubjects.includes(col.subjectId);
+                return (
                 <th key={col.subjectId} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom relative group">
-                  <div className="th-vertical-subject" title={`${col.subjectName} (${col.subjectCode}) - ${col.credits} tín chỉ`}>
+                  <div className="th-vertical-subject" title={`${col.subjectName} (${col.subjectCode}) - ${col.credits} tín chỉ${isAssignedToTeacher ? ' (Bạn phụ trách môn này)' : ''}`}>
                     {col.subjectName} <span className="text-emerald-700 text-[10px]">({col.credits}TC)</span>
+                    {isAssignedToTeacher && (
+                      <span className="ml-1 text-[9px] text-emerald-800 font-extrabold bg-emerald-200/90 px-1 py-0.5 rounded shadow-2xs">✓ Dạy</span>
+                    )}
                   </div>
                   {isPrivilegedUser && (
                     <div className="absolute top-1 right-0.5 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 z-10 bg-white/90 rounded p-0.5 shadow-xs">
@@ -1525,7 +1546,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     </div>
                   )}
                 </th>
-              ))}
+              );
+            })}
 
               {/* Sub-headers for 3 Graduation Exam Subjects */}
               {isPrivilegedUser && safeGradExamSubjects.map((sub) => (
@@ -1652,6 +1674,20 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     const currentScoreVal = isEdited ? editedScores[key] : (gradeDetail ? gradeDetail.score : '');
                     const hasExistingScore = gradeDetail && gradeDetail.score !== null && gradeDetail.score !== undefined;
                     const isLockedForTeacher = !isPrivilegedUser && hasExistingScore;
+                    const userAssignedSubjects = currentUser?.assignedSubjectIds || matrixData?.assignedSubjectIds || [];
+                    const isSubjectAllowedForTeacher = !isGiangVien || userAssignedSubjects.includes(col.subjectId);
+                    const isCellDisabled = isDonVi || (matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher || !isSubjectAllowedForTeacher;
+
+                    let cellTitle = 'Nhập điểm (0-10, ví dụ 9.5). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo';
+                    if (isDonVi) {
+                      cellTitle = 'Tài khoản Đơn vị chỉ có quyền tra cứu/xem điểm (chế độ Read-only)';
+                    } else if (!isSubjectAllowedForTeacher) {
+                      cellTitle = 'Bạn không được phân công giảng dạy môn học này';
+                    } else if (isLockedForTeacher) {
+                      cellTitle = 'Điểm đã lưu vào hệ thống. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên mới có quyền chỉnh sửa.';
+                    } else if (matrixData.isLocked && !isPrivilegedUser) {
+                      cellTitle = 'Bảng điểm đang bị khóa bởi Ban Đào Tạo';
+                    }
 
                     return (
                       <td key={col.subjectId} className={isEdited ? 'cell-modified' : ''}>
@@ -1661,15 +1697,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           id={`score-input-${rowIdx}-${colIdx}`}
                           data-row-idx={rowIdx}
                           data-col-idx={colIdx}
-                          disabled={(matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher}
+                          disabled={isCellDisabled}
                           value={currentScoreVal !== null && currentScoreVal !== undefined ? currentScoreVal : ''}
                           onChange={(e) => handleScoreInputChange(row.studentId, col.subjectId, e.target.value)}
                           onKeyDown={(e) => handleGridKeyDown(e, rowIdx, colIdx, false)}
                           onBlur={(e) => handleScoreBlur(row.studentId, col.subjectId, e.target.value)}
                           placeholder="-"
-                          title={isLockedForTeacher ? 'Điểm đã lưu vào hệ thống. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên mới có quyền chỉnh sửa.' : 'Nhập điểm (0-10, ví dụ 9.5). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo'}
+                          title={cellTitle}
                           className={`cell-input text-center font-bold ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${
-                            isLockedForTeacher
+                            isDonVi
+                              ? 'bg-slate-50 text-slate-700 cursor-not-allowed font-medium'
+                              : !isSubjectAllowedForTeacher
+                              ? 'bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-75'
+                              : isLockedForTeacher
                               ? 'bg-slate-100 text-slate-700 cursor-not-allowed font-medium opacity-90'
                               : matrixData.isLocked && !isPrivilegedUser
                               ? 'cursor-not-allowed opacity-50'
@@ -1878,7 +1918,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               </button>
             </div>
 
-            {/* TAB SELECTOR: CHỌN MÔN CÓ SẴN, TẠO MÔN MỚI, SỬA MÔN HOẶC ĐỔI MÔN CHO RIÊNG LỚP */}
+            {/* TAB SELECTOR: CHỌN MÔN CÓ SẴN, TẠO MÔN MỚI, SỬA MÔN, ĐỔI MÔN HOẶC XÓA MÔN CHO RIÊNG LỚP */}
             <div className="flex items-center gap-1.5 mb-4 p-1 bg-slate-100 rounded-lg border border-slate-200">
               <button
                 type="button"
@@ -1945,6 +1985,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 <ArrowLeftRight className="w-3.5 h-3.5" />
                 <span>4. Đổi Môn</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddSubjectTab('delete');
+                  if (!deleteSubjectId && rawColumns.length > 0) {
+                    setDeleteSubjectId(rawColumns[0].subjectId);
+                  }
+                }}
+                className={`flex-1 py-1.5 px-1.5 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1 ${
+                  addSubjectTab === 'delete'
+                    ? 'bg-red-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>5. Xóa Môn</span>
+              </button>
             </div>
 
             {addSubjectTab === 'existing' && (
@@ -1982,19 +2039,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   </p>
                 </div>
 
-                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsAddSubjectModalOpen(false)}
                     disabled={addingSubject}
-                    className="btn btn-secondary text-xs cursor-pointer"
+                    className="btn btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-slate-100 transition"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
                     disabled={addingSubject || availableSubjects.length === 0}
-                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="btn btn-primary px-5 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm rounded-lg"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{addingSubject ? 'Đang thêm...' : 'Gán Cột Môn Này Vào Lớp'}</span>
@@ -2054,19 +2111,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   📌 Cột môn học mới này sẽ được tạo và lưu trực tiếp vào cơ sở dữ liệu cho lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}).
                 </div>
 
-                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsAddSubjectModalOpen(false)}
                     disabled={addingSubject}
-                    className="btn btn-secondary text-xs cursor-pointer"
+                    className="btn btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-slate-100 transition"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
                     disabled={addingSubject}
-                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="btn btn-primary px-5 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm rounded-lg"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{addingSubject ? 'Đang tạo...' : 'Tạo & Gán Cột Vào Bảng Điểm'}</span>
@@ -2160,19 +2217,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   ✏️ Thay đổi sẽ cập nhật trực tiếp tên, mã môn và số tín chỉ của môn học này trong hệ thống.
                 </div>
 
-                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsAddSubjectModalOpen(false)}
                     disabled={editingSubject}
-                    className="btn btn-secondary text-xs cursor-pointer"
+                    className="btn btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-slate-100 transition"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
                     disabled={editingSubject || !editSubjectId}
-                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="btn btn-primary px-5 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm rounded-lg"
                     style={{ backgroundColor: '#b45309', borderColor: '#92400e' }}
                   >
                     <Edit className={`w-4 h-4 ${editingSubject ? 'animate-spin' : ''}`} />
@@ -2247,23 +2304,91 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   </p>
                 </div>
 
-                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsAddSubjectModalOpen(false)}
                     disabled={replacingSubject}
-                    className="btn btn-secondary text-xs cursor-pointer"
+                    className="btn btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-slate-100 transition"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
                     disabled={replacingSubject || !replaceOldSubjectId || !replaceNewSubjectId}
-                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="btn btn-primary px-5 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm rounded-lg"
                     style={{ backgroundColor: '#b45309', borderColor: '#92400e' }}
                   >
                     <ArrowLeftRight className={`w-4 h-4 ${replacingSubject ? 'animate-spin' : ''}`} />
                     <span>{replacingSubject ? 'Đang đổi môn...' : 'Xác Nhận Đổi Môn Cho Lớp'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {addSubjectTab === 'delete' && (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!deleteSubjectId) return;
+                const found = rawColumns.find(c => String(c.subjectId) === String(deleteSubjectId));
+                if (found) {
+                  await handleRemoveSubjectFromClass(found.subjectId, found.subjectName);
+                  setIsAddSubjectModalOpen(false);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Chọn môn học của lớp cần xóa <span className="text-red-500">*</span>
+                  </label>
+                  {rawColumns.length > 0 ? (
+                    <select
+                      value={deleteSubjectId}
+                      onChange={(e) => setDeleteSubjectId(e.target.value)}
+                      className="form-input text-xs font-semibold text-slate-900"
+                      required
+                    >
+                      <option value="">-- Chọn môn cần xóa khỏi lớp này --</option>
+                      {rawColumns.map((col) => (
+                        <option key={col.subjectId} value={col.subjectId}>
+                          {col.subjectCode} — {col.subjectName} ({col.credits} TC)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                      Lớp này hiện không có môn học nào để xóa.
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-900 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5 text-red-800">
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Cảnh báo xóa cột môn học:</span>
+                  </p>
+                  <p>
+                    Cột môn này sẽ bị gỡ bỏ khỏi bảng điểm của lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}). Toàn bộ điểm số đã nhập cho môn này của lớp sẽ bị xóa.
+                  </p>
+                  <p className="text-red-700 font-semibold">
+                    Thao tác này chỉ xóa riêng trong lớp này, hoàn toàn không xóa môn học trong Lộ trình chung.
+                  </p>
+                </div>
+
+                <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddSubjectModalOpen(false)}
+                    className="btn btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-slate-100 transition"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!deleteSubjectId}
+                    className="btn btn-danger px-5 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xác Nhận Xóa Cột Môn Này</span>
                   </button>
                 </div>
               </form>

@@ -31,6 +31,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
+    private final com.intranet.grade.repository.TeacherSubjectRepository teacherSubjectRepository;
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
@@ -43,6 +44,10 @@ public class AuthController {
             String jwt = tokenProvider.generateToken(authentication);
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
+            java.util.List<Integer> assignedSubjects = teacherSubjectRepository.findByTeacherId(userDetails.getId()).stream()
+                    .map(ts -> ts.getSubject().getId())
+                    .toList();
+
             return ResponseEntity.ok(AuthResponse.builder()
                     .token(jwt)
                     .username(userDetails.getUsername())
@@ -50,6 +55,7 @@ public class AuthController {
                     .role(userDetails.getRole())
                     .departmentId(userDetails.getDepartmentId())
                     .departmentName(userDetails.getDepartmentName())
+                    .assignedSubjectIds(assignedSubjects)
                     .build());
         } catch (org.springframework.security.core.AuthenticationException ex) {
             return ResponseEntity.status(401).body(java.util.Map.of(
@@ -120,12 +126,17 @@ public class AuthController {
         if (userDetails == null) {
             return ResponseEntity.status(401).build();
         }
+        java.util.List<Integer> assignedSubjects = teacherSubjectRepository.findByTeacherId(userDetails.getId()).stream()
+                .map(ts -> ts.getSubject().getId())
+                .toList();
+
         return ResponseEntity.ok(AuthResponse.builder()
                 .username(userDetails.getUsername())
                 .fullName(userDetails.getFullName())
                 .role(userDetails.getRole())
                 .departmentId(userDetails.getDepartmentId())
                 .departmentName(userDetails.getDepartmentName())
+                .assignedSubjectIds(assignedSubjects)
                 .build());
     }
 }

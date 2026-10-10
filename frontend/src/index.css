@@ -52,6 +52,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;

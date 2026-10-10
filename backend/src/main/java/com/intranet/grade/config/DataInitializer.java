@@ -24,45 +24,104 @@ public class DataInitializer implements CommandLineRunner {
     private final CourseRepository courseRepository;
     private final CurriculumRepository curriculumRepository;
     private final CurriculumSubjectRepository curriculumSubjectRepository;
+    private final com.intranet.grade.repository.TeacherSubjectRepository teacherSubjectRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
-        log.info("Checking & Initializing default security users...");
+        log.info("Checking & Initializing default security users, roles, and departments...");
 
         Role roleBgh = roleRepository.findByCode("ROLE_BGH")
-                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_BGH").name("Ban Giám Hiệu & Phòng Đào Tạo").build()));
-
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_BGH").name("Ban Giám Hiệu").build()));
+        Role rolePdt = roleRepository.findByCode("ROLE_PDT")
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_PDT").name("Phòng Đào Tạo").build()));
+        Role roleTruongKhoa = roleRepository.findByCode("ROLE_TRUONGKHOA")
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_TRUONGKHOA").name("Trưởng Khoa").build()));
+        Role roleGiangVien = roleRepository.findByCode("ROLE_GIANGVIEN")
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_GIANGVIEN").name("Giáo viên bộ môn").build()));
+        Role roleDonVi = roleRepository.findByCode("ROLE_DONVI")
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_DONVI").name("Đơn vị Quản lý Học viên").build()));
         Role roleBomon = roleRepository.findByCode("ROLE_BOMON")
                 .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_BOMON").name("Đơn vị / Bộ môn").build()));
-
-        Role roleGiangVien = roleRepository.findByCode("ROLE_GIANGVIEN")
-                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_GIANGVIEN").name("Giáo viên / Cán bộ Huấn luyện").build()));
-
         Role roleSinhVien = roleRepository.findByCode("ROLE_SINHVIEN")
                 .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_SINHVIEN").name("Học viên Sĩ quan Dự bị").build()));
 
-        Department pdt = departmentRepository.findByCode("PDT")
-                .orElseGet(() -> departmentRepository.save(Department.builder().code("PDT").name("Phòng Đào Tạo").type("PHONG_DAO_TAO").build()));
+        Department bghDept = departmentRepository.findByCode("BGH")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("BGH").name("Ban Giám Hiệu").type("PHONG_BAN").build()));
+        Department pdtDept = departmentRepository.findByCode("PDT")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("PDT").name("Phòng Đào Tạo").type("PHONG_BAN").build()));
+        Department khoaBc = departmentRepository.findByCode("KHOA_BC")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("KHOA_BC").name("Khoa Binh chủng Hợp thành").type("KHOA").build()));
+        Department khoaQs = departmentRepository.findByCode("KHOA_QS")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("KHOA_QS").name("Khoa Quân sự chung").type("KHOA").build()));
+        Department khoaCt = departmentRepository.findByCode("KHOA_CT")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("KHOA_CT").name("Khoa CTĐ - CTCT (Chính trị)").type("KHOA").build()));
+        Department donviD1 = departmentRepository.findByCode("D1")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("D1").name("Tiểu đoàn 1 - Quản lý Học viên").type("DON_VI").build()));
+        Department donviD2 = departmentRepository.findByCode("D2")
+                .orElseGet(() -> departmentRepository.save(Department.builder().code("D2").name("Tiểu đoàn 2 - Quản lý Học viên").type("DON_VI").build()));
 
-        String defaultPass = passwordEncoder.encode("password123");
+        // Khởi tạo 5 tài khoản test tương ứng với 5 role: username = password
+        createOrUpdateUser("bgh", passwordEncoder.encode("bgh"), "Thiếu tướng Trần Quốc Tuấn (Ban Giám Hiệu)", "bgh@intranet.edu.vn", roleBgh, bghDept);
+        createOrUpdateUser("pdt", passwordEncoder.encode("pdt"), "Đại tá Nguyễn Đức Phòng (Trưởng Phòng Đào Tạo)", "pdt@intranet.edu.vn", rolePdt, pdtDept);
+        createOrUpdateUser("truongkhoa", passwordEncoder.encode("truongkhoa"), "Thượng tá Lê Đình Khoa (Trưởng Khoa Binh chủng Hợp thành)", "truongkhoa@intranet.edu.vn", roleTruongKhoa, khoaBc);
+        createOrUpdateUser("giaovien", passwordEncoder.encode("giaovien"), "Đại úy Hoàng Văn Giáo (Giáo viên Bộ môn)", "giaovien@intranet.edu.vn", roleGiangVien, khoaBc);
+        createOrUpdateUser("donvi", passwordEncoder.encode("donvi"), "Trung tá Đặng Văn Đơn (Chỉ huy Đơn vị QLHV Tiểu đoàn 1)", "donvi@intranet.edu.vn", roleDonVi, donviD1);
 
-        createOrUpdateUser("admin", defaultPass, "Đại tá Trần Văn Thủ (Ban Giám Hiệu)", "bgh@intranet.edu.vn", roleBgh, pdt);
-        createOrUpdateUser("bomon_ht", defaultPass, "Thượng tá Lê Văn Bộ (Chủ nhiệm Bộ môn)", "bomon.ht@intranet.edu.vn", roleBomon, pdt);
-        createOrUpdateUser("giangvien_a", defaultPass, "Thượng úy Nguyễn Văn Giảng (Giáo viên)", "giang.nv@intranet.edu.vn", roleGiangVien, pdt);
-        createOrUpdateUser("sv001", defaultPass, "Thượng sĩ Nguyễn Văn An (Học viên)", "an.nv@student.edu.vn", roleSinhVien, pdt);
+        // Giữ tài khoản quản trị cũ
+        createOrUpdateUser("admin", passwordEncoder.encode("password123"), "Đại tá Trần Văn Thủ (Ban Giám Hiệu)", "admin@intranet.edu.vn", roleBgh, pdtDept);
+        createOrUpdateUser("bomon_ht", passwordEncoder.encode("password123"), "Thượng tá Lê Văn Bộ (Chủ nhiệm Bộ môn)", "bomon.ht@intranet.edu.vn", roleBomon, khoaBc);
+        createOrUpdateUser("giangvien_a", passwordEncoder.encode("password123"), "Thượng úy Nguyễn Văn Giảng (Giáo viên)", "giang.nv@intranet.edu.vn", roleGiangVien, khoaBc);
+        createOrUpdateUser("sv001", passwordEncoder.encode("password123"), "Thượng sĩ Nguyễn Văn An (Học viên)", "an.nv@student.edu.vn", roleSinhVien, donviD1);
 
-        log.info("Default security users initialized successfully! All users updated with password 'password123'.");
+        log.info("5 core security roles & accounts initialized successfully!");
 
         // Khởi tạo danh mục chuyên ngành chuẩn quân sự
-        initDefaultMajors(pdt);
+        initDefaultMajors(pdtDept);
 
         // Khởi tạo môn học quân sự và Lộ trình đào tạo chuẩn theo chuyên ngành
-        initMilitarySubjectsAndCurriculums(pdt);
+        initMilitarySubjectsAndCurriculums(khoaBc);
+
+        // Phân công môn giảng dạy cho tài khoản giáo viên test
+        assignDefaultSubjectsToTeacher();
 
         // Đồng bộ sequence tự tăng (PostgreSQL auto-increment sequence sync)
         syncPostgresSequences();
+    }
+
+    private void assignDefaultSubjectsToTeacher() {
+        try {
+            userRepository.findByUsername("giaovien").ifPresent(gv -> {
+                List<String> codes = List.of("BB101", "QS103", "TS101");
+                for (String code : codes) {
+                    subjectRepository.findByCode(code).ifPresent(sub -> {
+                        if (!teacherSubjectRepository.existsByTeacherIdAndSubjectId(gv.getId(), sub.getId())) {
+                            teacherSubjectRepository.save(com.intranet.grade.entity.TeacherSubject.builder()
+                                    .teacher(gv)
+                                    .subject(sub)
+                                    .build());
+                            log.info("Assigned subject {} to test teacher 'giaovien'", sub.getCode());
+                        }
+                    });
+                }
+            });
+            userRepository.findByUsername("giangvien_a").ifPresent(gv -> {
+                List<String> codes = List.of("BB101", "QS101", "QS103");
+                for (String code : codes) {
+                    subjectRepository.findByCode(code).ifPresent(sub -> {
+                        if (!teacherSubjectRepository.existsByTeacherIdAndSubjectId(gv.getId(), sub.getId())) {
+                            teacherSubjectRepository.save(com.intranet.grade.entity.TeacherSubject.builder()
+                                    .teacher(gv)
+                                    .subject(sub)
+                                    .build());
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Notice assigning default subjects to teacher: {}", e.getMessage());
+        }
     }
 
     private void initDefaultMajors(Department defaultDept) {
@@ -153,11 +212,18 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             user.setPasswordHash(passwordHash);
             user.setFullName(fullName);
+            user.setEmail(email);
             user.setRole(role);
             user.setDepartment(dept);
             user.setIsActive(true);
         }
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            log.warn("Notice saving user {} with email {}: {}, retrying without email", username, email, e.getMessage());
+            user.setEmail(null);
+            userRepository.save(user);
+        }
     }
 
     private void initMilitarySubjectsAndCurriculums(Department defaultDept) {

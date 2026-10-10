@@ -6,6 +6,7 @@ import {
   Compass,
   BookmarkCheck,
   History,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -14,12 +15,13 @@ import {
 } from 'lucide-react';
 
 const NAV_TABS = [
-  { id: 'dashboard', label: 'Dashboard Chỉ Huy',      icon: LayoutDashboard },
-  { id: 'students',  label: 'Quản lý Học viên',       icon: Users },
-  { id: 'matrix',    label: 'Bảng Quản lý Điểm',      icon: Table },
-  { id: 'roadmap',   label: 'Lộ trình Đào tạo',       icon: Compass },
-  { id: 'majors',    label: 'Chuyên ngành & Quy ước', icon: BookmarkCheck },
-  { id: 'audit',     label: 'Nhật ký Audit Log',      icon: History },
+  { id: 'dashboard',   label: 'Dashboard Chỉ Huy',        icon: LayoutDashboard },
+  { id: 'departments', label: 'Quản lý Khoa & Đơn vị',    icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+  { id: 'students',    label: 'Quản lý Học viên',         icon: Users },
+  { id: 'matrix',      label: 'Bảng Quản lý Điểm',        icon: Table },
+  { id: 'roadmap',     label: 'Lộ trình Đào tạo',         icon: Compass },
+  { id: 'majors',      label: 'Chuyên ngành & Quy ước',   icon: BookmarkCheck },
+  { id: 'audit',       label: 'Nhật ký Audit Log',        icon: History, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN'] },
 ];
 
 export default function Navbar({
@@ -34,11 +36,17 @@ export default function Navbar({
   const getRoleBadge = (role) => {
     switch (role) {
       case 'ROLE_BGH':
-        return { label: 'Ban Giám Đốc / PĐT', bg: '#fef3c7', color: '#b45309', border: '#fde047' };
+        return { label: 'Ban Giám Hiệu', bg: '#fef3c7', color: '#b45309', border: '#fde047' };
+      case 'ROLE_PDT':
+        return { label: 'Phòng Đào Tạo', bg: '#ede9fe', color: '#6d28d9', border: '#ddd6fe' };
+      case 'ROLE_TRUONGKHOA':
+        return { label: 'Trưởng Khoa', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' };
       case 'ROLE_BOMON':
         return { label: 'Chủ nhiệm Bộ môn', bg: '#dcfce7', color: '#15803d', border: '#86efac' };
       case 'ROLE_GIANGVIEN':
-        return { label: 'Giáo viên Huấn luyện', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' };
+        return { label: 'Giáo viên bộ môn', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' };
+      case 'ROLE_DONVI':
+        return { label: 'Cán bộ Đơn vị (Tiểu đoàn)', bg: '#fef9c3', color: '#854d0e', border: '#fef08a' };
       case 'ROLE_SINHVIEN':
         return { label: 'Học viên Quân sự', bg: '#e0f2fe', color: '#0284c7', border: '#7dd3fc' };
       default:
@@ -168,7 +176,9 @@ export default function Navbar({
           </p>
         )}
 
-        {NAV_TABS.map(({ id, label, icon: Icon }) => {
+        {NAV_TABS
+          .filter(tab => !tab.roles || !currentUser?.role || tab.roles.includes(currentUser.role))
+          .map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id;
           return (
             <button

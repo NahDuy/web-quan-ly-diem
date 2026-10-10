@@ -62,6 +62,36 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     }
   };
 
+  const handleQuickLogin = async (username, password) => {
+    setLoginUsername(username);
+    setLoginPassword(password);
+    setError('');
+    setSuccess('');
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.token) {
+        localStorage.setItem('jwt_token', data.token);
+        if (onLoginSuccess) {
+          onLoginSuccess(data);
+        }
+        onClose();
+        window.location.reload();
+      } else {
+        setError(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+      }
+    } catch (err) {
+      setError('Không thể kết nối đến máy chủ xác thực.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -308,6 +338,139 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 Đăng ký ngay
               </button>
             </div>
+
+            {/* Quick Demo Accounts for 5 Roles */}
+            <div style={{ marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
+              <p style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', marginBottom: '8px', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                ⚡ Tài khoản test nhanh 5 đối tượng (Username = Password):
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('bgh', 'bgh')}
+                  disabled={submitting}
+                  className="btn btn-xs"
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde047',
+                    borderRadius: '6px',
+                    justifyContent: 'flex-start',
+                    cursor: 'pointer'
+                  }}
+                  title="Tài khoản: bgh / bgh"
+                >
+                  <span style={{ fontSize: '0.8rem' }}>⭐</span>
+                  <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <div style={{ fontWeight: 800 }}>1. Ban Giám Hiệu</div>
+                    <span style={{ fontSize: '0.62rem', opacity: 0.8, fontFamily: 'monospace' }}>bgh / bgh</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('pdt', 'pdt')}
+                  disabled={submitting}
+                  className="btn btn-xs"
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: '#ede9fe',
+                    color: '#5b21b6',
+                    border: '1px solid #ddd6fe',
+                    borderRadius: '6px',
+                    justifyContent: 'flex-start',
+                    cursor: 'pointer'
+                  }}
+                  title="Tài khoản: pdt / pdt"
+                >
+                  <span style={{ fontSize: '0.8rem' }}>🏛️</span>
+                  <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <div style={{ fontWeight: 800 }}>2. Phòng Đào Tạo</div>
+                    <span style={{ fontSize: '0.62rem', opacity: 0.8, fontFamily: 'monospace' }}>pdt / pdt</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('truongkhoa', 'truongkhoa')}
+                  disabled={submitting}
+                  className="btn btn-xs"
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: '#e0f2fe',
+                    color: '#075985',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '6px',
+                    justifyContent: 'flex-start',
+                    cursor: 'pointer'
+                  }}
+                  title="Tài khoản: truongkhoa / truongkhoa"
+                >
+                  <span style={{ fontSize: '0.8rem' }}>🎖️</span>
+                  <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <div style={{ fontWeight: 800 }}>3. Trưởng Khoa</div>
+                    <span style={{ fontSize: '0.62rem', opacity: 0.8, fontFamily: 'monospace' }}>truongkhoa / truongkhoa</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('giaovien', 'giaovien')}
+                  disabled={submitting}
+                  className="btn btn-xs"
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: '#dcfce7',
+                    color: '#166534',
+                    border: '1px solid #86efac',
+                    borderRadius: '6px',
+                    justifyContent: 'flex-start',
+                    cursor: 'pointer'
+                  }}
+                  title="Tài khoản: giaovien / giaovien"
+                >
+                  <span style={{ fontSize: '0.8rem' }}>👨‍🏫</span>
+                  <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <div style={{ fontWeight: 800 }}>4. Giáo viên bộ môn</div>
+                    <span style={{ fontSize: '0.62rem', opacity: 0.8, fontFamily: 'monospace' }}>giaovien / giaovien</span>
+                  </div>
+                </button>
+              </div>
+
+              <div style={{ marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('donvi', 'donvi')}
+                  disabled={submitting}
+                  className="btn btn-xs"
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  title="Tài khoản: donvi / donvi"
+                >
+                  <span style={{ fontSize: '0.8rem' }}>🛡️</span>
+                  <span>5. Cán bộ Đơn vị (Chỉ xem điểm) &nbsp;—&nbsp; <strong style={{ fontFamily: 'monospace' }}>donvi / donvi</strong></span>
+                </button>
+              </div>
+            </div>
           </form>
         )}
 
@@ -356,10 +519,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                   className="form-input"
                   style={{ cursor: 'pointer' }}
                 >
-                  <option value="ROLE_GIANGVIEN">Giáo viên Huấn luyện</option>
-                  <option value="ROLE_BOMON">Chủ nhiệm Bộ môn</option>
-                  <option value="ROLE_BGH">Ban Giám Đốc / PĐT</option>
-                  <option value="ROLE_SINHVIEN">Học viên Quân sự</option>
+                  <option value="ROLE_BGH">Ban Giám Hiệu</option>
+                  <option value="ROLE_PDT">Phòng Đào Tạo</option>
+                  <option value="ROLE_TRUONGKHOA">Trưởng Khoa</option>
+                  <option value="ROLE_GIANGVIEN">Giáo viên bộ môn</option>
+                  <option value="ROLE_DONVI">Đơn vị (Tiểu đoàn)</option>
                 </select>
               </div>
             </div>

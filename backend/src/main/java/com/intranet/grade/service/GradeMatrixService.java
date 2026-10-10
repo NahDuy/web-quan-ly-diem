@@ -32,6 +32,7 @@ public class GradeMatrixService {
     private final ClassSubjectRepository classSubjectRepository;
     private final CurriculumRepository curriculumRepository;
     private final CurriculumSubjectRepository curriculumSubjectRepository;
+    private final com.intranet.grade.repository.TeacherSubjectRepository teacherSubjectRepository;
 
     @Transactional
     public MatrixResponseDTO getClassMatrix(Integer classId, Integer semester) {
@@ -56,9 +57,21 @@ public class GradeMatrixService {
         }
 
         CustomUserDetails currentUser = getCurrentUser();
-        boolean isPrivileged = currentUser == null || Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode());
-        boolean isTeacherView = !isPrivileged && currentUser.getDepartmentId() != null;
-        String deptFilterName = isTeacherView ? currentUser.getDepartmentName() : null;
+        String roleCode = currentUser != null ? currentUser.getRoleCode() : "ANONYMOUS";
+        boolean isPrivileged = currentUser == null || Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(roleCode);
+        boolean isDonVi = "ROLE_DONVI".equals(roleCode);
+        boolean isGiangVien = "ROLE_GIANGVIEN".equals(roleCode);
+        boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
+
+        List<Integer> assignedSubjectIds = new ArrayList<>();
+        if (currentUser != null && isGiangVien) {
+            assignedSubjectIds = teacherSubjectRepository.findByTeacherId(currentUser.getId()).stream()
+                    .map(ts -> ts.getSubject().getId())
+                    .collect(Collectors.toList());
+        }
+
+        boolean isTeacherView = isGiangVien;
+        String deptFilterName = (isGiangVien || isTruongKhoa) && currentUser != null ? currentUser.getDepartmentName() : null;
 
         if (isTeacherView) {
             subjects = subjects.stream()
@@ -220,6 +233,9 @@ public class GradeMatrixService {
                 .rows(rows)
                 .isTeacherView(isTeacherView)
                 .departmentFilterName(deptFilterName)
+                .assignedSubjectIds(assignedSubjectIds)
+                .userRole(roleCode)
+                .canEdit(!isDonVi)
                 .build();
     }
 
@@ -229,7 +245,14 @@ public class GradeMatrixService {
         if (currentUser == null) {
             throw new AccessDeniedException("Yêu cầu đăng nhập để cập nhật điểm.");
         }
-        boolean isPrivileged = Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode());
+        String roleCode = currentUser.getRoleCode();
+        if ("ROLE_DONVI".equals(roleCode)) {
+            throw new AccessDeniedException("Tài khoản Đơn vị chỉ có quyền xem điểm các đối tượng, không có quyền chỉnh sửa hoặc nhập điểm.");
+        }
+
+        boolean isPrivileged = Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(roleCode);
+        boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
+        boolean isGiangVien = "ROLE_GIANGVIEN".equals(roleCode);
 
         int sem = request.getSemester() != null ? request.getSemester() : 1;
 
@@ -263,10 +286,15 @@ public class GradeMatrixService {
                 Subject subject = subjectRepository.findById(item.getSubjectId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học ID: " + item.getSubjectId()));
 
-                // Kiểm tra môn học thuộc quyền phụ trách của giáo viên
-                if (!isPrivileged && currentUser.getDepartmentId() != null) {
+                // Kiểm tra phân công môn giảng dạy: Giáo viên chỉ được nhập điểm môn mình dạy
+                if (isGiangVien) {
+                    boolean isAssigned = teacherSubjectRepository.existsByTeacherIdAndSubjectId(currentUser.getId(), item.getSubjectId());
+                    if (!isAssigned) {
+                        throw new AccessDeniedException("Giáo viên chỉ được phép nhập điểm cho các môn học mình được phân công giảng dạy (" + subject.getName() + " chưa được phân công).");
+                    }
+                } else if (isTruongKhoa && currentUser.getDepartmentId() != null) {
                     if (subject.getDepartment() == null || !subject.getDepartment().getId().equals(currentUser.getDepartmentId())) {
-                        throw new AccessDeniedException("Giáo viên chỉ được nhập điểm cho các môn thuộc khoa/bộ môn của mình (" + subject.getName() + " không thuộc quyền phụ trách).");
+                        throw new AccessDeniedException("Trưởng khoa chỉ có quyền quản lý điểm các môn học thuộc khoa mình phụ trách (" + subject.getName() + " không thuộc khoa).");
                     }
                 }
 
