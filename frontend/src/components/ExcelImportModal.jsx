@@ -75,22 +75,24 @@ export default function ExcelImportModal({
           </h3>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 mb-4 space-y-1.5">
+        <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3.5 text-xs text-slate-300 mb-4 space-y-2.5">
           <p>
-            ℹ️ <strong className="text-emerald-300">Quy trình chuẩn:</strong> Danh sách môn học được tự động thiết lập từ <strong>Lộ trình Đào tạo</strong> của Chuyên ngành.
+            ℹ️ <strong className="text-emerald-300">Quy trình chuẩn:</strong> File Excel mẫu chứa đầy đủ danh sách học viên và các cột môn học đã được khởi tạo của lớp.
           </p>
-          <p>
-            Tải lên file Excel để cập nhật điểm học phần cho học viên của lớp theo đúng các cột môn học đã được tạo.
-          </p>
-          <div className="pt-2 flex items-center justify-between border-t border-slate-700/60 mt-2">
-            <span className="text-slate-400">Chưa có file mẫu chuẩn của lớp này?</span>
+          <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-white">Chưa có file Excel mẫu để điền điểm?</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Tải file mẫu có sẵn danh sách học viên lớp {classCode || ''} để nhập điểm offline</div>
+            </div>
             <a
               href={`/api/v1/classes/${classId || 1}/export-excel?semester=${semester || 1}`}
               download
-              className="text-yellow-400 hover:text-yellow-300 font-bold inline-flex items-center gap-1.5"
+              className="btn btn-sm shrink-0 font-bold inline-flex items-center gap-1.5 shadow-sm"
+              style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}
+              title="Tải file Excel mẫu chứa danh sách học viên và các cột môn để nhập điểm"
             >
-              <Download className="w-4 h-4" />
-              Tải file mẫu Excel lớp
+              <Download className="w-3.5 h-3.5 text-amber-700" />
+              <span>Tải File Mẫu Nhập Điểm</span>
             </a>
           </div>
         </div>

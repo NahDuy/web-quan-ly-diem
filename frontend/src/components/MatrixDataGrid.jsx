@@ -278,6 +278,46 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const isPrivilegedUser = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role);
 
+  // Navigation between grid cells using Arrow keys & Enter (giống Excel)
+  const handleGridKeyDown = (e, rowIdx, colIdx, isGradExam = false) => {
+    let targetRow = rowIdx;
+    let targetCol = colIdx;
+    const prefix = isGradExam ? 'grad-score-input' : 'score-input';
+
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      targetRow = rowIdx + 1;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      targetRow = rowIdx - 1;
+    } else if (e.key === 'ArrowRight' && (e.target.selectionEnd === e.target.value.length || e.target.selectionStart === 0)) {
+      targetCol = colIdx + 1;
+    } else if (e.key === 'ArrowLeft' && e.target.selectionStart === 0) {
+      targetCol = colIdx - 1;
+    } else {
+      return;
+    }
+
+    const nextElem = document.getElementById(`${prefix}-${targetRow}-${targetCol}`);
+    if (nextElem && !nextElem.disabled) {
+      nextElem.focus();
+      nextElem.select();
+    } else if (nextElem && nextElem.disabled && (e.key === 'ArrowDown' || e.key === 'Enter')) {
+      // Nhảy tiếp qua học viên bị khóa điểm
+      let r = targetRow + 1;
+      const totalRows = matrixData?.rows?.length || 0;
+      while (r < totalRows) {
+        const candidate = document.getElementById(`${prefix}-${r}-${targetCol}`);
+        if (candidate && !candidate.disabled) {
+          candidate.focus();
+          candidate.select();
+          break;
+        }
+        r++;
+      }
+    }
+  };
+
   const handleScoreChange = (studentId, subjectId, value) => {
     if (matrixData.isLocked && !isPrivilegedUser) {
       alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
@@ -303,23 +343,36 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return;
     }
 
-    const num = parseFloat(value);
-    if (isNaN(num)) return;
-
-    if (num < 0 || num > 10) {
-      alert('Điểm số chỉ được phép nhập trong phạm vi từ 0 đến 10!');
-      const clamped = Math.min(10, Math.max(0, num));
-      setEditedScores((prev) => ({
-        ...prev,
-        [key]: clamped,
-      }));
-      return;
-    }
-
+    const sanitized = typeof value === 'string' ? value.replace(/,/g, '.') : value.toString();
     setEditedScores((prev) => ({
       ...prev,
-      [key]: num,
+      [key]: sanitized,
     }));
+  };
+
+  // Helper nhập điểm môn học phần: Quy định dấu '.' thay vì ',', hỗ trợ tự động đổi ',' sang '.'
+  const handleScoreInputChange = (studentId, subjectId, rawVal) => {
+    let val = (rawVal || '').replace(/,/g, '.');
+    // Chỉ cho phép số và tối đa 1 dấu chấm (ví dụ: "9", "9.", "9.5", "10")
+    if (!/^\d*\.?\d*$/.test(val)) return;
+
+    if (val !== '' && val !== '.') {
+      const num = parseFloat(val);
+      if (num > 10) {
+        alert('Điểm số chỉ được phép nhập trong phạm vi từ 0 đến 10!');
+        return;
+      }
+    }
+
+    handleScoreChange(studentId, subjectId, val);
+  };
+
+  const handleScoreBlur = (studentId, subjectId, rawVal) => {
+    let val = (rawVal || '').toString().replace(/,/g, '.');
+    if (val.endsWith('.')) {
+      val = val.slice(0, -1);
+      handleScoreChange(studentId, subjectId, val);
+    }
   };
 
   const handleConductChange = (studentId, value) => {
@@ -352,23 +405,32 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return;
     }
 
-    const num = parseFloat(value);
-    if (isNaN(num)) return;
-
-    if (num < 0 || num > 10) {
-      alert('Điểm số tốt nghiệp chỉ được phép nhập trong phạm vi từ 0 đến 10!');
-      const clamped = Math.min(10, Math.max(0, num));
-      setEditedGradExamScores((prev) => ({
-        ...prev,
-        [key]: clamped,
-      }));
-      return;
-    }
-
+    const sanitized = typeof value === 'string' ? value.replace(/,/g, '.') : value.toString();
     setEditedGradExamScores((prev) => ({
       ...prev,
-      [key]: num,
+      [key]: sanitized,
     }));
+  };
+
+  const handleGradExamScoreInputChange = (studentId, gradSubId, rawVal) => {
+    let val = (rawVal || '').replace(/,/g, '.');
+    if (!/^\d*\.?\d*$/.test(val)) return;
+    if (val !== '' && val !== '.') {
+      const num = parseFloat(val);
+      if (num > 10) {
+        alert('Điểm thi tốt nghiệp chỉ được phép nhập trong phạm vi từ 0 đến 10!');
+        return;
+      }
+    }
+    handleGradExamScoreChange(studentId, gradSubId, val);
+  };
+
+  const handleGradExamScoreBlur = (studentId, gradSubId, rawVal) => {
+    let val = (rawVal || '').toString().replace(/,/g, '.');
+    if (val.endsWith('.')) {
+      val = val.slice(0, -1);
+      handleGradExamScoreChange(studentId, gradSubId, val);
+    }
   };
 
   const isCellEdited = (studentId, subjectId) => {
@@ -581,15 +643,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
     // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
     for (const [key, score] of Object.entries(editedScores)) {
-      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
-        alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
-        return;
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
       }
     }
     for (const [key, score] of Object.entries(editedGradExamScores)) {
-      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
-        alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
-        return;
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
       }
     }
 
@@ -618,10 +686,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
       const gradeUpdates = Object.entries(editedScores).map(([key, score]) => {
         const [studentId, subjectId] = key.split('_');
+        let parsedScore = null;
+        if (score !== '' && score !== null && score !== undefined) {
+          parsedScore = parseFloat(score);
+          if (isNaN(parsedScore)) parsedScore = null;
+        }
         return {
           studentId: parseInt(studentId),
           subjectId: parseInt(subjectId),
-          score: score,
+          score: parsedScore,
         };
       });
 
@@ -635,9 +708,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         const [sId, gradSubId] = key.split('_');
         const studentId = parseInt(sId);
         if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
-        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = val;
-        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = val;
-        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = val;
+        let parsedVal = null;
+        if (val !== '' && val !== null && val !== undefined) {
+          parsedVal = parseFloat(val);
+          if (isNaN(parsedVal)) parsedVal = null;
+        }
+        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = parsedVal;
+        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = parsedVal;
+        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = parsedVal;
       });
       const evaluationUpdates = Object.values(evalUpdatesMap);
 
@@ -679,15 +757,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
     // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
     for (const [key, score] of Object.entries(editedScores)) {
-      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
-        alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
-        return;
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
       }
     }
     for (const [key, score] of Object.entries(editedGradExamScores)) {
-      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
-        alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
-        return;
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
       }
     }
 
@@ -715,10 +799,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
       const gradeUpdates = Object.entries(editedScores).map(([key, score]) => {
         const [studentId, subjectId] = key.split('_');
+        let parsedScore = null;
+        if (score !== '' && score !== null && score !== undefined) {
+          parsedScore = parseFloat(score);
+          if (isNaN(parsedScore)) parsedScore = null;
+        }
         return {
           studentId: parseInt(studentId),
           subjectId: parseInt(subjectId),
-          score: score,
+          score: parsedScore,
         };
       });
 
@@ -732,9 +821,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         const [sId, gradSubId] = key.split('_');
         const studentId = parseInt(sId);
         if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
-        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = val;
-        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = val;
-        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = val;
+        let parsedVal = null;
+        if (val !== '' && val !== null && val !== undefined) {
+          parsedVal = parseFloat(val);
+          if (isNaN(parsedVal)) parsedVal = null;
+        }
+        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = parsedVal;
+        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = parsedVal;
+        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = parsedVal;
       });
       const evaluationUpdates = Object.values(evalUpdatesMap);
 
@@ -919,23 +1013,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
       )}
       
-      {/* Control Bar */}
-      <div className="glass-panel p-3.5 flex flex-wrap items-center justify-between gap-3 border border-slate-200 bg-white shadow-xs">
-        {/* Left: Class Selection */}
-        <div className="flex items-center gap-2.5 flex-1 min-w-[320px] max-w-2xl">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">
-              Chọn Lớp:
+      {/* Control Bar - Tinh gọn & Phân chia khoa học thành 3 khối */}
+      <div className="glass-panel p-3 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3">
+        {/* KHỐI 1: CHỌN LỚP ĐÀO TẠO */}
+        <div className="flex items-center gap-2 flex-1 min-w-[280px] max-w-xl">
+          <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 bg-slate-100/90 rounded-lg border border-slate-200">
+            <BookOpen className="w-4 h-4 text-emerald-700" />
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Lớp:
             </span>
-            <span className="text-[11px] text-emerald-700 font-semibold font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
-              {classList.length} lớp
+            <span className="text-[11px] text-emerald-800 font-bold font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">
+              {classList.length}
             </span>
           </div>
           <select
             value={classId}
             onChange={(e) => setClassId(parseInt(e.target.value))}
-            className="form-input text-xs font-bold text-slate-900 flex-1 h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg"
-            style={{ cursor: 'pointer' }}
+            className="form-input text-xs font-bold text-slate-900 flex-1 h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg cursor-pointer"
           >
             {classList.length > 0 ? (
               classList.map((cls) => {
@@ -960,25 +1054,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </select>
         </div>
 
-        {/* Actions Bar - Căn chỉnh đồng bộ và cân đối với ô chọn lớp */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {isPrivilegedUser && (
-            <button
-              type="button"
-              onClick={() => {
-                fetchAvailableSubjects();
-                setIsAddSubjectModalOpen(true);
-              }}
-              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
-              style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
-              title="Thêm cột hoặc đổi môn học cho lớp này"
-            >
-              <Plus className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="font-semibold text-emerald-800">Thêm / Đổi Cột Môn</span>
-            </button>
-          )}
-
-          {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP (Dành cho việc nhập điểm thông thường, ví dụ nhập trước 10 đồng chí, 5 môn) */}
+        {/* KHỐI 2: THAO TÁC NHẬP LIỆU (LƯU ĐIỂM / LƯU CÓ LÝ DO / ĐỔI MÔN) */}
+        <div className="flex items-center gap-2">
+          {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP */}
           <button
             onClick={handleSaveDirect}
             disabled={!hasUnsavedChanges || saving}
@@ -998,7 +1076,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
           </button>
 
-          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Dành cho trường hợp sửa điểm / phúc khảo / điều chỉnh cần lưu vết và lý do - Chỉ Admin/PĐT) */}
+          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Admin/PĐT) */}
           {isPrivilegedUser && hasUnsavedChanges && (
             <button
               onClick={() => {
@@ -1015,29 +1093,62 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               title="Lưu kèm ghi lý do/quyết định sửa điểm vào Nhật ký Audit Log"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
-              <span>Lưu Kèm Lý Do Sửa Điểm</span>
+              <span>Lưu Kèm Lý Do</span>
             </button>
           )}
 
+          {/* Nút 3: THÊM / ĐỔI CỘT MÔN (Admin/PĐT) */}
+          {isPrivilegedUser && (
+            <button
+              type="button"
+              onClick={() => {
+                fetchAvailableSubjects();
+                setIsAddSubjectModalOpen(true);
+              }}
+              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+              title="Thêm cột hoặc đổi môn học cho lớp này"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="font-semibold text-emerald-800">Đổi/Thêm Cột Môn</span>
+            </button>
+          )}
+        </div>
+
+        {/* KHỐI 3: TIỆN ÍCH EXCEL (XUẤT MẪU NHẬP ĐIỂM / IMPORT ĐIỂM / XUẤT BÁO CÁO) */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-lg">
+          {/* Nút A: TẢI FILE MẪU EXCEL ĐỂ NHẬP ĐIỂM */}
+          <a
+            href={`/api/v1/classes/${classId}/export-excel?semester=${semester}`}
+            download
+            className="btn btn-sm h-8 px-2.5 text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer rounded-md transition"
+            style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}
+            title="Tải file Excel mẫu chứa danh sách học viên và cột môn của lớp để nhập điểm offline"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-700" />
+            <span>Xuất Mẫu Nhập Điểm</span>
+          </a>
+
+          {/* Nút B: IMPORT EXCEL ĐIỂM */}
           <button
             onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
-            className="btn btn-secondary btn-sm h-9"
+            className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
             title="Nhập điểm hàng loạt từ file Excel"
           >
             <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Import Excel Điểm</span>
+            <span>Import Điểm</span>
           </button>
 
-          {/* Dropdown 2 dạng xuất file Excel */}
+          {/* Nút C: DROPDOWN XUẤT BÁO CÁO KẾT QUẢ */}
           <div className="relative">
             <button
               onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Chọn 1 trong 2 định dạng xuất file Excel"
+              className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1 cursor-pointer rounded-md"
+              title="Chọn định dạng xuất báo cáo kết quả"
             >
-              <Download className="w-3.5 h-3.5 text-amber-600" />
-              <span>Xuất File Excel</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
+              <span>Xuất Báo Cáo</span>
+              <ChevronDown className="w-3 h-3 text-slate-500" />
             </button>
 
             {exportDropdownOpen && (
@@ -1047,9 +1158,34 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   onClick={() => setExportDropdownOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
-                  {/* PHẦN 1: XUẤT LỚP HIỆN TẠI */}
+                  {/* PHẦN 1: FILE MẪU NHẬP ĐIỂM */}
+                  <div className="px-3.5 py-1 text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Mẫu nhập điểm offline</span>
+                  </div>
+                  <a
+                    href={`/api/v1/classes/${classId}/export-excel?semester=${semester}`}
+                    download
+                    onClick={() => setExportDropdownOpen(false)}
+                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/80 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg border border-amber-300 shrink-0 mt-0.5">
+                      <Download className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-amber-950">
+                        Mẫu Excel nhập điểm ({matrixData?.classCode || `Lớp #${classId}`})
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Chứa danh sách học viên và các cột môn đã tạo để điền điểm rồi nạp qua Import Excel
+                      </div>
+                    </div>
+                  </a>
+
+                  <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
+
+                  {/* PHẦN 2: XUẤT LỚP HIỆN TẠI */}
                   <div className="px-3.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                    <span>Xuất dữ liệu lớp đang chọn</span>
+                    <span>Báo cáo lớp đang chọn</span>
                     <span className="text-emerald-700 font-mono font-bold">
                       {matrixData?.classCode || `Lớp #${classId}`}
                     </span>
@@ -1097,7 +1233,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
                   <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
 
-                  {/* PHẦN 2: XUẤT TOÀN BỘ CÁC LỚP (MỖI LỚP 1 SHEET) */}
+                  {/* PHẦN 3: XUẤT TOÀN BỘ CÁC LỚP (MỖI LỚP 1 SHEET) */}
                   <div className="px-3.5 py-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
                     <span>Xuất toàn bộ các lớp (Mỗi lớp 1 sheet)</span>
                     <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
@@ -1147,7 +1283,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
                   <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
 
-                  {/* PHẦN 3: BÁO CÁO TỔNG HỢP XÉT ĐK DỰ THI */}
+                  {/* PHẦN 4: BÁO CÁO TỔNG HỢP XÉT ĐK DỰ THI */}
                   <div className="px-3.5 py-1 text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center justify-between">
                     <span>Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp</span>
                   </div>
@@ -1396,7 +1532,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </thead>
 
           <tbody>
-            {safeRows.map((row) => {
+            {safeRows.map((row, rowIdx) => {
               const currentConduct = editedConducts[row.studentId] !== undefined ? editedConducts[row.studentId] : row.conductGrade;
 
               // Calculate TBC for 3 Graduation Exam Subjects
@@ -1439,8 +1575,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     {row.dob}
                   </td>
 
-                  {/* COURSE SUBJECT GRADE INPUTS */}
-                  {safeColumns.map((col) => {
+                  {/* COURSE SUBJECT GRADE INPUTS (Hỗ trợ phím mũi tên & Enter như Excel, chuẩn dấu '.') */}
+                  {safeColumns.map((col, colIdx) => {
                     const gradeDetail = row.grades ? row.grades[col.subjectId] : null;
                     const key = `${row.studentId}_${col.subjectId}`;
                     const isEdited = isCellEdited(row.studentId, col.subjectId);
@@ -1451,25 +1587,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     return (
                       <td key={col.subjectId} className={isEdited ? 'cell-modified' : ''}>
                         <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="10"
+                          type="text"
+                          inputMode="decimal"
+                          id={`score-input-${rowIdx}-${colIdx}`}
+                          data-row-idx={rowIdx}
+                          data-col-idx={colIdx}
                           disabled={(matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher}
                           value={currentScoreVal !== null && currentScoreVal !== undefined ? currentScoreVal : ''}
-                          onChange={(e) => handleScoreChange(row.studentId, col.subjectId, e.target.value)}
-                          onBlur={(e) => {
-                            const val = e.target.value;
-                            if (val !== '') {
-                              const num = parseFloat(val);
-                              if (!isNaN(num) && (num < 0 || num > 10)) {
-                                handleScoreChange(row.studentId, col.subjectId, Math.min(10, Math.max(0, num)).toString());
-                              }
-                            }
-                          }}
+                          onChange={(e) => handleScoreInputChange(row.studentId, col.subjectId, e.target.value)}
+                          onKeyDown={(e) => handleGridKeyDown(e, rowIdx, colIdx, false)}
+                          onBlur={(e) => handleScoreBlur(row.studentId, col.subjectId, e.target.value)}
                           placeholder="-"
-                          title={isLockedForTeacher ? 'Điểm đã lưu vào hệ thống. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên mới có quyền chỉnh sửa.' : ''}
-                          className={`cell-input ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${
+                          title={isLockedForTeacher ? 'Điểm đã lưu vào hệ thống. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên mới có quyền chỉnh sửa.' : 'Nhập điểm (0-10, ví dụ 9.5). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo'}
+                          className={`cell-input text-center font-bold ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${
                             isLockedForTeacher
                               ? 'bg-slate-100 text-slate-700 cursor-not-allowed font-medium opacity-90'
                               : matrixData.isLocked && !isPrivilegedUser
@@ -1505,8 +1635,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                         </select>
                       </td>
 
-                      {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS */}
-                      {safeGradExamSubjects.map((gradSub) => {
+                      {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS (Hỗ trợ phím mũi tên & Enter như Excel, chuẩn dấu '.') */}
+                      {safeGradExamSubjects.map((gradSub, gradIdx) => {
                         const key = `${row.studentId}_${gradSub.id}`;
                         const isEdited = isGradExamCellEdited(row.studentId, gradSub.id);
                         const val = isEdited ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : '');
@@ -1514,24 +1644,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                         return (
                           <td key={gradSub.id} className={isEdited ? 'cell-modified' : ''}>
                             <input
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              max="10"
+                              type="text"
+                              inputMode="decimal"
+                              id={`grad-score-input-${rowIdx}-${gradIdx}`}
+                              data-row-idx={rowIdx}
+                              data-grad-idx={gradIdx}
                               disabled={matrixData.isLocked && !isPrivilegedUser}
                               value={val !== null && val !== undefined ? val : ''}
-                              onChange={(e) => handleGradExamScoreChange(row.studentId, gradSub.id, e.target.value)}
-                              onBlur={(e) => {
-                                const v = e.target.value;
-                                if (v !== '') {
-                                  const num = parseFloat(v);
-                                  if (!isNaN(num) && (num < 0 || num > 10)) {
-                                    handleGradExamScoreChange(row.studentId, gradSub.id, Math.min(10, Math.max(0, num)).toString());
-                                  }
-                                }
-                              }}
+                              onChange={(e) => handleGradExamScoreInputChange(row.studentId, gradSub.id, e.target.value)}
+                              onKeyDown={(e) => handleGridKeyDown(e, rowIdx, gradIdx, true)}
+                              onBlur={(e) => handleGradExamScoreBlur(row.studentId, gradSub.id, e.target.value)}
                               placeholder="-"
-                              className={`cell-input text-amber-800 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                              title="Điểm thi tốt nghiệp (0-10). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo"
+                              className={`cell-input text-center text-amber-800 font-bold ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                             />
                           </td>
                         );

@@ -46,7 +46,7 @@ public class ExcelExportImportController {
 
         byte[] excelBytes = excelService.exportClassMatrixToExcel(classId, semester);
         String classIdent = getSafeClassIdentifier(classId);
-        String filename = "BangDiem_MaTran_" + classIdent + ".xlsx";
+        String filename = "Mau_Nhap_Diem_" + classIdent + "_HK" + semester + ".xlsx";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
