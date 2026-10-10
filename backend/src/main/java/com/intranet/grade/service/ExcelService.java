@@ -247,823 +247,915 @@ public class ExcelService {
         }
     }
 
-    public byte[] exportKetQuaHocPhanExcel(Integer classId, Integer semester) throws IOException {
-        MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(classId, semester);
-        ClassEntity clazz = classRepository.findById(classId).orElse(null);
+    private static class HocPhanStyles {
+        CellStyle agencyStyle;
+        CellStyle agencyUnderlineStyle;
+        CellStyle titleStyle;
+        CellStyle subTitleStyle;
+        CellStyle italicCenterStyle;
+        CellStyle headerBoldStyle;
+        CellStyle verticalSubjectHeaderStyle;
+        CellStyle dataCenterStyle;
+        CellStyle dataLeftStyle;
+        CellStyle dataCenterBold;
+    }
+
+    private static class TotNghiepStyles {
+        CellStyle agencyStyle;
+        CellStyle agencyUnderlineStyle;
+        CellStyle titleStyle;
+        CellStyle subTitleStyle;
+        CellStyle italicCenterStyle;
+        CellStyle italicRightBoldStyle;
+        CellStyle headerBoldStyle;
+        CellStyle dataCenterStyle;
+        CellStyle dataLeftStyle;
+        CellStyle dataCenterBold;
+    }
+
+    private String getUniqueSheetName(String desiredName, Set<String> existingNames) {
+        if (desiredName == null || desiredName.trim().isEmpty()) {
+            desiredName = "Lop";
+        }
+        String cleanName = desiredName.replaceAll("[\\\\/\u003F\u002A\\[\\]:]", "_").trim();
+        if (cleanName.length() > 30) {
+            cleanName = cleanName.substring(0, 30);
+        }
+        String finalName = cleanName;
+        int counter = 1;
+        while (existingNames.contains(finalName.toLowerCase())) {
+            String suffix = "_" + counter;
+            int maxBaseLen = 31 - suffix.length();
+            if (cleanName.length() > maxBaseLen) {
+                finalName = cleanName.substring(0, maxBaseLen) + suffix;
+            } else {
+                finalName = cleanName + suffix;
+            }
+            counter++;
+        }
+        existingNames.add(finalName.toLowerCase());
+        return finalName;
+    }
+
+    private HocPhanStyles createHocPhanStyles(Workbook workbook) {
+        HocPhanStyles styles = new HocPhanStyles();
+
+        Font agencyFont = workbook.createFont();
+        agencyFont.setBold(true);
+        agencyFont.setFontHeightInPoints((short) 12);
+        agencyFont.setFontName("Times New Roman");
+
+        Font agencyUnderlineFont = workbook.createFont();
+        agencyUnderlineFont.setBold(true);
+        agencyUnderlineFont.setUnderline(Font.U_SINGLE);
+        agencyUnderlineFont.setFontHeightInPoints((short) 12);
+        agencyUnderlineFont.setFontName("Times New Roman");
+
+        Font titleFont = workbook.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 16);
+        titleFont.setFontName("Times New Roman");
+
+        Font subTitleFont = workbook.createFont();
+        subTitleFont.setBold(true);
+        subTitleFont.setFontHeightInPoints((short) 13);
+        subTitleFont.setFontName("Times New Roman");
+
+        Font italicFont = workbook.createFont();
+        italicFont.setItalic(true);
+        italicFont.setFontHeightInPoints((short) 12);
+        italicFont.setFontName("Times New Roman");
+
+        Font headerBoldFont = workbook.createFont();
+        headerBoldFont.setBold(true);
+        headerBoldFont.setFontHeightInPoints((short) 12);
+        headerBoldFont.setFontName("Times New Roman");
+
+        Font subjectNameFont = workbook.createFont();
+        subjectNameFont.setBold(false);
+        subjectNameFont.setFontHeightInPoints((short) 11);
+        subjectNameFont.setFontName("Times New Roman");
+
+        Font dataFont = workbook.createFont();
+        dataFont.setFontHeightInPoints((short) 12);
+        dataFont.setFontName("Times New Roman");
+
+        Font boldDataFont = workbook.createFont();
+        boldDataFont.setBold(true);
+        boldDataFont.setFontHeightInPoints((short) 12);
+        boldDataFont.setFontName("Times New Roman");
+
+        styles.agencyStyle = workbook.createCellStyle();
+        styles.agencyStyle.setFont(agencyFont);
+        styles.agencyStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.agencyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.agencyUnderlineStyle = workbook.createCellStyle();
+        styles.agencyUnderlineStyle.setFont(agencyUnderlineFont);
+        styles.agencyUnderlineStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.agencyUnderlineStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.titleStyle = workbook.createCellStyle();
+        styles.titleStyle.setFont(titleFont);
+        styles.titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.subTitleStyle = workbook.createCellStyle();
+        styles.subTitleStyle.setFont(subTitleFont);
+        styles.subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.subTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.italicCenterStyle = workbook.createCellStyle();
+        styles.italicCenterStyle.setFont(italicFont);
+        styles.italicCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.italicCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.headerBoldStyle = workbook.createCellStyle();
+        styles.headerBoldStyle.setFont(headerBoldFont);
+        styles.headerBoldStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.headerBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.headerBoldStyle.setBorderTop(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderBottom(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderLeft(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderRight(BorderStyle.THIN);
+        styles.headerBoldStyle.setWrapText(true);
+
+        styles.verticalSubjectHeaderStyle = workbook.createCellStyle();
+        styles.verticalSubjectHeaderStyle.setFont(subjectNameFont);
+        styles.verticalSubjectHeaderStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.verticalSubjectHeaderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.verticalSubjectHeaderStyle.setBorderTop(BorderStyle.THIN);
+        styles.verticalSubjectHeaderStyle.setBorderBottom(BorderStyle.THIN);
+        styles.verticalSubjectHeaderStyle.setBorderLeft(BorderStyle.THIN);
+        styles.verticalSubjectHeaderStyle.setBorderRight(BorderStyle.THIN);
+        styles.verticalSubjectHeaderStyle.setRotation((short) 90);
+        styles.verticalSubjectHeaderStyle.setWrapText(true);
+
+        styles.dataCenterStyle = workbook.createCellStyle();
+        styles.dataCenterStyle.setFont(dataFont);
+        styles.dataCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.dataCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataCenterStyle.setBorderTop(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderBottom(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderLeft(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderRight(BorderStyle.THIN);
+
+        styles.dataLeftStyle = workbook.createCellStyle();
+        styles.dataLeftStyle.setFont(dataFont);
+        styles.dataLeftStyle.setAlignment(HorizontalAlignment.LEFT);
+        styles.dataLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataLeftStyle.setBorderTop(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderBottom(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderLeft(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderRight(BorderStyle.THIN);
+
+        styles.dataCenterBold = workbook.createCellStyle();
+        styles.dataCenterBold.setFont(boldDataFont);
+        styles.dataCenterBold.setAlignment(HorizontalAlignment.CENTER);
+        styles.dataCenterBold.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataCenterBold.setBorderTop(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderBottom(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderLeft(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderRight(BorderStyle.THIN);
+
+        return styles;
+    }
+
+    private TotNghiepStyles createTotNghiepStyles(Workbook workbook) {
+        TotNghiepStyles styles = new TotNghiepStyles();
+
+        Font agencyFont = workbook.createFont();
+        agencyFont.setBold(true);
+        agencyFont.setFontHeightInPoints((short) 12);
+        agencyFont.setFontName("Times New Roman");
+
+        Font agencyUnderlineFont = workbook.createFont();
+        agencyUnderlineFont.setBold(true);
+        agencyUnderlineFont.setUnderline(Font.U_SINGLE);
+        agencyUnderlineFont.setFontHeightInPoints((short) 12);
+        agencyUnderlineFont.setFontName("Times New Roman");
+
+        Font titleFont = workbook.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 16);
+        titleFont.setFontName("Times New Roman");
+
+        Font subTitleFont = workbook.createFont();
+        subTitleFont.setBold(true);
+        subTitleFont.setFontHeightInPoints((short) 13);
+        subTitleFont.setFontName("Times New Roman");
+
+        Font italicFont = workbook.createFont();
+        italicFont.setItalic(true);
+        italicFont.setFontHeightInPoints((short) 12);
+        italicFont.setFontName("Times New Roman");
+
+        Font italicBoldFont = workbook.createFont();
+        italicBoldFont.setBold(true);
+        italicBoldFont.setItalic(true);
+        italicBoldFont.setFontHeightInPoints((short) 12);
+        italicBoldFont.setFontName("Times New Roman");
+
+        Font headerBoldFont = workbook.createFont();
+        headerBoldFont.setBold(true);
+        headerBoldFont.setFontHeightInPoints((short) 12);
+        headerBoldFont.setFontName("Times New Roman");
+
+        Font dataFont = workbook.createFont();
+        dataFont.setFontHeightInPoints((short) 12);
+        dataFont.setFontName("Times New Roman");
+
+        Font boldDataFont = workbook.createFont();
+        boldDataFont.setBold(true);
+        boldDataFont.setFontHeightInPoints((short) 12);
+        boldDataFont.setFontName("Times New Roman");
+
+        styles.agencyStyle = workbook.createCellStyle();
+        styles.agencyStyle.setFont(agencyFont);
+        styles.agencyStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.agencyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.agencyUnderlineStyle = workbook.createCellStyle();
+        styles.agencyUnderlineStyle.setFont(agencyUnderlineFont);
+        styles.agencyUnderlineStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.agencyUnderlineStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.titleStyle = workbook.createCellStyle();
+        styles.titleStyle.setFont(titleFont);
+        styles.titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.subTitleStyle = workbook.createCellStyle();
+        styles.subTitleStyle.setFont(subTitleFont);
+        styles.subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.subTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.italicCenterStyle = workbook.createCellStyle();
+        styles.italicCenterStyle.setFont(italicFont);
+        styles.italicCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.italicCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.italicRightBoldStyle = workbook.createCellStyle();
+        styles.italicRightBoldStyle.setFont(italicBoldFont);
+        styles.italicRightBoldStyle.setAlignment(HorizontalAlignment.RIGHT);
+        styles.italicRightBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.headerBoldStyle = workbook.createCellStyle();
+        styles.headerBoldStyle.setFont(headerBoldFont);
+        styles.headerBoldStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.headerBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.headerBoldStyle.setBorderTop(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderBottom(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderLeft(BorderStyle.THIN);
+        styles.headerBoldStyle.setBorderRight(BorderStyle.THIN);
+        styles.headerBoldStyle.setWrapText(true);
+
+        styles.dataCenterStyle = workbook.createCellStyle();
+        styles.dataCenterStyle.setFont(dataFont);
+        styles.dataCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.dataCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataCenterStyle.setBorderTop(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderBottom(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderLeft(BorderStyle.THIN);
+        styles.dataCenterStyle.setBorderRight(BorderStyle.THIN);
+
+        styles.dataLeftStyle = workbook.createCellStyle();
+        styles.dataLeftStyle.setFont(dataFont);
+        styles.dataLeftStyle.setAlignment(HorizontalAlignment.LEFT);
+        styles.dataLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataLeftStyle.setBorderTop(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderBottom(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderLeft(BorderStyle.THIN);
+        styles.dataLeftStyle.setBorderRight(BorderStyle.THIN);
+
+        styles.dataCenterBold = workbook.createCellStyle();
+        styles.dataCenterBold.setFont(boldDataFont);
+        styles.dataCenterBold.setAlignment(HorizontalAlignment.CENTER);
+        styles.dataCenterBold.setVerticalAlignment(VerticalAlignment.CENTER);
+        styles.dataCenterBold.setBorderTop(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderBottom(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderLeft(BorderStyle.THIN);
+        styles.dataCenterBold.setBorderRight(BorderStyle.THIN);
+
+        return styles;
+    }
+
+    private void buildHocPhanSheet(Workbook workbook, MatrixResponseDTO matrix, ClassEntity clazz, HocPhanStyles styles, Set<String> existingSheetNames) {
         String majorName = clazz != null && clazz.getMajor() != null ? clazz.getMajor().getName() : (matrix.getMajorName() != null ? matrix.getMajorName() : "Sĩ quan Dự bị");
         String courseName = clazz != null && clazz.getCourse() != null ? clazz.getCourse().getName() : (matrix.getCourseName() != null ? matrix.getCourseName() : "Khóa 2026");
         String className = clazz != null ? clazz.getName() : matrix.getClassName();
-        String classCode = matrix.getClassCode() != null ? matrix.getClassCode() : ("Lop_" + classId);
+        String classCode = matrix.getClassCode() != null ? matrix.getClassCode() : (clazz != null && clazz.getCode() != null ? clazz.getCode() : "Lop");
 
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            // Tên sheet (folder tab) đặt trực tiếp theo tên / mã lớp
-            String sheetName = classCode.length() > 31 ? classCode.substring(0, 31) : classCode;
-            Sheet sheet = workbook.createSheet(sheetName);
+        String sheetName = getUniqueSheetName(classCode, existingSheetNames);
+        Sheet sheet = workbook.createSheet(sheetName);
 
-            // Print setup: Landscape
-            sheet.getPrintSetup().setLandscape(true);
-            sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        sheet.getPrintSetup().setLandscape(true);
+        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
 
-            // Fonts (Chuẩn hóa font cỡ 12pt+ theo đúng mẫu KetQuaHocPhan.xlsx)
-            Font agencyFont = workbook.createFont();
-            agencyFont.setBold(true);
-            agencyFont.setFontHeightInPoints((short) 12);
-            agencyFont.setFontName("Times New Roman");
+        int numSubjects = matrix.getColumns() != null ? matrix.getColumns().size() : 0;
+        int totalCols = Math.max(8, 5 + numSubjects + 3);
 
-            Font agencyUnderlineFont = workbook.createFont();
-            agencyUnderlineFont.setBold(true);
-            agencyUnderlineFont.setUnderline(Font.U_SINGLE);
-            agencyUnderlineFont.setFontHeightInPoints((short) 12);
-            agencyUnderlineFont.setFontName("Times New Roman");
+        // Row 0: QUÂN KHU 3
+        Row r0 = sheet.createRow(0);
+        r0.setHeightInPoints(22);
+        Cell cAgency1 = r0.createCell(0);
+        cAgency1.setCellValue("QUÂN KHU 3");
+        cAgency1.setCellStyle(styles.agencyStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-            Font titleFont = workbook.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 16);
-            titleFont.setFontName("Times New Roman");
+        // Row 1: TRƯỜNG QUÂN SỰ
+        Row r1 = sheet.createRow(1);
+        r1.setHeightInPoints(22);
+        Cell cAgency2 = r1.createCell(0);
+        cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
+        cAgency2.setCellStyle(styles.agencyUnderlineStyle);
+        sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
 
-            Font subTitleFont = workbook.createFont();
-            subTitleFont.setBold(true);
-            subTitleFont.setFontHeightInPoints((short) 13);
-            subTitleFont.setFontName("Times New Roman");
+        // Row 2: Tiêu đề chính IN ĐẬM
+        Row r2 = sheet.createRow(2);
+        r2.setHeightInPoints(30);
+        Cell cTitle = r2.createCell(0);
+        cTitle.setCellValue("KẾT QUẢ KIỂM TRA THƯỜNG XUYÊN");
+        cTitle.setCellStyle(styles.titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
 
-            Font italicFont = workbook.createFont();
-            italicFont.setItalic(true);
-            italicFont.setFontHeightInPoints((short) 12);
-            italicFont.setFontName("Times New Roman");
+        // Row 3: Đơn vị lớp IN ĐẬM
+        Row r3 = sheet.createRow(3);
+        r3.setHeightInPoints(24);
+        Cell cUnit = r3.createCell(0);
+        cUnit.setCellValue("Đơn vị: " + className + " - Đào tạo " + majorName + " - " + courseName);
+        cUnit.setCellStyle(styles.subTitleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
 
-            Font headerBoldFont = workbook.createFont();
-            headerBoldFont.setBold(true);
-            headerBoldFont.setFontHeightInPoints((short) 12);
-            headerBoldFont.setFontName("Times New Roman");
+        // Row 4: Quyết định kèm theo
+        Row r4 = sheet.createRow(4);
+        r4.setHeightInPoints(20);
+        Cell cDec = r4.createCell(0);
+        cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-HT ngày      tháng 5 năm 2026)");
+        cDec.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
 
-            Font subjectNameFont = workbook.createFont();
-            subjectNameFont.setBold(false);
-            subjectNameFont.setFontHeightInPoints((short) 11);
-            subjectNameFont.setFontName("Times New Roman");
+        // Row 5: Khai giảng / Bế giảng
+        Row r5 = sheet.createRow(5);
+        r5.setHeightInPoints(20);
+        Cell cDates = r5.createCell(0);
+        cDates.setCellValue("Khai giảng: 18/6/2026         Bế giảng : 18/10/2026");
+        cDates.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
 
-            Font dataFont = workbook.createFont();
-            dataFont.setFontHeightInPoints((short) 12);
-            dataFont.setFontName("Times New Roman");
+        // Table Headers at Row 7 & Row 8 (0-indexed)
+        Row headRow1 = sheet.createRow(7);
+        Row headRow2 = sheet.createRow(8);
+        headRow1.setHeightInPoints(34);
+        headRow2.setHeightInPoints(210);
 
-            Font boldDataFont = workbook.createFont();
-            boldDataFont.setBold(true);
-            boldDataFont.setFontHeightInPoints((short) 12);
-            boldDataFont.setFontName("Times New Roman");
+        // Col 0: TT (IN ĐẬM)
+        Cell cTT1 = headRow1.createCell(0);
+        cTT1.setCellValue("TT");
+        cTT1.setCellStyle(styles.headerBoldStyle);
+        headRow2.createCell(0).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(7, 8, 0, 0));
 
-            // Cell Styles
-            CellStyle agencyStyle = workbook.createCellStyle();
-            agencyStyle.setFont(agencyFont);
-            agencyStyle.setAlignment(HorizontalAlignment.CENTER);
-            agencyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // Col 1-2: Số vào sổ (IN ĐẬM)
+        Cell cCode1 = headRow1.createCell(1);
+        cCode1.setCellValue("Số vào sổ");
+        cCode1.setCellStyle(styles.headerBoldStyle);
+        headRow1.createCell(2).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(7, 7, 1, 2));
 
-            CellStyle agencyUnderlineStyle = workbook.createCellStyle();
-            agencyUnderlineStyle.setFont(agencyUnderlineFont);
-            agencyUnderlineStyle.setAlignment(HorizontalAlignment.CENTER);
-            agencyUnderlineStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        Cell cCodeSub1 = headRow2.createCell(1);
+        cCodeSub1.setCellValue("Mã HV");
+        cCodeSub1.setCellStyle(styles.headerBoldStyle);
 
-            CellStyle titleStyle = workbook.createCellStyle();
-            titleStyle.setFont(titleFont);
-            titleStyle.setAlignment(HorizontalAlignment.CENTER);
-            titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        Cell cCodeSub2 = headRow2.createCell(2);
+        cCodeSub2.setCellValue("Khóa");
+        cCodeSub2.setCellStyle(styles.headerBoldStyle);
 
-            CellStyle subTitleStyle = workbook.createCellStyle();
-            subTitleStyle.setFont(subTitleFont);
-            subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
-            subTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // Col 3: Họ và tên (IN ĐẬM)
+        Cell cName1 = headRow1.createCell(3);
+        cName1.setCellValue("Họ và tên");
+        cName1.setCellStyle(styles.headerBoldStyle);
+        headRow2.createCell(3).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(7, 8, 3, 3));
 
-            CellStyle italicCenterStyle = workbook.createCellStyle();
-            italicCenterStyle.setFont(italicFont);
-            italicCenterStyle.setAlignment(HorizontalAlignment.CENTER);
-            italicCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // Col 4: Ngày tháng năm sinh (IN ĐẬM)
+        Cell cDob1 = headRow1.createCell(4);
+        cDob1.setCellValue("Ngày tháng\nnăm sinh");
+        cDob1.setCellStyle(styles.headerBoldStyle);
+        headRow2.createCell(4).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(7, 8, 4, 4));
 
-            // Table Header Styles (In đậm viền đầy đủ)
-            CellStyle headerBoldStyle = workbook.createCellStyle();
-            headerBoldStyle.setFont(headerBoldFont);
-            headerBoldStyle.setAlignment(HorizontalAlignment.CENTER);
-            headerBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            headerBoldStyle.setBorderTop(BorderStyle.THIN);
-            headerBoldStyle.setBorderBottom(BorderStyle.THIN);
-            headerBoldStyle.setBorderLeft(BorderStyle.THIN);
-            headerBoldStyle.setBorderRight(BorderStyle.THIN);
-            headerBoldStyle.setWrapText(true);
-
-            // Vertical Subject Header Style (Chiều cao 210pt, hiển thị trọn vẹn 100% tên môn dài)
-            CellStyle verticalSubjectHeaderStyle = workbook.createCellStyle();
-            verticalSubjectHeaderStyle.setFont(subjectNameFont);
-            verticalSubjectHeaderStyle.setAlignment(HorizontalAlignment.CENTER);
-            verticalSubjectHeaderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            verticalSubjectHeaderStyle.setBorderTop(BorderStyle.THIN);
-            verticalSubjectHeaderStyle.setBorderBottom(BorderStyle.THIN);
-            verticalSubjectHeaderStyle.setBorderLeft(BorderStyle.THIN);
-            verticalSubjectHeaderStyle.setBorderRight(BorderStyle.THIN);
-            verticalSubjectHeaderStyle.setRotation((short) 90);
-            verticalSubjectHeaderStyle.setWrapText(true);
-
-            CellStyle dataCenterStyle = workbook.createCellStyle();
-            dataCenterStyle.setFont(dataFont);
-            dataCenterStyle.setAlignment(HorizontalAlignment.CENTER);
-            dataCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataCenterStyle.setBorderTop(BorderStyle.THIN);
-            dataCenterStyle.setBorderBottom(BorderStyle.THIN);
-            dataCenterStyle.setBorderLeft(BorderStyle.THIN);
-            dataCenterStyle.setBorderRight(BorderStyle.THIN);
-
-            CellStyle dataLeftStyle = workbook.createCellStyle();
-            dataLeftStyle.setFont(dataFont);
-            dataLeftStyle.setAlignment(HorizontalAlignment.LEFT);
-            dataLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataLeftStyle.setBorderTop(BorderStyle.THIN);
-            dataLeftStyle.setBorderBottom(BorderStyle.THIN);
-            dataLeftStyle.setBorderLeft(BorderStyle.THIN);
-            dataLeftStyle.setBorderRight(BorderStyle.THIN);
-
-            CellStyle dataCenterBold = workbook.createCellStyle();
-            dataCenterBold.setFont(boldDataFont);
-            dataCenterBold.setAlignment(HorizontalAlignment.CENTER);
-            dataCenterBold.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataCenterBold.setBorderTop(BorderStyle.THIN);
-            dataCenterBold.setBorderBottom(BorderStyle.THIN);
-            dataCenterBold.setBorderLeft(BorderStyle.THIN);
-            dataCenterBold.setBorderRight(BorderStyle.THIN);
-
-            int numSubjects = matrix.getColumns().size();
-            int totalCols = Math.max(8, 5 + numSubjects + 3);
-
-            // Row 0: Góc trên cùng bên trái: QUÂN KHU 3
-            Row r0 = sheet.createRow(0);
-            r0.setHeightInPoints(22);
-            Cell cAgency1 = r0.createCell(0);
-            cAgency1.setCellValue("QUÂN KHU 3");
-            cAgency1.setCellStyle(agencyStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
-
-            // Row 1: Góc trên cùng bên trái: TRƯỜNG QUÂN SỰ
-            Row r1 = sheet.createRow(1);
-            r1.setHeightInPoints(22);
-            Cell cAgency2 = r1.createCell(0);
-            cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
-            cAgency2.setCellStyle(agencyUnderlineStyle);
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
-
-            // Row 2: Tiêu đề chính IN ĐẬM
-            Row r2 = sheet.createRow(2);
-            r2.setHeightInPoints(30);
-            Cell cTitle = r2.createCell(0);
-            cTitle.setCellValue("KẾT QUẢ KIỂM TRA THƯỜNG XUYÊN");
-            cTitle.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
-
-            // Row 3: Đơn vị lớp IN ĐẬM
-            Row r3 = sheet.createRow(3);
-            r3.setHeightInPoints(24);
-            Cell cUnit = r3.createCell(0);
-            cUnit.setCellValue("Đơn vị: " + className + " - Đào tạo " + majorName + " - " + courseName);
-            cUnit.setCellStyle(subTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
-
-            // Row 4: Quyết định kèm theo
-            Row r4 = sheet.createRow(4);
-            r4.setHeightInPoints(20);
-            Cell cDec = r4.createCell(0);
-            cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-HT ngày      tháng 5 năm 2026)");
-            cDec.setCellStyle(italicCenterStyle);
-            sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
-
-            // Row 5: Khai giảng / Bế giảng
-            Row r5 = sheet.createRow(5);
-            r5.setHeightInPoints(20);
-            Cell cDates = r5.createCell(0);
-            cDates.setCellValue("Khai giảng: 18/6/2026         Bế giảng : 18/10/2026");
-            cDates.setCellStyle(italicCenterStyle);
-            sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
-
-            // Table Headers at Row 7 & Row 8 (0-indexed)
-            Row headRow1 = sheet.createRow(7);
-            Row headRow2 = sheet.createRow(8);
-            headRow1.setHeightInPoints(34);
-            headRow2.setHeightInPoints(210); // 210pt đảm bảo hiển thị 100% trọn vẹn toàn bộ tên môn học dài
-
-            // Col 0: TT (IN ĐẬM)
-            Cell cTT1 = headRow1.createCell(0);
-            cTT1.setCellValue("TT");
-            cTT1.setCellStyle(headerBoldStyle);
-            headRow2.createCell(0).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(7, 8, 0, 0));
-
-            // Col 1-2: Số vào sổ (IN ĐẬM)
-            Cell cCode1 = headRow1.createCell(1);
-            cCode1.setCellValue("Số vào sổ");
-            cCode1.setCellStyle(headerBoldStyle);
-            headRow1.createCell(2).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(7, 7, 1, 2));
-
-            Cell cCodeSub1 = headRow2.createCell(1);
-            cCodeSub1.setCellValue("Mã HV");
-            cCodeSub1.setCellStyle(headerBoldStyle);
-
-            Cell cCodeSub2 = headRow2.createCell(2);
-            cCodeSub2.setCellValue("Khóa");
-            cCodeSub2.setCellStyle(headerBoldStyle);
-
-            // Col 3: Họ và tên (IN ĐẬM)
-            Cell cName1 = headRow1.createCell(3);
-            cName1.setCellValue("Họ và tên");
-            cName1.setCellStyle(headerBoldStyle);
-            headRow2.createCell(3).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(7, 8, 3, 3));
-
-            // Col 4: Ngày tháng năm sinh (IN ĐẬM)
-            Cell cDob1 = headRow1.createCell(4);
-            cDob1.setCellValue("Ngày tháng\nnăm sinh");
-            cDob1.setCellStyle(headerBoldStyle);
-            headRow2.createCell(4).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(7, 8, 4, 4));
-
-            // Nhóm: Kết quả kiểm tra thường xuyên = {N} (IN ĐẬM)
-            int subStart = 5;
-            int subEnd = subStart + numSubjects - 1;
-            if (numSubjects > 0) {
-                Cell subGroupCell = headRow1.createCell(subStart);
-                subGroupCell.setCellValue("Kết quả kiểm tra thường xuyên =" + numSubjects);
-                subGroupCell.setCellStyle(headerBoldStyle);
-                for (int c = subStart + 1; c <= subEnd; c++) {
-                    headRow1.createCell(c).setCellStyle(headerBoldStyle);
-                }
-                if (subEnd > subStart) {
-                    sheet.addMergedRegion(new CellRangeAddress(7, 7, subStart, subEnd));
-                }
-
-                for (int i = 0; i < numSubjects; i++) {
-                    SubjectColumnDTO sub = matrix.getColumns().get(i);
-                    int col = subStart + i;
-                    Cell sc = headRow2.createCell(col);
-                    sc.setCellValue(sub.getSubjectName());
-                    sc.setCellStyle(verticalSubjectHeaderStyle);
-                }
+        // Nhóm: Kết quả kiểm tra thường xuyên = {N} (IN ĐẬM)
+        int subStart = 5;
+        int subEnd = subStart + numSubjects - 1;
+        if (numSubjects > 0) {
+            Cell subGroupCell = headRow1.createCell(subStart);
+            subGroupCell.setCellValue("Kết quả kiểm tra thường xuyên =" + numSubjects);
+            subGroupCell.setCellStyle(styles.headerBoldStyle);
+            for (int c = subStart + 1; c <= subEnd; c++) {
+                headRow1.createCell(c).setCellStyle(styles.headerBoldStyle);
+            }
+            if (subEnd > subStart) {
+                sheet.addMergedRegion(new CellRangeAddress(7, 7, subStart, subEnd));
             }
 
-            int afterStart = Math.max(subEnd + 1, 5);
-            // Theo đúng mẫu KetQuaHocPhan.xlsx: Không có cột Điều kiện thi TN
-            String[] fixedAfter = {"Trung bình\ncộng", "Phân loại\nrèn luyện", "Quê quán"};
-            for (int i = 0; i < fixedAfter.length; i++) {
-                int col = afterStart + i;
-                Cell c = headRow1.createCell(col);
-                c.setCellValue(fixedAfter[i]);
-                c.setCellStyle(headerBoldStyle);
-                headRow2.createCell(col).setCellStyle(headerBoldStyle);
-                sheet.addMergedRegion(new CellRangeAddress(7, 8, col, col));
+            for (int i = 0; i < numSubjects; i++) {
+                SubjectColumnDTO sub = matrix.getColumns().get(i);
+                int col = subStart + i;
+                Cell sc = headRow2.createCell(col);
+                sc.setCellValue(sub.getSubjectName());
+                sc.setCellStyle(styles.verticalSubjectHeaderStyle);
             }
+        }
 
-            // Data Rows (from r=9)
-            int curRow = 9;
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        int afterStart = Math.max(subEnd + 1, 5);
+        String[] fixedAfter = {"Trung bình\ncộng", "Phân loại\nrèn luyện", "Quê quán"};
+        for (int i = 0; i < fixedAfter.length; i++) {
+            int col = afterStart + i;
+            Cell c = headRow1.createCell(col);
+            c.setCellValue(fixedAfter[i]);
+            c.setCellStyle(styles.headerBoldStyle);
+            headRow2.createCell(col).setCellStyle(styles.headerBoldStyle);
+            sheet.addMergedRegion(new CellRangeAddress(7, 8, col, col));
+        }
 
+        // Data Rows (from r=9)
+        int curRow = 9;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        if (matrix.getRows() != null) {
             for (StudentRowDTO st : matrix.getRows()) {
                 Row r = sheet.createRow(curRow++);
                 r.setHeightInPoints(24);
 
                 int cIdx = 0;
-                // Col 0: TT
                 Cell cellTT = r.createCell(cIdx++);
                 cellTT.setCellValue(st.getStt());
-                cellTT.setCellStyle(dataCenterStyle);
+                cellTT.setCellStyle(styles.dataCenterStyle);
 
-                // Col 1: Mã HV
                 Cell cellCode = r.createCell(cIdx++);
                 cellCode.setCellValue(st.getStudentCode());
-                cellCode.setCellStyle(dataCenterStyle);
+                cellCode.setCellStyle(styles.dataCenterStyle);
 
-                // Col 2: Khóa
                 Cell cellYear = r.createCell(cIdx++);
                 cellYear.setCellValue(2026);
-                cellYear.setCellStyle(dataCenterStyle);
+                cellYear.setCellStyle(styles.dataCenterStyle);
 
-                // Col 3: Họ và tên
                 Cell cellName = r.createCell(cIdx++);
                 cellName.setCellValue(st.getFullName());
-                cellName.setCellStyle(dataLeftStyle);
+                cellName.setCellStyle(styles.dataLeftStyle);
 
-                // Col 4: Ngày sinh
                 Cell cellDob = r.createCell(cIdx++);
                 cellDob.setCellValue(st.getDob() != null ? st.getDob().format(formatter) : "");
-                cellDob.setCellStyle(dataCenterStyle);
+                cellDob.setCellStyle(styles.dataCenterStyle);
 
-                // Subjects
-                for (SubjectColumnDTO sub : matrix.getColumns()) {
-                    Cell cScore = r.createCell(cIdx++);
-                    cScore.setCellStyle(dataCenterStyle);
-                    if (st.getGrades() != null && st.getGrades().containsKey(sub.getSubjectId())) {
-                        BigDecimal sc = st.getGrades().get(sub.getSubjectId()).getScore();
-                        if (sc != null) cScore.setCellValue(sc.doubleValue());
+                if (matrix.getColumns() != null) {
+                    for (SubjectColumnDTO sub : matrix.getColumns()) {
+                        Cell cScore = r.createCell(cIdx++);
+                        cScore.setCellStyle(styles.dataCenterStyle);
+                        if (st.getGrades() != null && st.getGrades().containsKey(sub.getSubjectId())) {
+                            BigDecimal sc = st.getGrades().get(sub.getSubjectId()).getScore();
+                            if (sc != null) cScore.setCellValue(sc.doubleValue());
+                        }
                     }
                 }
 
-                // Trung bình cộng (IN ĐẬM)
                 Cell cTbc = r.createCell(cIdx++);
-                cTbc.setCellStyle(dataCenterBold);
+                cTbc.setCellStyle(styles.dataCenterBold);
                 if (st.getTbcScore() != null) cTbc.setCellValue(st.getTbcScore().doubleValue());
 
-                // Rèn luyện
                 Cell cCond = r.createCell(cIdx++);
                 cCond.setCellValue(formatConductGrade(st.getConductGrade()));
-                cCond.setCellStyle(dataCenterStyle);
+                cCond.setCellStyle(styles.dataCenterStyle);
 
-                // Quê quán (Không còn cột thừa Điều kiện thi TN)
                 Cell cPob = r.createCell(cIdx++);
                 cPob.setCellValue(st.getPob() != null ? st.getPob() : "");
-                cPob.setCellStyle(dataLeftStyle);
+                cPob.setCellStyle(styles.dataLeftStyle);
             }
+        }
 
-            // Summary / Signatures (IN ĐẬM)
-            int signRowIdx = curRow + 2;
-            Row signRow1 = sheet.createRow(signRowIdx);
-            Row signRow2 = sheet.createRow(signRowIdx + 1);
-            signRow1.setHeightInPoints(24);
-            signRow2.setHeightInPoints(20);
+        // Summary / Signatures
+        int signRowIdx = curRow + 2;
+        Row signRow1 = sheet.createRow(signRowIdx);
+        Row signRow2 = sheet.createRow(signRowIdx + 1);
+        signRow1.setHeightInPoints(24);
+        signRow2.setHeightInPoints(20);
 
-            Cell s1 = signRow1.createCell(1);
-            s1.setCellValue("NGƯỜI LẬP BIỂU");
-            s1.setCellStyle(agencyStyle);
+        Cell s1 = signRow1.createCell(1);
+        s1.setCellValue("NGƯỜI LẬP BIỂU");
+        s1.setCellStyle(styles.agencyStyle);
 
-            Cell s1Note = signRow2.createCell(1);
-            s1Note.setCellValue("(Ký và ghi rõ họ tên)");
-            s1Note.setCellStyle(italicCenterStyle);
+        Cell s1Note = signRow2.createCell(1);
+        s1Note.setCellValue("(Ký và ghi rõ họ tên)");
+        s1Note.setCellStyle(styles.italicCenterStyle);
 
-            int midCol = totalCols / 2;
-            Cell s2 = signRow1.createCell(midCol);
-            s2.setCellValue("TRƯỞNG BỘ MÔN / KHOA");
-            s2.setCellStyle(agencyStyle);
+        int midCol = totalCols / 2;
+        Cell s2 = signRow1.createCell(midCol);
+        s2.setCellValue("TRƯỞNG BỘ MÔN / KHOA");
+        s2.setCellStyle(styles.agencyStyle);
 
-            Cell s2Note = signRow2.createCell(midCol);
-            s2Note.setCellValue("(Ký và ghi rõ họ tên)");
-            s2Note.setCellStyle(italicCenterStyle);
+        Cell s2Note = signRow2.createCell(midCol);
+        s2Note.setCellValue("(Ký và ghi rõ họ tên)");
+        s2Note.setCellStyle(styles.italicCenterStyle);
 
-            int endCol = Math.max(totalCols - 2, midCol + 2);
-            Cell s3 = signRow1.createCell(endCol);
-            s3.setCellValue("CHỈ HUY ĐƠN VỊ");
-            s3.setCellStyle(agencyStyle);
+        int endCol = Math.max(totalCols - 2, midCol + 2);
+        Cell s3 = signRow1.createCell(endCol);
+        s3.setCellValue("CHỈ HUY ĐƠN VỊ");
+        s3.setCellStyle(styles.agencyStyle);
 
-            Cell s3Note = signRow2.createCell(endCol);
-            s3Note.setCellValue("(Ký và ghi rõ họ tên)");
-            s3Note.setCellStyle(italicCenterStyle);
+        Cell s3Note = signRow2.createCell(endCol);
+        s3Note.setCellValue("(Ký và ghi rõ họ tên)");
+        s3Note.setCellStyle(styles.italicCenterStyle);
 
-            // Column Widths
-            sheet.setColumnWidth(0, 5 * 256);  // TT
-            sheet.setColumnWidth(1, 14 * 256); // Mã HV
-            sheet.setColumnWidth(2, 8 * 256);  // Khóa
-            sheet.setColumnWidth(3, 24 * 256); // Họ tên
-            sheet.setColumnWidth(4, 14 * 256); // Ngày sinh
-            for (int i = 0; i < numSubjects; i++) {
-                sheet.setColumnWidth(subStart + i, 13 * 256); // Tên môn hiển thị rộng rãi
+        // Column Widths
+        sheet.setColumnWidth(0, 5 * 256);  // TT
+        sheet.setColumnWidth(1, 14 * 256); // Mã HV
+        sheet.setColumnWidth(2, 8 * 256);  // Khóa
+        sheet.setColumnWidth(3, 24 * 256); // Họ tên
+        sheet.setColumnWidth(4, 14 * 256); // Ngày sinh
+        for (int i = 0; i < numSubjects; i++) {
+            sheet.setColumnWidth(subStart + i, 13 * 256);
+        }
+        sheet.setColumnWidth(afterStart, 14 * 256);     // Trung bình cộng
+        sheet.setColumnWidth(afterStart + 1, 16 * 256); // Phân loại rèn luyện
+        sheet.setColumnWidth(afterStart + 2, 28 * 256); // Quê quán
+    }
+
+    public byte[] exportKetQuaHocPhanExcel(Integer classId, Integer semester) throws IOException {
+        MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(classId, semester);
+        ClassEntity clazz = classRepository.findById(classId).orElse(null);
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            HocPhanStyles styles = createHocPhanStyles(workbook);
+            Set<String> existingNames = new HashSet<>();
+            buildHocPhanSheet(workbook, matrix, clazz, styles, existingNames);
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    public byte[] exportAllClassesHocPhanExcel(Integer semester) throws IOException {
+        List<ClassEntity> classes = classRepository.findAll();
+        classes.sort((a, b) -> (a.getCode() != null ? a.getCode() : "").compareToIgnoreCase(b.getCode() != null ? b.getCode() : ""));
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            HocPhanStyles styles = createHocPhanStyles(workbook);
+            Set<String> existingNames = new HashSet<>();
+
+            if (classes.isEmpty()) {
+                workbook.createSheet("DanhSachLop");
+            } else {
+                for (ClassEntity c : classes) {
+                    MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(c.getId(), semester);
+                    buildHocPhanSheet(workbook, matrix, c, styles, existingNames);
+                }
             }
-            sheet.setColumnWidth(afterStart, 14 * 256);     // Trung bình cộng
-            sheet.setColumnWidth(afterStart + 1, 16 * 256); // Phân loại rèn luyện
-            sheet.setColumnWidth(afterStart + 2, 28 * 256); // Quê quán
 
             workbook.write(out);
             return out.toByteArray();
         }
     }
 
-    public byte[] exportKetQuaTotNghiepExcel(Integer classId, Integer semester) throws IOException {
-        MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(classId, semester);
-        ClassEntity clazz = classRepository.findById(classId).orElse(null);
+    private void buildTotNghiepSheet(Workbook workbook, MatrixResponseDTO matrix, ClassEntity clazz, TotNghiepStyles styles, Set<String> existingSheetNames) {
         String majorName = clazz != null && clazz.getMajor() != null ? clazz.getMajor().getName() : (matrix.getMajorName() != null ? matrix.getMajorName() : "Sĩ quan Dự bị");
         String courseName = clazz != null && clazz.getCourse() != null ? clazz.getCourse().getName() : (matrix.getCourseName() != null ? matrix.getCourseName() : "Khóa 2026");
         String className = clazz != null ? clazz.getName() : matrix.getClassName();
-        String classCode = matrix.getClassCode() != null ? matrix.getClassCode() : ("Lop_" + classId);
+        String classCode = matrix.getClassCode() != null ? matrix.getClassCode() : (clazz != null && clazz.getCode() != null ? clazz.getCode() : "Lop");
 
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            // Tên sheet (folder tab) đặt trực tiếp theo tên / mã lớp
-            String sheetName = classCode.length() > 31 ? classCode.substring(0, 31) : classCode;
-            Sheet sheet = workbook.createSheet(sheetName);
+        String sheetName = getUniqueSheetName(classCode, existingSheetNames);
+        Sheet sheet = workbook.createSheet(sheetName);
 
-            sheet.getPrintSetup().setLandscape(true);
-            sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        sheet.getPrintSetup().setLandscape(true);
+        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
 
-            // Fonts (Chuẩn hóa font cỡ 12pt+ theo đúng mẫu KetQuaTotNghiep.xls)
-            Font agencyFont = workbook.createFont();
-            agencyFont.setBold(true);
-            agencyFont.setFontHeightInPoints((short) 12);
-            agencyFont.setFontName("Times New Roman");
+        int totalCols = 14;
 
-            Font agencyUnderlineFont = workbook.createFont();
-            agencyUnderlineFont.setBold(true);
-            agencyUnderlineFont.setUnderline(Font.U_SINGLE);
-            agencyUnderlineFont.setFontHeightInPoints((short) 12);
-            agencyUnderlineFont.setFontName("Times New Roman");
+        // Row 0: QUÂN KHU 3
+        Row r0 = sheet.createRow(0);
+        r0.setHeightInPoints(22);
+        Cell cAgency1 = r0.createCell(0);
+        cAgency1.setCellValue("QUÂN KHU 3");
+        cAgency1.setCellStyle(styles.agencyStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-            Font titleFont = workbook.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 16);
-            titleFont.setFontName("Times New Roman");
+        // Row 1: TRƯỜNG QUÂN SỰ
+        Row r1 = sheet.createRow(1);
+        r1.setHeightInPoints(22);
+        Cell cAgency2 = r1.createCell(0);
+        cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
+        cAgency2.setCellStyle(styles.agencyUnderlineStyle);
+        sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
 
-            Font subTitleFont = workbook.createFont();
-            subTitleFont.setBold(true);
-            subTitleFont.setFontHeightInPoints((short) 13);
-            subTitleFont.setFontName("Times New Roman");
+        // Row 2: Tiêu đề chính IN ĐẬM
+        Row r2 = sheet.createRow(2);
+        r2.setHeightInPoints(30);
+        Cell cTitle = r2.createCell(0);
+        cTitle.setCellValue("KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP");
+        cTitle.setCellStyle(styles.titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
 
-            Font italicFont = workbook.createFont();
-            italicFont.setItalic(true);
-            italicFont.setFontHeightInPoints((short) 12);
-            italicFont.setFontName("Times New Roman");
+        // Row 3: Khóa & Lớp đào tạo IN ĐẬM
+        Row r3 = sheet.createRow(3);
+        r3.setHeightInPoints(24);
+        Cell cSub = r3.createCell(0);
+        cSub.setCellValue("Khóa " + courseName + " - Đào tạo " + majorName + " (" + className + ")");
+        cSub.setCellStyle(styles.subTitleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
 
-            Font italicBoldFont = workbook.createFont();
-            italicBoldFont.setBold(true);
-            italicBoldFont.setItalic(true);
-            italicBoldFont.setFontHeightInPoints((short) 12);
-            italicBoldFont.setFontName("Times New Roman");
+        // Row 4: Quyết định kèm theo
+        Row r4 = sheet.createRow(4);
+        r4.setHeightInPoints(20);
+        Cell cDec = r4.createCell(0);
+        cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-TQS ngày       tháng 4 năm 2026 của Trường Quân sự)");
+        cDec.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
 
-            Font headerBoldFont = workbook.createFont();
-            headerBoldFont.setBold(true);
-            headerBoldFont.setFontHeightInPoints((short) 12);
-            headerBoldFont.setFontName("Times New Roman");
+        // Row 5: Ngày tiếp nhận, khai giảng, bế giảng
+        Row r5 = sheet.createRow(5);
+        r5.setHeightInPoints(20);
+        Cell cDate = r5.createCell(0);
+        cDate.setCellValue("Tiếp nhận 03/02/2026    Khai giảng: 05/02/2026    Bế giảng : 29/5/2026");
+        cDate.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
 
-            Font dataFont = workbook.createFont();
-            dataFont.setFontHeightInPoints((short) 12);
-            dataFont.setFontName("Times New Roman");
+        // Row 7: Quân số lớp IN ĐẬM NGHIÊNG
+        int numRows = matrix.getRows() != null ? matrix.getRows().size() : 0;
+        Row r7 = sheet.createRow(7);
+        r7.setHeightInPoints(22);
+        Cell cCount = r7.createCell(totalCols - 1);
+        cCount.setCellValue(className + ": " + numRows + " đ/c");
+        cCount.setCellStyle(styles.italicRightBoldStyle);
 
-            Font boldDataFont = workbook.createFont();
-            boldDataFont.setBold(true);
-            boldDataFont.setFontHeightInPoints((short) 12);
-            boldDataFont.setFontName("Times New Roman");
+        // Row 9 & 10: Table Headers (0-indexed: r=9, r=10)
+        Row hRow1 = sheet.createRow(9);
+        Row hRow2 = sheet.createRow(10);
+        hRow1.setHeightInPoints(34);
+        hRow2.setHeightInPoints(36);
 
-            // Cell Styles
-            CellStyle agencyStyle = workbook.createCellStyle();
-            agencyStyle.setFont(agencyFont);
-            agencyStyle.setAlignment(HorizontalAlignment.CENTER);
-            agencyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // C0: TT (IN ĐẬM)
+        Cell cTT1 = hRow1.createCell(0);
+        cTT1.setCellValue("TT");
+        cTT1.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(0).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 0, 0));
 
-            CellStyle agencyUnderlineStyle = workbook.createCellStyle();
-            agencyUnderlineStyle.setFont(agencyUnderlineFont);
-            agencyUnderlineStyle.setAlignment(HorizontalAlignment.CENTER);
-            agencyUnderlineStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // C1-C2: Số vào sổ gốc cấp chứng chỉ (IN ĐẬM)
+        Cell cCert = hRow1.createCell(1);
+        cCert.setCellValue("Số vào sổ gốc cấp chứng chỉ");
+        cCert.setCellStyle(styles.headerBoldStyle);
+        hRow1.createCell(2).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 9, 1, 2));
 
-            CellStyle titleStyle = workbook.createCellStyle();
-            titleStyle.setFont(titleFont);
-            titleStyle.setAlignment(HorizontalAlignment.CENTER);
-            titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        Cell cCertSub1 = hRow2.createCell(1);
+        cCertSub1.setCellValue("Số TT");
+        cCertSub1.setCellStyle(styles.headerBoldStyle);
 
-            CellStyle subTitleStyle = workbook.createCellStyle();
-            subTitleStyle.setFont(subTitleFont);
-            subTitleStyle.setAlignment(HorizontalAlignment.CENTER);
-            subTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        Cell cCertSub2 = hRow2.createCell(2);
+        cCertSub2.setCellValue("Năm");
+        cCertSub2.setCellStyle(styles.headerBoldStyle);
 
-            CellStyle italicCenterStyle = workbook.createCellStyle();
-            italicCenterStyle.setFont(italicFont);
-            italicCenterStyle.setAlignment(HorizontalAlignment.CENTER);
-            italicCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // C3: Họ và tên (IN ĐẬM)
+        Cell cName1 = hRow1.createCell(3);
+        cName1.setCellValue("Họ và tên");
+        cName1.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(3).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 3, 3));
 
-            CellStyle italicRightBoldStyle = workbook.createCellStyle();
-            italicRightBoldStyle.setFont(italicBoldFont);
-            italicRightBoldStyle.setAlignment(HorizontalAlignment.RIGHT);
-            italicRightBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        // C4: Ngày tháng năm sinh (IN ĐẬM)
+        Cell cDob1 = hRow1.createCell(4);
+        cDob1.setCellValue("Ngày tháng\nnăm sinh");
+        cDob1.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(4).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 4, 4));
 
-            CellStyle headerBoldStyle = workbook.createCellStyle();
-            headerBoldStyle.setFont(headerBoldFont);
-            headerBoldStyle.setAlignment(HorizontalAlignment.CENTER);
-            headerBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            headerBoldStyle.setBorderTop(BorderStyle.THIN);
-            headerBoldStyle.setBorderBottom(BorderStyle.THIN);
-            headerBoldStyle.setBorderLeft(BorderStyle.THIN);
-            headerBoldStyle.setBorderRight(BorderStyle.THIN);
-            headerBoldStyle.setWrapText(true);
+        // C5-C8: Nhóm Kết quả thi (IN ĐẬM)
+        Cell cExamGroup = hRow1.createCell(5);
+        cExamGroup.setCellValue("Kết quả thi");
+        cExamGroup.setCellStyle(styles.headerBoldStyle);
+        for (int col = 6; col <= 8; col++) {
+            hRow1.createCell(col).setCellStyle(styles.headerBoldStyle);
+        }
+        sheet.addMergedRegion(new CellRangeAddress(9, 9, 5, 8));
 
-            CellStyle dataCenterStyle = workbook.createCellStyle();
-            dataCenterStyle.setFont(dataFont);
-            dataCenterStyle.setAlignment(HorizontalAlignment.CENTER);
-            dataCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataCenterStyle.setBorderTop(BorderStyle.THIN);
-            dataCenterStyle.setBorderBottom(BorderStyle.THIN);
-            dataCenterStyle.setBorderLeft(BorderStyle.THIN);
-            dataCenterStyle.setBorderRight(BorderStyle.THIN);
+        String[] examSubs = {"CTĐ,\nCTCT", "Kỹ,\nC.thuật", "Chuyên\nngành", "TB thi"};
+        for (int i = 0; i < examSubs.length; i++) {
+            Cell subC = hRow2.createCell(5 + i);
+            subC.setCellValue(examSubs[i]);
+            subC.setCellStyle(styles.headerBoldStyle);
+        }
 
-            CellStyle dataLeftStyle = workbook.createCellStyle();
-            dataLeftStyle.setFont(dataFont);
-            dataLeftStyle.setAlignment(HorizontalAlignment.LEFT);
-            dataLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataLeftStyle.setBorderTop(BorderStyle.THIN);
-            dataLeftStyle.setBorderBottom(BorderStyle.THIN);
-            dataLeftStyle.setBorderLeft(BorderStyle.THIN);
-            dataLeftStyle.setBorderRight(BorderStyle.THIN);
+        // C9: Học lực (TB học tập) (IN ĐẬM)
+        Cell cHocLuc = hRow1.createCell(9);
+        cHocLuc.setCellValue("Học lực\n(TB học tập)");
+        cHocLuc.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(9).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 9, 9));
 
-            CellStyle dataCenterBold = workbook.createCellStyle();
-            dataCenterBold.setFont(boldDataFont);
-            dataCenterBold.setAlignment(HorizontalAlignment.CENTER);
-            dataCenterBold.setVerticalAlignment(VerticalAlignment.CENTER);
-            dataCenterBold.setBorderTop(BorderStyle.THIN);
-            dataCenterBold.setBorderBottom(BorderStyle.THIN);
-            dataCenterBold.setBorderLeft(BorderStyle.THIN);
-            dataCenterBold.setBorderRight(BorderStyle.THIN);
+        // C10: TB khóa học (Xét TN) (IN ĐẬM)
+        Cell cTbKhoa = hRow1.createCell(10);
+        cTbKhoa.setCellValue("TB khóa\nhọc (Xét TN)");
+        cTbKhoa.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(10).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 10, 10));
 
-            int totalCols = 14;
+        // C11: Rèn luyện (IN ĐẬM)
+        Cell cRenLuyen = hRow1.createCell(11);
+        cRenLuyen.setCellValue("Rèn\nluyện");
+        cRenLuyen.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(11).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 11, 11));
 
-            // Row 0: Góc trên cùng bên trái QUÂN KHU 3
-            Row r0 = sheet.createRow(0);
-            r0.setHeightInPoints(22);
-            Cell cAgency1 = r0.createCell(0);
-            cAgency1.setCellValue("QUÂN KHU 3");
-            cAgency1.setCellStyle(agencyStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
+        // C12: Phân loại TN (IN ĐẬM)
+        Cell cPhanLoai = hRow1.createCell(12);
+        cPhanLoai.setCellValue("Phân loại\nTN");
+        cPhanLoai.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(12).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 12, 12));
 
-            // Row 1: Góc trên cùng bên trái TRƯỜNG QUÂN SỰ
-            Row r1 = sheet.createRow(1);
-            r1.setHeightInPoints(22);
-            Cell cAgency2 = r1.createCell(0);
-            cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
-            cAgency2.setCellStyle(agencyUnderlineStyle);
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
+        // C13: Quê quán (IN ĐẬM)
+        Cell cQueQuan = hRow1.createCell(13);
+        cQueQuan.setCellValue("Quê quán");
+        cQueQuan.setCellStyle(styles.headerBoldStyle);
+        hRow2.createCell(13).setCellStyle(styles.headerBoldStyle);
+        sheet.addMergedRegion(new CellRangeAddress(9, 10, 13, 13));
 
-            // Row 2: Tiêu đề chính IN ĐẬM
-            Row r2 = sheet.createRow(2);
-            r2.setHeightInPoints(30);
-            Cell cTitle = r2.createCell(0);
-            cTitle.setCellValue("KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP");
-            cTitle.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
+        // Data Rows (from r=11)
+        int curRow = 11;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-            // Row 3: Khóa & Lớp đào tạo IN ĐẬM
-            Row r3 = sheet.createRow(3);
-            r3.setHeightInPoints(24);
-            Cell cSub = r3.createCell(0);
-            cSub.setCellValue("Khóa " + courseName + " - Đào tạo " + majorName + " (" + className + ")");
-            cSub.setCellStyle(subTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
+        int countGioi = 0, countKha = 0, countTbKha = 0, countTb = 0;
 
-            // Row 4: Quyết định kèm theo
-            Row r4 = sheet.createRow(4);
-            r4.setHeightInPoints(20);
-            Cell cDec = r4.createCell(0);
-            cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-TQS ngày       tháng 4 năm 2026 của Trường Quân sự)");
-            cDec.setCellStyle(italicCenterStyle);
-            sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
-
-            // Row 5: Ngày tiếp nhận, khai giảng, bế giảng
-            Row r5 = sheet.createRow(5);
-            r5.setHeightInPoints(20);
-            Cell cDate = r5.createCell(0);
-            cDate.setCellValue("Tiếp nhận 03/02/2026    Khai giảng: 05/02/2026    Bế giảng : 29/5/2026");
-            cDate.setCellStyle(italicCenterStyle);
-            sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
-
-            // Row 7: Quân số lớp IN ĐẬM NGHIÊNG
-            Row r7 = sheet.createRow(7);
-            r7.setHeightInPoints(22);
-            Cell cCount = r7.createCell(totalCols - 1);
-            cCount.setCellValue(className + ": " + matrix.getRows().size() + " đ/c");
-            cCount.setCellStyle(italicRightBoldStyle);
-
-            // Row 9 & 10: Table Headers (0-indexed: r=9, r=10)
-            Row hRow1 = sheet.createRow(9);
-            Row hRow2 = sheet.createRow(10);
-            hRow1.setHeightInPoints(34);
-            hRow2.setHeightInPoints(36);
-
-            // C0: TT (IN ĐẬM)
-            Cell cTT1 = hRow1.createCell(0);
-            cTT1.setCellValue("TT");
-            cTT1.setCellStyle(headerBoldStyle);
-            hRow2.createCell(0).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 0, 0));
-
-            // C1-C2: Số vào sổ gốc cấp chứng chỉ (IN ĐẬM)
-            Cell cCert = hRow1.createCell(1);
-            cCert.setCellValue("Số vào sổ gốc cấp chứng chỉ");
-            cCert.setCellStyle(headerBoldStyle);
-            hRow1.createCell(2).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 9, 1, 2));
-
-            Cell cCertSub1 = hRow2.createCell(1);
-            cCertSub1.setCellValue("Số TT");
-            cCertSub1.setCellStyle(headerBoldStyle);
-
-            Cell cCertSub2 = hRow2.createCell(2);
-            cCertSub2.setCellValue("Năm");
-            cCertSub2.setCellStyle(headerBoldStyle);
-
-            // C3: Họ và tên (IN ĐẬM)
-            Cell cName1 = hRow1.createCell(3);
-            cName1.setCellValue("Họ và tên");
-            cName1.setCellStyle(headerBoldStyle);
-            hRow2.createCell(3).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 3, 3));
-
-            // C4: Ngày tháng năm sinh (IN ĐẬM)
-            Cell cDob1 = hRow1.createCell(4);
-            cDob1.setCellValue("Ngày tháng\nnăm sinh");
-            cDob1.setCellStyle(headerBoldStyle);
-            hRow2.createCell(4).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 4, 4));
-
-            // C5-C8: Nhóm Kết quả thi (IN ĐẬM)
-            Cell cExamGroup = hRow1.createCell(5);
-            cExamGroup.setCellValue("Kết quả thi");
-            cExamGroup.setCellStyle(headerBoldStyle);
-            for (int col = 6; col <= 8; col++) {
-                hRow1.createCell(col).setCellStyle(headerBoldStyle);
-            }
-            sheet.addMergedRegion(new CellRangeAddress(9, 9, 5, 8));
-
-            String[] examSubs = {"CTĐ,\nCTCT", "Kỹ,\nC.thuật", "Chuyên\nngành", "TB thi"};
-            for (int i = 0; i < examSubs.length; i++) {
-                Cell subC = hRow2.createCell(5 + i);
-                subC.setCellValue(examSubs[i]);
-                subC.setCellStyle(headerBoldStyle);
-            }
-
-            // C9: Học lực (TB học tập) (IN ĐẬM)
-            Cell cHocLuc = hRow1.createCell(9);
-            cHocLuc.setCellValue("Học lực\n(TB học tập)");
-            cHocLuc.setCellStyle(headerBoldStyle);
-            hRow2.createCell(9).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 9, 9));
-
-            // C10: TB khóa học (Xét TN) (IN ĐẬM)
-            Cell cTbKhoa = hRow1.createCell(10);
-            cTbKhoa.setCellValue("TB khóa\nhọc (Xét TN)");
-            cTbKhoa.setCellStyle(headerBoldStyle);
-            hRow2.createCell(10).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 10, 10));
-
-            // C11: Rèn luyện (IN ĐẬM)
-            Cell cRenLuyen = hRow1.createCell(11);
-            cRenLuyen.setCellValue("Rèn\nluyện");
-            cRenLuyen.setCellStyle(headerBoldStyle);
-            hRow2.createCell(11).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 11, 11));
-
-            // C12: Phân loại TN (IN ĐẬM)
-            Cell cPhanLoai = hRow1.createCell(12);
-            cPhanLoai.setCellValue("Phân loại\nTN");
-            cPhanLoai.setCellStyle(headerBoldStyle);
-            hRow2.createCell(12).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 12, 12));
-
-            // C13: Quê quán (IN ĐẬM)
-            Cell cQueQuan = hRow1.createCell(13);
-            cQueQuan.setCellValue("Quê quán");
-            cQueQuan.setCellStyle(headerBoldStyle);
-            hRow2.createCell(13).setCellStyle(headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(9, 10, 13, 13));
-
-            // Data Rows (from r=11)
-            int curRow = 11;
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-
-            int countGioi = 0, countKha = 0, countTbKha = 0, countTb = 0;
-
+        if (matrix.getRows() != null) {
             for (StudentRowDTO st : matrix.getRows()) {
                 Row r = sheet.createRow(curRow++);
                 r.setHeightInPoints(24);
 
-                // C0: TT
                 Cell d0 = r.createCell(0);
                 d0.setCellValue(st.getStt());
-                d0.setCellStyle(dataCenterStyle);
+                d0.setCellStyle(styles.dataCenterStyle);
 
-                // C1: Số vào sổ (format 0001, 0002...)
                 Cell d1 = r.createCell(1);
                 d1.setCellValue(String.format("%04d", st.getStt()));
-                d1.setCellStyle(dataCenterStyle);
+                d1.setCellStyle(styles.dataCenterStyle);
 
-                // C2: Năm
                 Cell d2 = r.createCell(2);
                 d2.setCellValue(2026);
-                d2.setCellStyle(dataCenterStyle);
+                d2.setCellStyle(styles.dataCenterStyle);
 
-                // C3: Họ và tên
                 Cell d3 = r.createCell(3);
                 d3.setCellValue(st.getFullName());
-                d3.setCellStyle(dataLeftStyle);
+                d3.setCellStyle(styles.dataLeftStyle);
 
-                // C4: Ngày sinh
                 Cell d4 = r.createCell(4);
                 d4.setCellValue(st.getDob() != null ? st.getDob().format(formatter) : "");
-                d4.setCellStyle(dataCenterStyle);
+                d4.setCellStyle(styles.dataCenterStyle);
 
-                // C5: CTĐ, CTCT (Môn 101)
                 Cell d5 = r.createCell(5);
-                d5.setCellStyle(dataCenterStyle);
+                d5.setCellStyle(styles.dataCenterStyle);
                 if (st.getGradExamScores() != null && st.getGradExamScores().containsKey(101)) {
                     d5.setCellValue(st.getGradExamScores().get(101).doubleValue());
                 }
 
-                // C6: Kỹ, C.thuật (Môn 102)
                 Cell d6 = r.createCell(6);
-                d6.setCellStyle(dataCenterStyle);
+                d6.setCellStyle(styles.dataCenterStyle);
                 if (st.getGradExamScores() != null && st.getGradExamScores().containsKey(102)) {
                     d6.setCellValue(st.getGradExamScores().get(102).doubleValue());
                 }
 
-                // C7: Chuyên ngành (Môn 103)
                 Cell d7 = r.createCell(7);
-                d7.setCellStyle(dataCenterStyle);
+                d7.setCellStyle(styles.dataCenterStyle);
                 if (st.getGradExamScores() != null && st.getGradExamScores().containsKey(103)) {
                     d7.setCellValue(st.getGradExamScores().get(103).doubleValue());
                 }
 
-                // C8: TB thi (IN ĐẬM)
                 Cell d8 = r.createCell(8);
-                d8.setCellStyle(dataCenterBold);
+                d8.setCellStyle(styles.dataCenterBold);
                 if (st.getGraduationExamScore() != null) {
                     d8.setCellValue(st.getGraduationExamScore().doubleValue());
                 }
 
-                // C9: Học lực (TB học tập) (IN ĐẬM)
                 Cell d9 = r.createCell(9);
-                d9.setCellStyle(dataCenterBold);
+                d9.setCellStyle(styles.dataCenterBold);
                 if (st.getTbcScore() != null) {
                     d9.setCellValue(st.getTbcScore().doubleValue());
                 }
 
-                // C10: TB khóa học (finalGraduationScore) (IN ĐẬM)
                 Cell d10 = r.createCell(10);
-                d10.setCellStyle(dataCenterBold);
+                d10.setCellStyle(styles.dataCenterBold);
                 if (st.getFinalGraduationScore() != null) {
                     d10.setCellValue(st.getFinalGraduationScore().doubleValue());
                 }
 
-                // C11: Rèn luyện
                 String rl = formatConductGrade(st.getConductGrade());
                 Cell d11 = r.createCell(11);
                 d11.setCellValue(rl);
-                d11.setCellStyle(dataCenterStyle);
+                d11.setCellStyle(styles.dataCenterStyle);
 
-                // C12: Phân loại TN (IN ĐẬM)
                 String pl = formatClassification(st.getGraduationClassification());
                 Cell d12 = r.createCell(12);
                 d12.setCellValue(pl);
-                d12.setCellStyle(dataCenterBold);
+                d12.setCellStyle(styles.dataCenterBold);
 
                 if (pl.contains("Giỏi")) countGioi++;
                 else if (pl.contains("Khá") && !pl.contains("TB")) countKha++;
                 else if (pl.contains("TB khá")) countTbKha++;
                 else if (pl.contains("Trung bình")) countTb++;
 
-                // C13: Quê quán
                 Cell d13 = r.createCell(13);
                 d13.setCellValue(st.getPob() != null ? st.getPob() : "");
-                d13.setCellStyle(dataLeftStyle);
+                d13.setCellStyle(styles.dataLeftStyle);
             }
+        }
 
-            // Statistics summary (IN ĐẬM)
-            int totalCadets = matrix.getRows().size();
-            int statRowIdx = curRow + 1;
-            Row statRow = sheet.createRow(statRowIdx);
-            statRow.setHeightInPoints(24);
-            Cell statCell = statRow.createCell(0);
-            statCell.setCellValue(String.format("Tổng số dự thi: %d đ/c. Trong đó: Giỏi: %d đ/c (%.1f%%); Khá: %d đ/c (%.1f%%); TB khá: %d đ/c (%.1f%%); Trung bình: %d đ/c (%.1f%%)",
-                    totalCadets,
-                    countGioi, totalCadets > 0 ? (countGioi * 100.0 / totalCadets) : 0,
-                    countKha, totalCadets > 0 ? (countKha * 100.0 / totalCadets) : 0,
-                    countTbKha, totalCadets > 0 ? (countTbKha * 100.0 / totalCadets) : 0,
-                    countTb, totalCadets > 0 ? (countTb * 100.0 / totalCadets) : 0));
-            statCell.setCellStyle(subTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(statRowIdx, statRowIdx, 0, totalCols - 1));
+        // Statistics summary (IN ĐẬM)
+        int totalCadets = numRows;
+        int statRowIdx = curRow + 1;
+        Row statRow = sheet.createRow(statRowIdx);
+        statRow.setHeightInPoints(24);
+        Cell statCell = statRow.createCell(0);
+        statCell.setCellValue(String.format("Tổng số dự thi: %d đ/c. Trong đó: Giỏi: %d đ/c (%.1f%%); Khá: %d đ/c (%.1f%%); TB khá: %d đ/c (%.1f%%); Trung bình: %d đ/c (%.1f%%)",
+                totalCadets,
+                countGioi, totalCadets > 0 ? (countGioi * 100.0 / totalCadets) : 0,
+                countKha, totalCadets > 0 ? (countKha * 100.0 / totalCadets) : 0,
+                countTbKha, totalCadets > 0 ? (countTbKha * 100.0 / totalCadets) : 0,
+                countTb, totalCadets > 0 ? (countTb * 100.0 / totalCadets) : 0));
+        statCell.setCellStyle(styles.subTitleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(statRowIdx, statRowIdx, 0, totalCols - 1));
 
-            // Signatures (IN ĐẬM)
-            int signRowIdx = statRowIdx + 2;
-            Row sRow1 = sheet.createRow(signRowIdx);
-            Row sRow2 = sheet.createRow(signRowIdx + 1);
-            sRow1.setHeightInPoints(24);
-            sRow2.setHeightInPoints(20);
+        // Signatures (IN ĐẬM)
+        int signRowIdx = statRowIdx + 2;
+        Row sRow1 = sheet.createRow(signRowIdx);
+        Row sRow2 = sheet.createRow(signRowIdx + 1);
+        sRow1.setHeightInPoints(24);
+        sRow2.setHeightInPoints(20);
 
-            Cell s1 = sRow1.createCell(1);
-            s1.setCellValue("NGƯỜI TỔNG HỢP");
-            s1.setCellStyle(agencyStyle);
-            Cell s1Sub = sRow2.createCell(1);
-            s1Sub.setCellValue("(Ký và ghi rõ họ tên)");
-            s1Sub.setCellStyle(italicCenterStyle);
+        Cell s1 = sRow1.createCell(1);
+        s1.setCellValue("NGƯỜI TỔNG HỢP");
+        s1.setCellStyle(styles.agencyStyle);
+        Cell s1Sub = sRow2.createCell(1);
+        s1Sub.setCellValue("(Ký và ghi rõ họ tên)");
+        s1Sub.setCellStyle(styles.italicCenterStyle);
 
-            Cell s2 = sRow1.createCell(6);
-            s2.setCellValue("TRƯỞNG PHÒNG ĐÀO TẠO");
-            s2.setCellStyle(agencyStyle);
-            Cell s2Sub = sRow2.createCell(6);
-            s2Sub.setCellValue("(Ký và ghi rõ họ tên)");
-            s2Sub.setCellStyle(italicCenterStyle);
+        Cell s2 = sRow1.createCell(6);
+        s2.setCellValue("TRƯỞNG PHÒNG ĐÀO TẠO");
+        s2.setCellStyle(styles.agencyStyle);
+        Cell s2Sub = sRow2.createCell(6);
+        s2Sub.setCellValue("(Ký và ghi rõ họ tên)");
+        s2Sub.setCellStyle(styles.italicCenterStyle);
 
-            Cell s3 = sRow1.createCell(11);
-            s3.setCellValue("HIỆU TRƯỞNG / CHỈ HUY TRƯỞNG");
-            s3.setCellStyle(agencyStyle);
-            Cell s3Sub = sRow2.createCell(11);
-            s3Sub.setCellValue("(Ký và ghi rõ họ tên)");
-            s3Sub.setCellStyle(italicCenterStyle);
+        Cell s3 = sRow1.createCell(11);
+        s3.setCellValue("HIỆU TRƯỞNG / CHỈ HUY TRƯỞNG");
+        s3.setCellStyle(styles.agencyStyle);
+        Cell s3Sub = sRow2.createCell(11);
+        s3Sub.setCellValue("(Ký và ghi rõ họ tên)");
+        s3Sub.setCellStyle(styles.italicCenterStyle);
 
-            // Column widths
-            sheet.setColumnWidth(0, 5 * 256);  // TT
-            sheet.setColumnWidth(1, 9 * 256);  // Số TT
-            sheet.setColumnWidth(2, 8 * 256);  // Năm
-            sheet.setColumnWidth(3, 24 * 256); // Họ và tên
-            sheet.setColumnWidth(4, 14 * 256); // Ngày sinh
-            sheet.setColumnWidth(5, 11 * 256); // CTĐ, CTCT
-            sheet.setColumnWidth(6, 11 * 256); // Kỹ, C.thuật
-            sheet.setColumnWidth(7, 11 * 256); // Chuyên ngành
-            sheet.setColumnWidth(8, 11 * 256); // TB thi
-            sheet.setColumnWidth(9, 13 * 256); // Học lực
-            sheet.setColumnWidth(10, 13 * 256);// TB khóa học
-            sheet.setColumnWidth(11, 12 * 256);// Rèn luyện
-            sheet.setColumnWidth(12, 13 * 256);// Phân loại TN
-            sheet.setColumnWidth(13, 28 * 256);// Quê quán
+        // Column widths
+        sheet.setColumnWidth(0, 5 * 256);  // TT
+        sheet.setColumnWidth(1, 9 * 256);  // Số TT
+        sheet.setColumnWidth(2, 8 * 256);  // Năm
+        sheet.setColumnWidth(3, 24 * 256); // Họ và tên
+        sheet.setColumnWidth(4, 14 * 256); // Ngày sinh
+        sheet.setColumnWidth(5, 11 * 256); // CTĐ, CTCT
+        sheet.setColumnWidth(6, 11 * 256); // Kỹ, C.thuật
+        sheet.setColumnWidth(7, 11 * 256); // Chuyên ngành
+        sheet.setColumnWidth(8, 11 * 256); // TB thi
+        sheet.setColumnWidth(9, 13 * 256); // Học lực
+        sheet.setColumnWidth(10, 13 * 256);// TB khóa học
+        sheet.setColumnWidth(11, 12 * 256);// Rèn luyện
+        sheet.setColumnWidth(12, 13 * 256);// Phân loại TN
+        sheet.setColumnWidth(13, 28 * 256);// Quê quán
+    }
+
+    public byte[] exportKetQuaTotNghiepExcel(Integer classId, Integer semester) throws IOException {
+        MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(classId, semester);
+        ClassEntity clazz = classRepository.findById(classId).orElse(null);
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            TotNghiepStyles styles = createTotNghiepStyles(workbook);
+            Set<String> existingNames = new HashSet<>();
+            buildTotNghiepSheet(workbook, matrix, clazz, styles, existingNames);
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    public byte[] exportAllClassesTotNghiepExcel(Integer semester) throws IOException {
+        List<ClassEntity> classes = classRepository.findAll();
+        classes.sort((a, b) -> (a.getCode() != null ? a.getCode() : "").compareToIgnoreCase(b.getCode() != null ? b.getCode() : ""));
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            TotNghiepStyles styles = createTotNghiepStyles(workbook);
+            Set<String> existingNames = new HashSet<>();
+
+            if (classes.isEmpty()) {
+                workbook.createSheet("DanhSachLop");
+            } else {
+                for (ClassEntity c : classes) {
+                    MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(c.getId(), semester);
+                    buildTotNghiepSheet(workbook, matrix, c, styles, existingNames);
+                }
+            }
 
             workbook.write(out);
             return out.toByteArray();

@@ -83,6 +83,32 @@ public class ExcelExportImportController {
                 .body(excelBytes);
     }
 
+    @GetMapping("/export-all-classes-hoc-phan")
+    public ResponseEntity<byte[]> exportAllClassesHocPhan(
+            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+
+        byte[] excelBytes = excelService.exportAllClassesHocPhanExcel(semester);
+        String filename = "SoKetQuaHocPhan_ToanBoCacLop_2026.xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @GetMapping("/export-all-classes-tot-nghiep")
+    public ResponseEntity<byte[]> exportAllClassesTotNghiep(
+            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+
+        byte[] excelBytes = excelService.exportAllClassesTotNghiepExcel(semester);
+        String filename = "SoKetQuaTotNghiep_ToanBoCacLop_2026.xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
     @PostMapping("/{classId}/import-excel")
     public ResponseEntity<Map<String, Object>> importExcel(
             @PathVariable Integer classId,

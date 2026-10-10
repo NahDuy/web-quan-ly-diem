@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet } from 'lucide-react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers } from 'lucide-react';
 
 const INITIAL_MILITARY_MOCK_MATRIX = {
   classId: 1,
@@ -566,6 +566,22 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     window.location.href = `/api/v1/classes/${classId}/export-tot-nghiep?semester=${semester}`;
   };
 
+  const handleExportAllClassesHocPhan = () => {
+    if (isDemoMode) {
+      alert('Chức năng xuất toàn bộ lớp khả dụng khi kết nối Backend.');
+      return;
+    }
+    window.location.href = `/api/v1/classes/export-all-classes-hoc-phan?semester=${semester}`;
+  };
+
+  const handleExportAllClassesTotNghiep = () => {
+    if (isDemoMode) {
+      alert('Chức năng xuất toàn bộ lớp khả dụng khi kết nối Backend.');
+      return;
+    }
+    window.location.href = `/api/v1/classes/export-all-classes-tot-nghiep?semester=${semester}`;
+  };
+
   const handleExportExcel = () => {
     handleExportHocPhan();
   };
@@ -731,9 +747,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   className="fixed inset-0 z-40"
                   onClick={() => setExportDropdownOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Chọn loại báo cáo Excel xuất ra
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
+                  {/* PHẦN 1: XUẤT LỚP HIỆN TẠI */}
+                  <div className="px-3.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                    <span>Xuất dữ liệu lớp đang chọn</span>
+                    <span className="text-emerald-700 font-mono font-bold">
+                      {matrixData?.classCode || `Lớp #${classId}`}
+                    </span>
                   </div>
 
                   <button
@@ -741,14 +761,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       setExportDropdownOpen(false);
                       handleExportHocPhan();
                     }}
-                    className="w-full px-3.5 py-2.5 text-left hover:bg-amber-50/80 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
-                    <div className="p-2 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 shrink-0 mt-0.5">
+                    <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0 mt-0.5">
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>1. Kết quả Học phần</span>
+                        <span>1. Kết quả Học phần (Lớp này)</span>
                         <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-mono font-semibold rounded">
                           KetQuaHocPhan
                         </span>
@@ -759,27 +779,75 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     </div>
                   </button>
 
-                  <div className="h-px bg-slate-100 my-1"></div>
-
                   <button
                     onClick={() => {
                       setExportDropdownOpen(false);
                       handleExportTotNghiep();
                     }}
-                    className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50/80 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
-                    <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0 mt-0.5">
+                    <div className="p-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 shrink-0 mt-0.5">
                       <Award className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>2. Kết quả Tốt nghiệp</span>
+                        <span>2. Kết quả Tốt nghiệp (Lớp này)</span>
                         <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-semibold rounded">
                           KetQuaTotNghiep
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
                         Số vào sổ gốc, điểm thi TN (CTĐ-CTCT, Kỹ thuật), TB khóa & xếp loại TN
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
+
+                  {/* PHẦN 2: XUẤT TOÀN BỘ CÁC LỚP (MỖI LỚP 1 SHEET) */}
+                  <div className="px-3.5 py-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Xuất toàn bộ các lớp (Mỗi lớp 1 sheet)</span>
+                    <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
+                      {classList.length} lớp
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportAllClassesHocPhan();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-emerald-600 text-white rounded-lg border border-emerald-700 shrink-0 mt-0.5 shadow-xs">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                        <span>3. Sổ Kết quả Học phần — Toàn bộ lớp</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Tổng hợp tất cả {classList.length} lớp đào tạo, mỗi lớp lưu trên 1 sheet riêng biệt
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportAllClassesTotNghiep();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-amber-600 text-white rounded-lg border border-amber-700 shrink-0 mt-0.5 shadow-xs">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                        <span>4. Sổ Kết quả Tốt nghiệp — Toàn bộ lớp</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Tổng hợp phân loại tốt nghiệp toàn khóa, mỗi lớp lưu trên 1 sheet riêng biệt
                       </div>
                     </div>
                   </button>
