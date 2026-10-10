@@ -222,6 +222,11 @@ public class GradeMatrixService {
 
         if (request.getGradeUpdates() != null) {
             for (GradeUpdateItem item : request.getGradeUpdates()) {
+                if (item.getScore() != null) {
+                    if (item.getScore().compareTo(BigDecimal.ZERO) < 0 || item.getScore().compareTo(BigDecimal.TEN) > 0) {
+                        throw new IllegalArgumentException("Điểm môn học phải nằm trong phạm vi từ 0 đến 10 (học viên ID: " + item.getStudentId() + ")");
+                    }
+                }
                 Student student = studentRepository.findById(item.getStudentId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học viên ID: " + item.getStudentId()));
                 Subject subject = subjectRepository.findById(item.getSubjectId())
@@ -260,6 +265,19 @@ public class GradeMatrixService {
 
         if (request.getEvaluationUpdates() != null) {
             for (EvaluationUpdateItem item : request.getEvaluationUpdates()) {
+                if (item.getScorePolitical() != null && (item.getScorePolitical().compareTo(BigDecimal.ZERO) < 0 || item.getScorePolitical().compareTo(BigDecimal.TEN) > 0)) {
+                    throw new IllegalArgumentException("Điểm thi Chính trị phải nằm trong phạm vi từ 0 đến 10");
+                }
+                if (item.getScoreMilitary() != null && (item.getScoreMilitary().compareTo(BigDecimal.ZERO) < 0 || item.getScoreMilitary().compareTo(BigDecimal.TEN) > 0)) {
+                    throw new IllegalArgumentException("Điểm thi Quân sự chung phải nằm trong phạm vi từ 0 đến 10");
+                }
+                if (item.getScoreSpecialty() != null && (item.getScoreSpecialty().compareTo(BigDecimal.ZERO) < 0 || item.getScoreSpecialty().compareTo(BigDecimal.TEN) > 0)) {
+                    throw new IllegalArgumentException("Điểm thi Chuyên ngành phải nằm trong phạm vi từ 0 đến 10");
+                }
+                if (item.getGraduationExamScore() != null && (item.getGraduationExamScore().compareTo(BigDecimal.ZERO) < 0 || item.getGraduationExamScore().compareTo(BigDecimal.TEN) > 0)) {
+                    throw new IllegalArgumentException("Điểm tốt nghiệp phải nằm trong phạm vi từ 0 đến 10");
+                }
+
                 Student student = studentRepository.findById(item.getStudentId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học viên ID: " + item.getStudentId()));
 

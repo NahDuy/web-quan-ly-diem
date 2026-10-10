@@ -274,9 +274,30 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return;
     }
     const key = `${studentId}_${subjectId}`;
+    if (value === '' || value === null || value === undefined) {
+      setEditedScores((prev) => ({
+        ...prev,
+        [key]: null,
+      }));
+      return;
+    }
+
+    const num = parseFloat(value);
+    if (isNaN(num)) return;
+
+    if (num < 0 || num > 10) {
+      alert('Điểm số chỉ được phép nhập trong phạm vi từ 0 đến 10!');
+      const clamped = Math.min(10, Math.max(0, num));
+      setEditedScores((prev) => ({
+        ...prev,
+        [key]: clamped,
+      }));
+      return;
+    }
+
     setEditedScores((prev) => ({
       ...prev,
-      [key]: value === '' ? null : parseFloat(value),
+      [key]: num,
     }));
   };
 
@@ -294,9 +315,30 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return;
     }
     const key = `${studentId}_${gradSubId}`;
+    if (value === '' || value === null || value === undefined) {
+      setEditedGradExamScores((prev) => ({
+        ...prev,
+        [key]: null,
+      }));
+      return;
+    }
+
+    const num = parseFloat(value);
+    if (isNaN(num)) return;
+
+    if (num < 0 || num > 10) {
+      alert('Điểm số tốt nghiệp chỉ được phép nhập trong phạm vi từ 0 đến 10!');
+      const clamped = Math.min(10, Math.max(0, num));
+      setEditedGradExamScores((prev) => ({
+        ...prev,
+        [key]: clamped,
+      }));
+      return;
+    }
+
     setEditedGradExamScores((prev) => ({
       ...prev,
-      [key]: value === '' ? null : parseFloat(value),
+      [key]: num,
     }));
   };
 
@@ -447,6 +489,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   // Quick direct save for ongoing grade entries (e.g. nhập trước 10 đồng chí, mỗi đồng chí 5 môn)
   const handleSaveDirect = async () => {
     if (!hasUnsavedChanges) return;
+
+    // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
+    for (const [key, score] of Object.entries(editedScores)) {
+      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
+        alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+        return;
+      }
+    }
+    for (const [key, score] of Object.entries(editedGradExamScores)) {
+      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
+        alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+        return;
+      }
+    }
+
     setSaving(true);
     setSaveSuccessMsg('');
 
@@ -529,6 +586,20 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     if (!auditReason.trim()) {
       alert('Vui lòng ghi rõ lý do/quyết định sửa điểm để lưu Audit Log');
       return;
+    }
+
+    // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
+    for (const [key, score] of Object.entries(editedScores)) {
+      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
+        alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+        return;
+      }
+    }
+    for (const [key, score] of Object.entries(editedGradExamScores)) {
+      if (score !== null && score !== undefined && (score < 0 || score > 10)) {
+        alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -1050,10 +1121,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               let intGradCount = 0;
               safeGradExamSubjects.forEach((gradSub) => {
                 const key = `${row.studentId}_${gradSub.id}`;
-                const val = key in editedGradExamScores ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : null);
-                if (val !== null && val !== undefined) {
-                  sumGradExam += val;
-                  intGradCount++;
+                const rawVal = key in editedGradExamScores ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : null);
+                if (rawVal !== null && rawVal !== undefined && rawVal !== '') {
+                  const val = parseFloat(rawVal);
+                  if (!isNaN(val)) {
+                    sumGradExam += val;
+                    intGradCount++;
+                  }
                 }
               });
 
@@ -1099,6 +1173,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
                           value={currentScoreVal !== null && currentScoreVal !== undefined ? currentScoreVal : ''}
                           onChange={(e) => handleScoreChange(row.studentId, col.subjectId, e.target.value)}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            if (val !== '') {
+                              const num = parseFloat(val);
+                              if (!isNaN(num) && (num < 0 || num > 10)) {
+                                handleScoreChange(row.studentId, col.subjectId, Math.min(10, Math.max(0, num)).toString());
+                              }
+                            }
+                          }}
                           placeholder="-"
                           className={`cell-input ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />
@@ -1144,6 +1227,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
                           value={val !== null && val !== undefined ? val : ''}
                           onChange={(e) => handleGradExamScoreChange(row.studentId, gradSub.id, e.target.value)}
+                          onBlur={(e) => {
+                            const v = e.target.value;
+                            if (v !== '') {
+                              const num = parseFloat(v);
+                              if (!isNaN(num) && (num < 0 || num > 10)) {
+                                handleGradExamScoreChange(row.studentId, gradSub.id, Math.min(10, Math.max(0, num)).toString());
+                              }
+                            }
+                          }}
                           placeholder="-"
                           className={`cell-input text-amber-800 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />

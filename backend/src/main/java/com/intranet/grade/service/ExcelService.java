@@ -1274,19 +1274,21 @@ public class ExcelService {
                     Cell scoreCell = row.getCell(c);
                     if (scoreCell != null && scoreCell.getCellType() == CellType.NUMERIC) {
                         double scoreVal = scoreCell.getNumericCellValue();
-                        BigDecimal score = BigDecimal.valueOf(scoreVal).setScale(2, RoundingMode.HALF_UP);
+                        if (scoreVal >= 0.0 && scoreVal <= 10.0) {
+                            BigDecimal score = BigDecimal.valueOf(scoreVal).setScale(2, RoundingMode.HALF_UP);
 
-                        Subject sub = subjectRepository.findById(subjectId).orElse(null);
-                        if (sub != null) {
-                            Optional<Grade> gradeOpt = gradeRepository.findByStudentIdAndSubjectIdAndClazzId(student.getId(), sub.getId(), clazz.getId());
-                            Grade g = gradeOpt.orElseGet(() -> Grade.builder()
-                                    .student(student)
-                                    .subject(sub)
-                                    .clazz(clazz)
-                                    .semester(1)
-                                    .build());
-                            g.setScore(score);
-                            gradeRepository.save(g);
+                            Subject sub = subjectRepository.findById(subjectId).orElse(null);
+                            if (sub != null) {
+                                Optional<Grade> gradeOpt = gradeRepository.findByStudentIdAndSubjectIdAndClazzId(student.getId(), sub.getId(), clazz.getId());
+                                Grade g = gradeOpt.orElseGet(() -> Grade.builder()
+                                        .student(student)
+                                        .subject(sub)
+                                        .clazz(clazz)
+                                        .semester(1)
+                                        .build());
+                                g.setScore(score);
+                                gradeRepository.save(g);
+                            }
                         }
                     }
                 }
