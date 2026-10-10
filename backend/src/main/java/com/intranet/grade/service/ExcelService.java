@@ -1713,6 +1713,10 @@ public class ExcelService {
 
     @Transactional
     public Map<String, Object> importCurriculumFromExcel(MultipartFile file) throws IOException {
+        return importCurriculumFromExcel(file, null);
+    }
+
+    public Map<String, Object> importCurriculumFromExcel(MultipartFile file, String requestedCourseCode) throws IOException {
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
 
@@ -1735,14 +1739,28 @@ public class ExcelService {
                 throw new IllegalArgumentException("Không xác định được chuyên ngành từ file Excel!");
             }
 
-            Course course = courseRepository.findByCode("SQDB2026").orElseGet(() ->
-                    courseRepository.findAll().stream().findFirst().orElse(null));
+            Course course = null;
+            if (requestedCourseCode != null && !requestedCourseCode.isBlank()) {
+                course = courseRepository.findByCode(requestedCourseCode).orElse(null);
+            }
+            if (course == null) {
+                if (subTitle.contains("2025")) {
+                    course = courseRepository.findByCode("SQDB2025").orElse(null);
+                } else if (subTitle.contains("2024")) {
+                    course = courseRepository.findByCode("SQDB2024").orElse(null);
+                }
+            }
+            if (course == null) {
+                course = courseRepository.findByCode("SQDB2026").orElseGet(() ->
+                        courseRepository.findAll().stream().findFirst().orElse(null));
+            }
 
-            Curriculum curriculum = curriculumRepository.findByMajorIdAndCourseId(major.getId(), course.getId())
+            final Course finalCourse = course;
+            Curriculum curriculum = curriculumRepository.findByMajorIdAndCourseId(major.getId(), finalCourse.getId())
                     .orElseGet(() -> curriculumRepository.save(Curriculum.builder()
                             .major(major)
-                            .course(course)
-                            .name("Lộ trình Đào tạo & Thi TN " + major.getName())
+                            .course(finalCourse)
+                            .name("Lộ trình Đào tạo & Thi TN " + major.getName() + " (" + finalCourse.getName() + ")")
                             .totalCredits(0)
                             .build()));
 

@@ -199,6 +199,35 @@ public class DataInitializer implements CommandLineRunner {
         initCurriculumForMajor("HT", "Lộ trình Đào tạo SQDB Hợp thành", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, bb101, bb102, bb103));
         initCurriculumForMajor("PB", "Lộ trình Đào tạo SQDB Pháo binh", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, pb101, pb102));
         initCurriculumForMajor("TT", "Lộ trình Đào tạo SQDB Thông tin Kỹ thuật", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, tt101, tt102));
+
+        // 5. Khởi tạo Lộ trình Đào tạo riêng biệt cho các Khóa trước (Khóa 2025, Khóa 2024)
+        Course course2025 = courseRepository.findByCode("SQDB2025").orElseGet(() ->
+                courseRepository.save(Course.builder()
+                        .code("SQDB2025")
+                        .name("Khóa Đào tạo Sĩ quan Dự bị Năm 2025")
+                        .startYear(2025)
+                        .endYear(2025)
+                        .build())
+        );
+
+        Course course2024 = courseRepository.findByCode("SQDB2024").orElseGet(() ->
+                courseRepository.save(Course.builder()
+                        .code("SQDB2024")
+                        .name("Khóa Đào tạo Sĩ quan Dự bị Năm 2024")
+                        .startYear(2024)
+                        .endYear(2024)
+                        .build())
+        );
+
+        initCurriculumForMajor("TSBB", "Lộ trình Đào tạo SQDB Trinh sát Bộ binh (Khóa 2025)", course2025, List.of(qs101, qs102, qs103, qs104, qs105, ts101, ts102, ts103));
+        initCurriculumForMajor("BB", "Lộ trình Đào tạo SQDB Bộ binh (Khóa 2025)", course2025, List.of(qs101, qs102, qs103, qs104, qs105, bb101, bb102, bb103));
+        initCurriculumForMajor("BCHT", "Lộ trình Đào tạo SQDB Binh chủng Hợp thành (Khóa 2025)", course2025, List.of(qs101, qs102, qs103, qs104, qs105, bb101, bb102, bb103));
+        initCurriculumForMajor("COI", "Lộ trình Đào tạo SQDB Súng Cối 82mm (Khóa 2025)", course2025, List.of(qs101, qs102, qs103, qs104, qs105, coi101, coi102, coi103));
+        initCurriculumForMajor("DKZ", "Lộ trình Đào tạo SQDB Súng ĐKZ (Khóa 2025)", course2025, List.of(qs101, qs102, qs103, qs104, qs105, dkz101, dkz102, dkz103));
+
+        initCurriculumForMajor("TSBB", "Lộ trình Đào tạo SQDB Trinh sát Bộ binh (Khóa 2024)", course2024, List.of(qs101, qs102, qs103, qs104, ts101, ts102, ts103));
+        initCurriculumForMajor("BB", "Lộ trình Đào tạo SQDB Bộ binh (Khóa 2024)", course2024, List.of(qs101, qs102, qs103, qs104, bb101, bb102, bb103));
+        initCurriculumForMajor("BCHT", "Lộ trình Đào tạo SQDB Binh chủng Hợp thành (Khóa 2024)", course2024, List.of(qs101, qs102, qs103, qs104, bb101, bb102, bb103));
     }
 
     private Subject getOrCreateSubject(String code, String name, int credits, Department dept) {

@@ -92,12 +92,23 @@ public class CurriculumService {
 
     @Transactional(readOnly = true)
     public List<com.intranet.grade.dto.CurriculumDTO> getAllCurriculums(String majorCode, String targetGroup) {
+        return getAllCurriculums(majorCode, targetGroup, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.intranet.grade.dto.CurriculumDTO> getAllCurriculums(String majorCode, String targetGroup, String courseCode) {
         List<Curriculum> list = curriculumRepository.findAll();
         List<com.intranet.grade.dto.CurriculumDTO> dtos = new ArrayList<>();
 
         for (Curriculum c : list) {
             if (majorCode != null && !majorCode.isBlank() && c.getMajor() != null) {
                 if (!majorCode.equalsIgnoreCase(c.getMajor().getCode())) {
+                    continue;
+                }
+            }
+
+            if (courseCode != null && !courseCode.isBlank() && c.getCourse() != null) {
+                if (!courseCode.equalsIgnoreCase(c.getCourse().getCode())) {
                     continue;
                 }
             }

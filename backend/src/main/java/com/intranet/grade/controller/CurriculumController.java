@@ -17,17 +17,19 @@ public class CurriculumController {
     @GetMapping
     public ResponseEntity<java.util.List<com.intranet.grade.dto.CurriculumDTO>> getAllCurriculums(
             @RequestParam(required = false) String majorCode,
-            @RequestParam(required = false) String targetGroup) {
-        return ResponseEntity.ok(curriculumService.getAllCurriculums(majorCode, targetGroup));
+            @RequestParam(required = false) String targetGroup,
+            @RequestParam(required = false) String courseCode) {
+        return ResponseEntity.ok(curriculumService.getAllCurriculums(majorCode, targetGroup, courseCode));
     }
 
     @GetMapping("/export-template")
     public ResponseEntity<byte[]> exportCurriculumTemplate(
             @RequestParam(required = false, defaultValue = "TSBB") String majorCode,
-            @RequestParam(required = false, defaultValue = "SQDB") String targetGroup) throws java.io.IOException {
+            @RequestParam(required = false, defaultValue = "SQDB") String targetGroup,
+            @RequestParam(required = false, defaultValue = "SQDB2026") String courseCode) throws java.io.IOException {
 
         byte[] bytes = excelService.exportCurriculumTemplate(majorCode, targetGroup);
-        String filename = "Khung_ChuongTrinh_Thi_" + majorCode + "_" + targetGroup + ".xlsx";
+        String filename = "Khung_ChuongTrinh_Thi_" + majorCode + "_" + targetGroup + "_" + courseCode + ".xlsx";
 
         return ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
@@ -36,9 +38,11 @@ public class CurriculumController {
     }
 
     @PostMapping("/import-excel")
-    public ResponseEntity<?> importCurriculumExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+    public ResponseEntity<?> importCurriculumExcel(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(required = false) String courseCode) {
         try {
-            java.util.Map<String, Object> result = excelService.importCurriculumFromExcel(file);
+            java.util.Map<String, Object> result = excelService.importCurriculumFromExcel(file, courseCode);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Map.of(

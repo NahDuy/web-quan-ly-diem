@@ -44,21 +44,15 @@ public class GradeMatrixService {
         Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem);
         boolean isLocked = lockOpt.isPresent() && lockOpt.get().getIsLocked();
 
-        // 1. Fetch Subjects (From ClassSubjects if configured, else fallback to SubjectRepository)
-        List<Subject> subjects = new ArrayList<>();
+        // 1. Fetch Subjects (From ClassSubjects if configured, else auto-populate & snapshot)
         List<ClassSubject> classSubjects = classSubjectRepository.findByClazzIdAndSemesterOrderByIsExtraAscDisplayOrderAsc(classId, sem);
+        List<Subject> subjects;
 
         if (!classSubjects.isEmpty()) {
             subjects = classSubjects.stream().map(ClassSubject::getSubject).collect(Collectors.toList());
         } else {
-            if (semester != null && semester > 0) {
-                subjects = subjectRepository.findSubjectsByClassIdAndSemester(classId, semester);
-            } else {
-                subjects = subjectRepository.findSubjectsByClassId(classId);
-            }
-            if (subjects.isEmpty()) {
-                subjects = autoPopulateSubjectsFromCurriculum(clazz, sem);
-            }
+            // Tự động snapshot danh sách môn từ đúng Khóa/Ngành của lớp vào class_subjects để cố định độc lập
+            subjects = autoPopulateSubjectsFromCurriculum(clazz, sem);
         }
 
         List<SubjectColumnDTO> columns = subjects.stream().map(s -> SubjectColumnDTO.builder()

@@ -38,6 +38,13 @@ export default function CurriculumRoadmapView() {
   const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
   const [addTargetError, setAddTargetError] = useState('');
 
+  const [selectedCourse, setSelectedCourse] = useState('SQDB2026');
+  const courseOptions = [
+    { code: 'SQDB2026', name: 'Khóa SQDB 2026 (Năm 2026)', year: 2026 },
+    { code: 'SQDB2025', name: 'Khóa SQDB 2025 (Năm 2025)', year: 2025 },
+    { code: 'SQDB2024', name: 'Khóa SQDB 2024 (Năm 2024)', year: 2024 },
+  ];
+
   // Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -62,7 +69,7 @@ export default function CurriculumRoadmapView() {
   const fetchCurriculums = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/curriculums?majorCode=${selectedMajor}&targetGroup=${targetGroup}`);
+      const res = await fetch(`/api/v1/curriculums?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`);
       if (res.ok) {
         const data = await res.json();
         setCurriculums(data);
@@ -82,7 +89,7 @@ export default function CurriculumRoadmapView() {
     if (selectedMajor && targetGroup) {
       fetchCurriculums();
     }
-  }, [selectedMajor, targetGroup]);
+  }, [selectedMajor, targetGroup, selectedCourse]);
 
   const activeCurriculum = curriculums.length > 0 ? curriculums[0] : null;
   const allSubjects = activeCurriculum?.subjects || [];
@@ -109,12 +116,13 @@ export default function CurriculumRoadmapView() {
 
     const formData = new FormData();
     formData.append('file', importFile);
+    formData.append('courseCode', selectedCourse);
 
     try {
       const token = localStorage.getItem('jwt_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      const res = await fetch('/api/v1/curriculums/import-excel', {
+      const res = await fetch(`/api/v1/curriculums/import-excel?courseCode=${selectedCourse}`, {
         method: 'POST',
         headers,
         body: formData
@@ -124,19 +132,23 @@ export default function CurriculumRoadmapView() {
       if (res.ok && data.success) {
         setImportStatus({
           type: 'success',
-          text: data.message || `Đã import thành công ${data.importedCount} môn học vào Lộ trình đào tạo!`
+          text: data.message || `Đã import thành công ${data.importedCount} môn học vào Lộ trình đào tạo khóa ${selectedCourse}!`
         });
         setTimeout(() => {
           setIsImportModalOpen(false);
-          setImportFile(null);
-          setImportStatus({ type: '', text: '' });
           fetchCurriculums();
         }, 1500);
       } else {
-        setImportStatus({ type: 'error', text: data.message || 'Lỗi khi import file Excel' });
+        setImportStatus({
+          type: 'error',
+          text: data.message || 'Lỗi khi nhập dữ liệu từ file Excel'
+        });
       }
-    } catch (err) {
-      setImportStatus({ type: 'error', text: 'Không thể tải file lên máy chủ' });
+    } catch (e) {
+      setImportStatus({
+        type: 'error',
+        text: 'Lỗi kết nối máy chủ khi tải lên file'
+      });
     } finally {
       setUploading(false);
     }
@@ -232,7 +244,7 @@ export default function CurriculumRoadmapView() {
             </button>
 
             <a
-              href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}`}
+              href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`}
               download
               className="btn btn-secondary btn-sm"
               title="Tải về file Excel mẫu chuẩn đã được minh họa sẵn danh sách môn học và thi tốt nghiệp của chuyên ngành này"
@@ -318,7 +330,25 @@ export default function CurriculumRoadmapView() {
           <div className="flex flex-wrap items-center gap-4">
             <div>
               <label className="form-label text-[11px] mb-1">
-                2. Chọn Chuyên ngành đào tạo
+                2. Chọn Khóa / Năm đào tạo
+              </label>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="form-input text-xs font-bold text-slate-900 min-w-[210px]"
+                style={{ cursor: 'pointer' }}
+              >
+                {courseOptions.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="form-label text-[11px] mb-1">
+                3. Chọn Chuyên ngành đào tạo
               </label>
               <select
                 value={selectedMajor}
@@ -542,12 +572,12 @@ export default function CurriculumRoadmapView() {
               <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                 <span className="text-slate-500">Chưa có file mẫu chuẩn?</span>
                 <a
-                  href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}`}
+                  href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`}
                   download
                   className="text-amber-700 hover:text-amber-800 font-bold inline-flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Tải file mẫu Excel ({selectedMajor} - {targetGroup})
+                  Tải file mẫu Excel ({selectedMajor} - {targetGroup} - {selectedCourse})
                 </a>
               </div>
             </div>
