@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers } from 'lucide-react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen } from 'lucide-react';
 
 const INITIAL_MILITARY_MOCK_MATRIX = {
   classId: 1,
@@ -160,9 +160,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   // State for Dynamic Extra Subject Column Modal
   const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
+  const [addSubjectTab, setAddSubjectTab] = useState('existing'); // 'existing' | 'new'
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubCredits, setNewSubCredits] = useState('3');
+  const [addingSubject, setAddingSubject] = useState(false);
 
   // State for Export Format Dropdown
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -312,32 +316,88 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                             Object.keys(editedConducts).length +
                             Object.keys(editedGradExamScores).length;
 
-  const handleAddDynamicSubject = (e) => {
+  const fetchAvailableSubjects = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/classes/available-subjects', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableSubjects(data || []);
+        if (data && data.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(data[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi tải danh mục môn học:', err);
+    }
+  };
+
+  const handleAddExistingSubject = async (e) => {
+    e.preventDefault();
+    if (!selectedSubjectId) {
+      alert('Vui lòng chọn một môn học từ danh mục!');
+      return;
+    }
+    setAddingSubject(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/classes/${classId}/add-subject?subjectId=${selectedSubjectId}&semester=${semester}&isExtra=true`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsAddSubjectModalOpen(false);
+        setSaveSuccessMsg(data.message || 'Đã thêm cột môn học vào bảng điểm của lớp thành công!');
+        await fetchMatrix();
+      } else {
+        alert(data.message || 'Không thể thêm môn học vào lớp');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi thêm môn học');
+    } finally {
+      setAddingSubject(false);
+    }
+  };
+
+  const handleAddNewSubject = async (e) => {
     e.preventDefault();
     if (!newSubName.trim() || !newSubCode.trim()) {
       alert('Vui lòng nhập đầy đủ Tên môn học và Mã môn học!');
       return;
     }
-
-    const newSubId = Date.now();
-    const newColObj = {
-      subjectId: newSubId,
-      subjectCode: newSubCode.toUpperCase(),
-      subjectName: newSubName,
-      credits: parseInt(newSubCredits) || 3,
-      isExtra: true,
-    };
-
-    setMatrixData((prev) => ({
-      ...prev,
-      columns: [...prev.columns, newColObj],
-    }));
-
-    setIsAddSubjectModalOpen(false);
-    setNewSubName('');
-    setNewSubCode('');
-    setNewSubCredits('3');
-    setSaveSuccessMsg(`Đã thêm mới cột môn học linh hoạt "${newSubName} (${newSubCode.toUpperCase()})" (${newSubCredits} tín chỉ) cho lớp!`);
+    setAddingSubject(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const params = new URLSearchParams({
+        subjectCode: newSubCode.trim().toUpperCase(),
+        subjectName: newSubName.trim(),
+        credits: newSubCredits || '3',
+        semester: semester || 1,
+      });
+      const res = await fetch(`/api/v1/classes/${classId}/create-and-add-subject?${params.toString()}`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsAddSubjectModalOpen(false);
+        setNewSubName('');
+        setNewSubCode('');
+        setNewSubCredits('3');
+        setSaveSuccessMsg(data.message || 'Đã tạo và thêm cột môn học mới thành công!');
+        await fetchMatrix();
+      } else {
+        alert(data.message || 'Không thể tạo môn học mới');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi tạo môn học');
+    } finally {
+      setAddingSubject(false);
+    }
   };
 
   const handleLockMatrix = async () => {
@@ -670,13 +730,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         {/* Actions Bar - Căn chỉnh đồng bộ và cân đối với ô chọn lớp */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsAddSubjectModalOpen(true)}
-            className="btn btn-secondary btn-sm h-9"
-            style={{ color: '#15803d', borderColor: '#bbf7d0' }}
+            type="button"
+            onClick={() => {
+              fetchAvailableSubjects();
+              setIsAddSubjectModalOpen(true);
+            }}
+            className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
+            style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
             title="Thêm cột môn học linh hoạt cho lớp này"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Thêm Cột Môn</span>
+            <Plus className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="font-semibold text-emerald-800">Thêm Cột Môn</span>
           </button>
 
           {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP (Dành cho việc nhập điểm thông thường, ví dụ nhập trước 10 đồng chí, 5 môn) */}
@@ -877,14 +941,29 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               Lớp thuộc chuyên ngành <strong>{matrixData.majorName || 'Quân sự'}</strong>. Bạn có thể nhấn nút để hệ thống tự động liên kết các môn học từ <strong>Lộ trình Đào tạo</strong> của chuyên ngành này vào bảng điểm.
             </p>
           </div>
-          <button
-            onClick={handleInitFromCurriculum}
-            disabled={loading}
-            className="btn-primary bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap shadow-lg flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            ⚡ Lấy Môn từ Lộ Trình Ngay
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleInitFromCurriculum}
+              disabled={loading}
+              className="btn btn-primary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-2 cursor-pointer"
+              style={{ backgroundColor: '#d97706', borderColor: '#b45309' }}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>⚡ Lấy Môn từ Lộ Trình Ngay</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                fetchAvailableSubjects();
+                setIsAddSubjectModalOpen(true);
+              }}
+              className="btn btn-secondary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-pointer text-slate-800"
+            >
+              <Plus className="w-4 h-4 text-emerald-600" />
+              <span>+ Thêm Cột Thủ Công</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -1201,68 +1280,175 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       {/* MODAL THÊM CỘT MÔN HỌC LINH HOẠT CHO LỚP */}
       {isAddSubjectModalOpen && (
         <div className="modal-overlay" onClick={() => setIsAddSubjectModalOpen(false)}>
-          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-panel" style={{ maxWidth: '520px', padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
               <div className="flex items-center space-x-2 text-emerald-700">
-                <Plus className="w-5 h-5" />
-                <h3 className="font-military text-base font-bold text-slate-900">Thêm Cột Môn Học Linh Hoạt cho Lớp</h3>
+                <Plus className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-military text-base font-bold text-slate-900">Thêm Cột Môn Học Vào Bảng Điểm</h3>
               </div>
-              <button onClick={() => setIsAddSubjectModalOpen(false)} className="btn btn-icon btn-secondary btn-xs">
-                <X className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => setIsAddSubjectModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                title="Đóng modal"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddDynamicSubject} className="space-y-4">
-              <div>
-                <label className="form-label">Tên môn học mới <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={newSubName}
-                  onChange={(e) => setNewSubName(e.target.value)}
-                  placeholder="VD: Điều lệnh Đội ngũ, Kỹ thuật Bắn súng..."
-                  className="form-input text-sm font-semibold"
-                  required
-                />
-              </div>
+            {/* TAB SELECTOR: CHỌN MÔN CÓ SẴN HOẶC TẠO MÔN MỚI */}
+            <div className="flex items-center gap-2 mb-4 p-1 bg-slate-100 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setAddSubjectTab('existing')}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  addSubjectTab === 'existing'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>1. Chọn Môn Có Sẵn ({availableSubjects.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddSubjectTab('new')}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  addSubjectTab === 'new'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>2. Tạo Môn Mới Linh Hoạt</span>
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
+            {addSubjectTab === 'existing' ? (
+              <form onSubmit={handleAddExistingSubject} className="space-y-4">
                 <div>
-                  <label className="form-label">Mã môn học <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Chọn môn học từ danh mục của Nhà trường <span className="text-red-500">*</span>
+                  </label>
+                  {availableSubjects.length > 0 ? (
+                    <select
+                      value={selectedSubjectId}
+                      onChange={(e) => setSelectedSubjectId(e.target.value)}
+                      className="form-input text-xs font-semibold text-slate-900"
+                      required
+                    >
+                      {availableSubjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.code} — {sub.name} ({sub.credits} Tín chỉ)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                      Đang tải danh mục môn học hoặc chưa có môn học trong hệ thống. Bạn có thể chuyển sang tab <strong>Tạo Môn Mới</strong>.
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-900 space-y-1">
+                  <p>
+                    📌 Môn học được chọn sẽ được gán làm cột bổ sung linh hoạt cho lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}).
+                  </p>
+                  <p className="text-slate-500">
+                    Cán bộ huấn luyện có thể nhập điểm trực tiếp trên bảng ma trận hoặc qua file Excel sau khi thêm.
+                  </p>
+                </div>
+
+                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddSubjectModalOpen(false)}
+                    disabled={addingSubject}
+                    className="btn btn-secondary text-xs cursor-pointer"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingSubject || availableSubjects.length === 0}
+                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{addingSubject ? 'Đang thêm...' : 'Gán Cột Môn Này Vào Lớp'}</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleAddNewSubject} className="space-y-4">
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Tên môn học mới <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    value={newSubCode}
-                    onChange={(e) => setNewSubCode(e.target.value)}
-                    placeholder="VD: QS2001"
-                    className="form-input text-sm font-mono"
+                    value={newSubName}
+                    onChange={(e) => setNewSubName(e.target.value)}
+                    placeholder="VD: Điều lệnh Đội ngũ, Kỹ thuật Bắn súng..."
+                    className="form-input text-xs font-semibold"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="form-label">Số lượng Tín chỉ <span className="text-red-500">*</span></label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={newSubCredits}
-                    onChange={(e) => setNewSubCredits(e.target.value)}
-                    className="form-input text-sm font-mono"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                      Mã môn học <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newSubCode}
+                      onChange={(e) => setNewSubCode(e.target.value.toUpperCase())}
+                      placeholder="VD: QS2001"
+                      className="form-input text-xs font-mono font-bold uppercase"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                      Số lượng Tín chỉ <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={newSubCredits}
+                      onChange={(e) => setNewSubCredits(e.target.value)}
+                      className="form-input text-xs font-mono"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-[11px] text-slate-500 italic bg-slate-50 p-2.5 rounded border border-slate-200">
-                📌 Cột môn học linh hoạt này sẽ được gán riêng cho lớp <strong>{matrixData.classCode}</strong> (Học kỳ {semester}) mà không ảnh hưởng tới khung đào tạo chuẩn của các lớp khác.
-              </p>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600">
+                  📌 Cột môn học mới này sẽ được tạo và lưu trực tiếp vào cơ sở dữ liệu cho lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}).
+                </div>
 
-              <div className="flex justify-end space-x-3 pt-2">
-                <button type="button" onClick={() => setIsAddSubjectModalOpen(false)} className="btn btn-secondary">Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary font-bold">
-                  Thêm Cột Vào Bảng Điểm
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddSubjectModalOpen(false)}
+                    disabled={addingSubject}
+                    className="btn btn-secondary text-xs cursor-pointer"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingSubject}
+                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{addingSubject ? 'Đang tạo...' : 'Tạo & Gán Cột Vào Bảng Điểm'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

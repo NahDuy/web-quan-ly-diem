@@ -77,6 +77,11 @@ public class ClassMatrixController {
         ));
     }
 
+    @GetMapping("/available-subjects")
+    public ResponseEntity<List<com.intranet.grade.entity.Subject>> getAvailableSubjects() {
+        return ResponseEntity.ok(gradeMatrixService.getAllSubjects());
+    }
+
     @PostMapping("/{classId}/add-subject")
     public ResponseEntity<Map<String, Object>> addSubjectToClass(
             @PathVariable Integer classId,
@@ -89,6 +94,22 @@ public class ClassMatrixController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Đã gán thêm cột môn học linh hoạt vào ma trận điểm của lớp thành công."
+        ));
+    }
+
+    @PostMapping("/{classId}/create-and-add-subject")
+    public ResponseEntity<Map<String, Object>> createAndAddSubject(
+            @PathVariable Integer classId,
+            @RequestParam String subjectCode,
+            @RequestParam String subjectName,
+            @RequestParam(required = false, defaultValue = "3") Integer credits,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+
+        com.intranet.grade.entity.Subject subject = gradeMatrixService.createAndAddSubject(classId, semester, subjectCode, subjectName, credits);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã thêm môn học " + subject.getName() + " (" + subject.getCode() + ") vào bảng điểm của lớp thành công.",
+                "subject", subject
         ));
     }
 

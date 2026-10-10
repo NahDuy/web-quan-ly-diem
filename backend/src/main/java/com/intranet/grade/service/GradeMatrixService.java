@@ -340,6 +340,12 @@ public class GradeMatrixService {
         }
     }
 
+    private final DepartmentRepository departmentRepository;
+
+    public List<Subject> getAllSubjects() {
+        return subjectRepository.findAll(org.springframework.data.domain.Sort.by("name"));
+    }
+
     @Transactional
     public void addSubjectToClass(Integer classId, Integer semester, Integer subjectId, Boolean isExtra) {
         ClassEntity clazz = classRepository.findById(classId)
@@ -358,6 +364,64 @@ public class GradeMatrixService {
                     .build();
             classSubjectRepository.save(cs);
         }
+
+        List<Student> students = studentRepository.findByClazzIdOrderByStudentCodeAsc(clazz.getId());
+        for (Student st : students) {
+            if (gradeRepository.findByStudentIdAndSubjectIdAndClazzId(st.getId(), subject.getId(), clazz.getId()).isEmpty()) {
+                gradeRepository.save(Grade.builder()
+                        .student(st)
+                        .subject(subject)
+                        .clazz(clazz)
+                        .semester(sem)
+                        .score(null)
+                        .build());
+            }
+        }
+    }
+
+    @Transactional
+    public Subject createAndAddSubject(Integer classId, Integer semester, String subjectCode, String subjectName, Integer credits) {
+        ClassEntity clazz = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học: " + classId));
+
+        String cleanCode = subjectCode.trim().toUpperCase();
+        Subject subject = subjectRepository.findByCode(cleanCode).orElse(null);
+        if (subject == null) {
+            Department defaultDept = departmentRepository.findAll().stream().findFirst().orElse(null);
+            subject = Subject.builder()
+                    .code(cleanCode)
+                    .name(subjectName.trim())
+                    .credits(credits != null && credits > 0 ? credits : 3)
+                    .department(defaultDept)
+                    .build();
+            subject = subjectRepository.save(subject);
+        }
+
+        int sem = semester != null ? semester : 1;
+        if (!classSubjectRepository.existsByClazzIdAndSubjectIdAndSemester(classId, subject.getId(), sem)) {
+            ClassSubject cs = ClassSubject.builder()
+                    .clazz(clazz)
+                    .subject(subject)
+                    .semester(sem)
+                    .isExtra(true)
+                    .displayOrder(100)
+                    .build();
+            classSubjectRepository.save(cs);
+        }
+
+        List<Student> students = studentRepository.findByClazzIdOrderByStudentCodeAsc(clazz.getId());
+        for (Student st : students) {
+            if (gradeRepository.findByStudentIdAndSubjectIdAndClazzId(st.getId(), subject.getId(), clazz.getId()).isEmpty()) {
+                gradeRepository.save(Grade.builder()
+                        .student(st)
+                        .subject(subject)
+                        .clazz(clazz)
+                        .semester(sem)
+                        .score(null)
+                        .build());
+            }
+        }
+        return subject;
     }
 
     @Transactional
