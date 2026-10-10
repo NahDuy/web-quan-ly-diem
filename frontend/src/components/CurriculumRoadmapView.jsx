@@ -567,7 +567,7 @@ export default function CurriculumRoadmapView() {
 
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs text-slate-700 mb-4 space-y-2">
               <p>
-                ℹ️ File tải lên cần tuân thủ cấu trúc định dạng chuẩn của nhà trường (chứa danh sách mã môn, tên môn, tín chỉ, học kỳ và phân loại môn thi tốt nghiệp).
+                ℹ️ File tải lên cần tuân thủ cấu trúc định dạng chuẩn của nhà trường (chứa danh sách mã môn, tên môn, tín chỉ, số tiết, phân loại và hình thức thi).
               </p>
               <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                 <span className="text-slate-500">Chưa có file mẫu chuẩn?</span>

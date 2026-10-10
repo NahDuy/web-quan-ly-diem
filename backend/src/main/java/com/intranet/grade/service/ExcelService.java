@@ -8,6 +8,7 @@ import com.intranet.grade.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -2082,33 +2083,41 @@ public class ExcelService {
             examCenterRowStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
             examCenterRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
+            // Page Setup for A4 Landscape
+            PrintSetup printSetup = sheet.getPrintSetup();
+            printSetup.setLandscape(true);
+            printSetup.setPaperSize(PrintSetup.A4_PAPERSIZE);
+            sheet.setFitToPage(true);
+            printSetup.setFitWidth((short) 1);
+            printSetup.setFitHeight((short) 0);
+            sheet.setAutobreaks(true);
+
             // Title rows
             Row r0 = sheet.createRow(0);
             Cell c0 = r0.createCell(0);
             c0.setCellValue("BỘ QUỐC PHÒNG - TRƯỜNG QUÂN SỰ");
             c0.setCellStyle(subTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 8));
 
             Row r1 = sheet.createRow(1);
             Cell c1 = r1.createCell(0);
             c1.setCellValue("LỘ TRÌNH ĐÀO TẠO & KHUNG NỘI DUNG THI ĐÁNH GIÁ TỐT NGHIỆP");
             c1.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 9));
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 8));
 
             Row r2 = sheet.createRow(2);
             Cell c2 = r2.createCell(0);
             c2.setCellValue("ĐỐI TƯỢNG: " + tgName.toUpperCase() + " | CHUYÊN NGÀNH: " + majorName.toUpperCase() + " (" + code + ")");
             c2.setCellStyle(subTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 9));
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 8));
 
-            // Headers
+            // Headers: Bỏ cột Học kỳ, sửa Số tiết quy đổi thành Số tiết, Hình thức thi (Viết / TH / Vấn đáp)
             String[] headers = {
                     "STT",
                     "Mã môn / Mã thi",
                     "Tên môn học / Nội dung kiểm tra, thi",
                     "Số tín chỉ",
-                    "Số tiết quy đổi",
-                    "Học kỳ",
+                    "Số tiết",
                     "Phân loại",
                     "Hình thức thi / kiểm tra",
                     "Hệ số",
@@ -2128,7 +2137,7 @@ public class ExcelService {
             for (int i = 0; i < sampleRows.size(); i++) {
                 String[] r = sampleRows.get(i);
                 Row row = sheet.createRow(rowIdx++);
-                boolean isExam = "Môn thi tốt nghiệp".equalsIgnoreCase(r[5]);
+                boolean isExam = "Môn thi tốt nghiệp".equalsIgnoreCase(r[4]);
                 CellStyle curStyle = isExam ? examRowStyle : dataStyle;
                 CellStyle curCenter = isExam ? examCenterRowStyle : centerDataStyle;
 
@@ -2152,26 +2161,38 @@ public class ExcelService {
                 cHours.setCellValue(Integer.parseInt(r[3]));
                 cHours.setCellStyle(curCenter);
 
-                Cell cSem = row.createCell(5);
-                cSem.setCellValue(Integer.parseInt(r[4]));
-                cSem.setCellStyle(curCenter);
-
-                Cell cType = row.createCell(6);
-                cType.setCellValue(r[5]);
+                Cell cType = row.createCell(5);
+                cType.setCellValue(r[4]);
                 cType.setCellStyle(curCenter);
 
-                Cell cFormat = row.createCell(7);
-                cFormat.setCellValue(r[6]);
-                cFormat.setCellStyle(curStyle);
+                Cell cFormat = row.createCell(6);
+                cFormat.setCellValue(r[5]);
+                cFormat.setCellStyle(curCenter);
 
-                Cell cWeight = row.createCell(8);
-                cWeight.setCellValue(r[7]);
+                Cell cWeight = row.createCell(7);
+                cWeight.setCellValue(r[6]);
                 cWeight.setCellStyle(curCenter);
 
-                Cell cDept = row.createCell(9);
-                cDept.setCellValue(r[8]);
+                Cell cDept = row.createCell(8);
+                cDept.setCellValue(r[7]);
                 cDept.setCellStyle(curStyle);
             }
+
+            // Data Validation: Dropdown cho cột Hình thức thi (Cột 6) và Phân loại (Cột 5)
+            DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+            CellRangeAddressList examFormatRange = new CellRangeAddressList(5, 1000, 6, 6);
+            DataValidationConstraint examFormatConstraint = validationHelper.createExplicitListConstraint(new String[]{"Viết", "TH", "Vấn đáp"});
+            DataValidation examFormatValidation = validationHelper.createValidation(examFormatConstraint, examFormatRange);
+            examFormatValidation.setShowErrorBox(true);
+            examFormatValidation.setSuppressDropDownArrow(true);
+            sheet.addValidationData(examFormatValidation);
+
+            CellRangeAddressList typeRange = new CellRangeAddressList(5, 1000, 5, 5);
+            DataValidationConstraint typeConstraint = validationHelper.createExplicitListConstraint(new String[]{"Môn học phần", "Môn thi tốt nghiệp"});
+            DataValidation typeValidation = validationHelper.createValidation(typeConstraint, typeRange);
+            typeValidation.setShowErrorBox(true);
+            typeValidation.setSuppressDropDownArrow(true);
+            sheet.addValidationData(typeValidation);
 
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
@@ -2188,10 +2209,12 @@ public class ExcelService {
             String[] instructions = {
                     "1. Mã môn / Mã thi: Mã định danh viết liền không dấu, ví dụ QS101, TS101, COI101, TN01...",
                     "2. Tên môn học / Nội dung thi: Tên môn huấn luyện hoặc nội dung thi tốt nghiệp.",
-                    "3. Phân loại: Nhập chính xác 'Môn học phần' hoặc 'Môn thi tốt nghiệp'.",
-                    "4. Học kỳ: Nhập 1 hoặc 2.",
-                    "5. Hệ số: Nhập 1 hoặc 2.",
-                    "6. Sau khi điền thêm/sửa đổi, tải file lên hệ thống tại tab 'Lộ trình đào tạo' -> nút 'Import Lộ Trình Excel'."
+                    "3. Số tín chỉ & Số tiết: Số nguyên dương.",
+                    "4. Phân loại: Chọn hoặc nhập chính xác 'Môn học phần' hoặc 'Môn thi tốt nghiệp'.",
+                    "5. Hình thức thi / kiểm tra: Gồm 3 hình thức chuẩn: 'Viết', 'TH', hoặc 'Vấn đáp'.",
+                    "6. Hệ số: Nhập 1 hoặc 2.",
+                    "7. Khoa / Bộ môn phụ trách: Tên khoa phụ trách môn học/nội dung thi.",
+                    "8. Sau khi điền thêm/sửa đổi, tải file lên hệ thống tại tab 'Lộ trình đào tạo' -> nút 'Import Lộ Trình (Excel)'."
             };
             for (int i = 0; i < instructions.length; i++) {
                 Row gr = guideSheet.createRow(i + 2);
@@ -2206,47 +2229,47 @@ public class ExcelService {
 
     private List<String[]> getSampleCurriculumRows(String majorCode) {
         List<String[]> list = new ArrayList<>();
-        // Môn quân sự chung bắt buộc
-        list.add(new String[]{"QS101", "Bắn súng tiểu liên AK bài 1", "3", "45", "1", "Môn học phần", "Thực hành bắn đạn thật", "1", "Khoa Quân sự chung"});
-        list.add(new String[]{"QS102", "Điều lệnh Đội ngũ & Quản lý bộ đội", "2", "30", "1", "Môn học phần", "Thực hành thao trường", "1", "Khoa Quân sự chung"});
-        list.add(new String[]{"QS103", "Chiến thuật Từng người & Tổ Bộ binh", "3", "45", "1", "Môn học phần", "Thực hành thực địa", "1", "Khoa Quân sự chung"});
-        list.add(new String[]{"QS104", "Địa hình Quân sự & Bản đồ tác chiến", "3", "45", "1", "Môn học phần", "Đọc bản đồ & Định vị", "1", "Khoa Binh chủng"});
-        list.add(new String[]{"QS105", "Công sự & Ngụy trang Phòng ngự", "2", "30", "1", "Môn học phần", "Thực hành công sự", "1", "Khoa Binh chủng"});
-        list.add(new String[]{"QS106", "Quân y & Cấp cứu Thương binh Chiến trường", "2", "30", "1", "Môn học phần", "Băng bó cứu thương", "1", "Khoa Hậu cần"});
+        // Môn quân sự chung bắt buộc (Mã, Tên, Tín chỉ, Tiết, Phân loại, Hình thức thi [Viết/TH/Vấn đáp], Hệ số, Khoa)
+        list.add(new String[]{"QS101", "Bắn súng tiểu liên AK bài 1", "3", "45", "Môn học phần", "TH", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS102", "Điều lệnh Đội ngũ & Quản lý bộ đội", "2", "30", "Môn học phần", "TH", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS103", "Chiến thuật Từng người & Tổ Bộ binh", "3", "45", "Môn học phần", "TH", "1", "Khoa Quân sự chung"});
+        list.add(new String[]{"QS104", "Địa hình Quân sự & Bản đồ tác chiến", "3", "45", "Môn học phần", "Viết", "1", "Khoa Binh chủng"});
+        list.add(new String[]{"QS105", "Công sự & Ngụy trang Phòng ngự", "2", "30", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+        list.add(new String[]{"QS106", "Quân y & Cấp cứu Thương binh Chiến trường", "2", "30", "Môn học phần", "TH", "1", "Khoa Hậu cần"});
 
         // Môn chuyên ngành
         if ("TSBB".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"TS101", "Kỹ thuật Trinh sát Thực địa & Luồn sâu", "4", "60", "1", "Môn học phần", "Thực hành đêm & dã ngoại", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"TS102", "Chiến thuật Trung đội Trinh sát Bộ binh", "3", "45", "1", "Môn học phần", "Diễn tập chỉ huy", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"TS103", "Võ thuật Đặc nhiệm & Kỹ năng Sinh tồn", "3", "45", "1", "Môn học phần", "Thực hành đối kháng", "1", "Khoa Thể thao Quân sự"});
+            list.add(new String[]{"TS101", "Kỹ thuật Trinh sát Thực địa & Luồn sâu", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"TS102", "Chiến thuật Trung đội Trinh sát Bộ binh", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"TS103", "Võ thuật Đặc nhiệm & Kỹ năng Sinh tồn", "3", "45", "Môn học phần", "TH", "1", "Khoa Thể thao Quân sự"});
         } else if ("COI".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"COI101", "Cấu tạo & Quy tắc bắn Súng Cối 82mm", "4", "60", "1", "Môn học phần", "Thực hành bắn cối", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"COI102", "Khí tài Đo đạc & Tính toán Phần tử bắn", "3", "45", "1", "Môn học phần", "Đo đạc thực địa", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"COI103", "Chiến thuật Trung đội Hỏa lực Cối", "3", "45", "1", "Môn học phần", "Diễn tập chiến thuật", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"COI101", "Cấu tạo & Quy tắc bắn Súng Cối 82mm", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"COI102", "Khí tài Đo đạc & Tính toán Phần tử bắn", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"COI103", "Chiến thuật Trung đội Hỏa lực Cối", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
         } else if ("DKZ".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"DKZ101", "Cấu tạo & Quy tắc bắn ĐKZ (82-K65, SPG-9)", "4", "60", "1", "Môn học phần", "Thực hành bắn ĐKZ", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"DKZ102", "Chiến thuật Phục kích Diệt tăng ĐKZ", "3", "45", "1", "Môn học phần", "Thao trường diệt tăng", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"DKZ103", "Kỹ thuật Hiệu chỉnh & Ngắm bắn ĐKZ", "3", "45", "1", "Môn học phần", "Hiệu chỉnh khí tài", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"DKZ101", "Cấu tạo & Quy tắc bắn ĐKZ (82-K65, SPG-9)", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"DKZ102", "Chiến thuật Phục kích Diệt tăng ĐKZ", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"DKZ103", "Kỹ thuật Hiệu chỉnh & Ngắm bắn ĐKZ", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
         } else if ("PK127".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"PK101", "Cấu tạo SMPK 12,7mm & Quy tắc bắn", "4", "60", "1", "Môn học phần", "Bắn súng máy PK", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"PK102", "Bắn Mục tiêu Bay thấp & Mặt đất", "3", "45", "1", "Môn học phần", "Bắn mục tiêu bay", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"PK103", "Chiến thuật Phân đội SMPK 12,7mm", "3", "45", "1", "Môn học phần", "Trận địa phòng không", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PK101", "Cấu tạo SMPK 12,7mm & Quy tắc bắn", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PK102", "Bắn Mục tiêu Bay thấp & Mặt đất", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PK103", "Chiến thuật Phân đội SMPK 12,7mm", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
         } else if ("PB".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"PB101", "Lý thuyết & Quy tắc bắn Pháo binh", "4", "60", "1", "Môn học phần", "Bắn trận địa pháo", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"PB102", "Chỉ huy Hỏa lực & Đo đạc Trinh sát Pháo", "4", "60", "1", "Môn học phần", "Đo đạc chỉ huy", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PB101", "Lý thuyết & Quy tắc bắn Pháo binh", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"PB102", "Chỉ huy Hỏa lực & Đo đạc Trinh sát Pháo", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
         } else if ("TT".equalsIgnoreCase(majorCode)) {
-            list.add(new String[]{"TT101", "Khí tài Vô tuyến điện Quân sự", "3", "45", "1", "Môn học phần", "Khai thác khí tài", "1", "Khoa Thông tin"});
-            list.add(new String[]{"TT102", "Mạng Thông tin Chỉ huy Tác chiến", "4", "60", "1", "Môn học phần", "Thiết lập mạng thông tin", "1", "Khoa Thông tin"});
+            list.add(new String[]{"TT101", "Khí tài Vô tuyến điện Quân sự", "3", "45", "Môn học phần", "TH", "1", "Khoa Thông tin"});
+            list.add(new String[]{"TT102", "Mạng Thông tin Chỉ huy Tác chiến", "4", "60", "Môn học phần", "TH", "1", "Khoa Thông tin"});
         } else {
-            list.add(new String[]{"BB101", "Chiến thuật Trung đội Bộ binh Tiến công & Phòng ngự", "4", "60", "1", "Môn học phần", "Diễn tập chiến thuật", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"BB102", "Sử dụng Hỏa lực Bộ binh (B40, B41, RPD)", "3", "45", "1", "Môn học phần", "Thực hành bắn đạn thật", "1", "Khoa Binh chủng"});
-            list.add(new String[]{"BB103", "Tổ chức Chỉ huy Phân đội Bộ binh", "3", "45", "1", "Môn học phần", "Bài tập chỉ huy", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"BB101", "Chiến thuật Trung đội Bộ binh Tiến công & Phòng ngự", "4", "60", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"BB102", "Sử dụng Hỏa lực Bộ binh (B40, B41, RPD)", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
+            list.add(new String[]{"BB103", "Tổ chức Chỉ huy Phân đội Bộ binh", "3", "45", "Môn học phần", "TH", "1", "Khoa Binh chủng"});
         }
 
         // 3 Môn thi tốt nghiệp chuẩn
-        list.add(new String[]{"TN01", "Thi Tốt nghiệp môn Chính trị", "2", "30", "1", "Môn thi tốt nghiệp", "Vấn đáp lý thuyết", "1", "Khoa Chính trị"});
-        list.add(new String[]{"TN02", "Thi Tốt nghiệp môn Quân sự chung", "3", "45", "1", "Môn thi tốt nghiệp", "Thực hành thao trường", "2", "Khoa Quân sự chung"});
-        list.add(new String[]{"TN03", "Thi Tốt nghiệp môn Chuyên ngành", "4", "60", "1", "Môn thi tốt nghiệp", "Thực hành chuyên ngành tác chiến", "2", "Khoa Binh chủng"});
+        list.add(new String[]{"TN01", "Thi Tốt nghiệp môn Chính trị", "2", "30", "Môn thi tốt nghiệp", "Vấn đáp", "1", "Khoa Chính trị"});
+        list.add(new String[]{"TN02", "Thi Tốt nghiệp môn Quân sự chung", "3", "45", "Môn thi tốt nghiệp", "TH", "2", "Khoa Quân sự chung"});
+        list.add(new String[]{"TN03", "Thi Tốt nghiệp môn Chuyên ngành", "4", "60", "Môn thi tốt nghiệp", "TH", "2", "Khoa Binh chủng"});
 
         return list;
     }
@@ -2324,10 +2347,6 @@ public class ExcelService {
                 } catch (Exception ignored) {}
 
                 int semester = 1;
-                try {
-                    String semStr = getCellValueAsString(row.getCell(5));
-                    if (!semStr.isBlank()) semester = Integer.parseInt(semStr);
-                } catch (Exception ignored) {}
 
                 final int finalCredits = credits;
                 Subject subject = subjectRepository.findByCode(code).orElseGet(() ->
