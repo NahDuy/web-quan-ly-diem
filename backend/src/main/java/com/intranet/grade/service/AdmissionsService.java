@@ -61,8 +61,8 @@ public class AdmissionsService {
                 String rowText = getRowFullText(row);
 
                 // Detect Section Header: "Khóa..." or "DANH SÁCH..." or "Đào tạo..."
-                if (rowText.contains("Khóa") || rowText.contains("Đào tạo")) {
-                    if (rowText.toLowerCase().contains("khóa") || rowText.toLowerCase().contains("sĩ quan dự bị")) {
+                if (rowText.contains("Khóa") || rowText.contains("Khoá") || rowText.contains("Đào tạo") || rowText.contains("đào tạo")) {
+                    if (rowText.toLowerCase().contains("khóa") || rowText.toLowerCase().contains("khoá") || rowText.toLowerCase().contains("sĩ quan dự bị")) {
                         if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
                             ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
                             sections.add(sec);
@@ -71,8 +71,11 @@ public class AdmissionsService {
                             currentMajorText = "";
                         }
                     }
-                    if (rowText.contains("Khóa")) {
-                        currentKhoa = extractKhoaText(rowText);
+                    if (rowText.contains("Khóa") || rowText.contains("Khoá") || rowText.contains("K")) {
+                        String extracted = extractKhoaText(rowText, year);
+                        if (!extracted.isBlank()) {
+                            currentKhoa = extracted;
+                        }
                     }
                     currentDetectedTarget = detectTargetTypeFromText(rowText, targetTypeOverride);
                     currentTargetName = getTargetName(currentDetectedTarget);
@@ -147,9 +150,17 @@ public class AdmissionsService {
             if (sec.getStudents() == null || sec.getStudents().isEmpty()) continue;
 
             // 1. Get or Create Course (e.g. SQDB2026-H1, SQDB2026-SV, SQDB2026, TDT2026)
+            // 1. Get or Create Course (e.g. K229/2026, K225/2026, SQDB2026-H1, etc.)
             String courseCode;
             String courseName;
-            if ("SQDB(H1)".equals(sec.getTargetType())) {
+            String khoaCode = sec.getKhoaName();
+            if (khoaCode != null && !khoaCode.isBlank()) {
+                courseCode = khoaCode.startsWith("K") ? khoaCode : "K" + khoaCode;
+                if (!courseCode.contains("/")) {
+                    courseCode = courseCode + "/" + year;
+                }
+                courseName = "Khóa " + courseCode;
+            } else if ("SQDB(H1)".equals(sec.getTargetType())) {
                 courseCode = "SQDB" + year + "-H1";
                 courseName = "Khóa Đào tạo SQDB (Hạng 1) Năm " + year;
             } else if ("SQDB(SV)".equals(sec.getTargetType())) {
@@ -163,10 +174,12 @@ public class AdmissionsService {
                 courseName = "Khóa Đào tạo " + sec.getTargetName() + " Năm " + year;
             }
 
-            Course course = courseRepository.findByCode(courseCode).orElseGet(() ->
+            final String finalCourseCode = courseCode;
+            final String finalCourseName = courseName;
+            Course course = courseRepository.findByCode(finalCourseCode).orElseGet(() ->
                     courseRepository.save(Course.builder()
-                            .code(courseCode)
-                            .name(courseName)
+                            .code(finalCourseCode)
+                            .name(finalCourseName)
                             .startYear(year)
                             .endYear(year)
                             .build())
@@ -191,7 +204,7 @@ public class AdmissionsService {
             String classCode = sec.getClassCode();
             String className = sec.getClassName();
             if (className == null || className.isBlank() || isCorrupted(className)) {
-                className = "Lớp " + getTargetName(sec.getTargetType()) + " " + year + " - " + finalMajorName;
+                className = "Lớp " + getTargetName(sec.getTargetType()) + " - " + finalMajorName;
             }
             final String finalClassName = className;
             ClassEntity clazz = classRepository.findByCode(classCode).orElseGet(() ->
@@ -203,9 +216,17 @@ public class AdmissionsService {
                             .build())
             );
 
-            // Cập nhật tên lớp chuẩn nếu lớp đã tồn tại từ trước
+            // Cập nhật tên lớp chuẩn & course nếu lớp đã tồn tại từ trước
+            boolean needUpdate = false;
             if (!clazz.getName().equals(finalClassName) && !finalClassName.isBlank()) {
                 clazz.setName(finalClassName);
+                needUpdate = true;
+            }
+            if (course != null && (clazz.getCourse() == null || !clazz.getCourse().getId().equals(course.getId()))) {
+                clazz.setCourse(course);
+                needUpdate = true;
+            }
+            if (needUpdate) {
                 classRepository.save(clazz);
             }
 
@@ -302,9 +323,9 @@ public class AdmissionsService {
 
         String className;
         if ("THEO_KHOA".equalsIgnoreCase(classNamingMode) && !khoa.isBlank()) {
-            className = "Lớp " + targetName + " (" + khoa + ") - " + majorName + (counter > 1 ? " " + counter : "");
+            className = "Lớp " + targetName + " (" + khoa + ") - " + majorName + " " + counter;
         } else {
-            className = "Lớp " + targetName + " " + year + " - " + majorName + " " + String.format("%02d", counter);
+            className = "Lớp " + targetName + " - " + majorName + " " + counter;
         }
 
         // Generate Student Code range and assign to students
@@ -495,10 +516,21 @@ public class AdmissionsService {
         }
     }
 
-    private String extractKhoaText(String text) {
-        Matcher m = Pattern.compile("Khóa\\s+(\\d+)", Pattern.CASE_INSENSITIVE).matcher(text);
+    private String extractKhoaText(String text, int year) {
+        if (text == null) return "";
+        Matcher m = Pattern.compile("(?:Khóa|Khoá|K)\\s*(\\d+)(?:/(\\d+))?", Pattern.CASE_INSENSITIVE).matcher(text);
         if (m.find()) {
-            return "K" + m.group(1);
+            String num = m.group(1);
+            String y = m.group(2);
+            if (y == null || y.isBlank()) {
+                Matcher my = Pattern.compile("20\\d{2}").matcher(text);
+                if (my.find()) {
+                    y = my.group();
+                } else {
+                    y = String.valueOf(year);
+                }
+            }
+            return "K" + num + "/" + y;
         }
         return "";
     }

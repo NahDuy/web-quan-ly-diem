@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -540,6 +542,49 @@ public class ExcelService {
         return styles;
     }
 
+    private String resolveKhoaHeader(ClassEntity clazz, MatrixResponseDTO matrix) {
+        String code = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getCode() : null;
+        String name = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getName() : (matrix != null ? matrix.getCourseName() : null);
+
+        // 1. Kiểm tra nếu code có dạng K... (ví dụ K229/2026, K225/2026, K229)
+        if (code != null && !code.isBlank()) {
+            Matcher m = Pattern.compile("(?i)K\\s*(\\d+)(?:/(\\d+))?").matcher(code);
+            if (m.find()) {
+                String kNum = m.group(1);
+                String y = m.group(2);
+                if (y == null || y.isBlank()) {
+                    Integer startYear = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getStartYear() : 2026;
+                    y = String.valueOf(startYear != null ? startYear : 2026);
+                }
+                return "Khóa K" + kNum + "/" + y;
+            }
+        }
+
+        // 2. Kiểm tra nếu name có dạng K... (ví dụ Khóa K229/2026, Khóa 229, ...)
+        if (name != null && !name.isBlank()) {
+            Matcher m = Pattern.compile("(?i)(?:Khóa|Khoá|K)\\s*(\\d+)(?:/(\\d+))?").matcher(name);
+            if (m.find()) {
+                String kNum = m.group(1);
+                String y = m.group(2);
+                if (y == null || y.isBlank()) {
+                    Matcher my = Pattern.compile("20\\d{2}").matcher(name);
+                    if (my.find()) {
+                        y = my.group();
+                    } else {
+                        Integer startYear = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getStartYear() : 2026;
+                        y = String.valueOf(startYear != null ? startYear : 2026);
+                    }
+                }
+                return "Khóa K" + kNum + "/" + y;
+            }
+        }
+
+        // 3. Fallback mặc định
+        Integer year = (clazz != null && clazz.getCourse() != null && clazz.getCourse().getStartYear() != null) 
+                ? clazz.getCourse().getStartYear() : 2026;
+        return "Khóa K229/" + year;
+    }
+
     private void buildHocPhanSheet(Workbook workbook, MatrixResponseDTO matrix, ClassEntity clazz, HocPhanStyles styles, Set<String> existingSheetNames) {
         String majorName = clazz != null && clazz.getMajor() != null ? clazz.getMajor().getName() : (matrix.getMajorName() != null ? matrix.getMajorName() : "Sĩ quan Dự bị");
         String courseName = clazz != null && clazz.getCourse() != null ? clazz.getCourse().getName() : (matrix.getCourseName() != null ? matrix.getCourseName() : "Khóa 2026");
@@ -583,29 +628,21 @@ public class ExcelService {
         Row r3 = sheet.createRow(3);
         r3.setHeightInPoints(24);
         Cell cUnit = r3.createCell(0);
-        cUnit.setCellValue("Đơn vị: " + className + " - Đào tạo " + majorName + " - " + courseName);
+        cUnit.setCellValue("Đơn vị: " + className + " - " + resolveKhoaHeader(clazz, matrix));
         cUnit.setCellStyle(styles.subTitleStyle);
         sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
 
-        // Row 4: Quyết định kèm theo
+        // Row 4: Khai giảng / Bế giảng (Đã bỏ dòng Quyết định kèm theo)
         Row r4 = sheet.createRow(4);
         r4.setHeightInPoints(20);
-        Cell cDec = r4.createCell(0);
-        cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-HT ngày      tháng 5 năm 2026)");
-        cDec.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
-
-        // Row 5: Khai giảng / Bế giảng
-        Row r5 = sheet.createRow(5);
-        r5.setHeightInPoints(20);
-        Cell cDates = r5.createCell(0);
+        Cell cDates = r4.createCell(0);
         cDates.setCellValue("Khai giảng: 18/6/2026         Bế giảng : 18/10/2026");
         cDates.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
 
-        // Table Headers at Row 7 & Row 8 (0-indexed)
-        Row headRow1 = sheet.createRow(7);
-        Row headRow2 = sheet.createRow(8);
+        // Table Headers at Row 6 & Row 7 (0-indexed)
+        Row headRow1 = sheet.createRow(6);
+        Row headRow2 = sheet.createRow(7);
         headRow1.setHeightInPoints(34);
         headRow2.setHeightInPoints(210);
 
@@ -614,14 +651,14 @@ public class ExcelService {
         cTT1.setCellValue("TT");
         cTT1.setCellStyle(styles.headerBoldStyle);
         headRow2.createCell(0).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(7, 8, 0, 0));
+        sheet.addMergedRegion(new CellRangeAddress(6, 7, 0, 0));
 
         // Col 1-2: Số vào sổ (IN ĐẬM)
         Cell cCode1 = headRow1.createCell(1);
         cCode1.setCellValue("Số vào sổ");
         cCode1.setCellStyle(styles.headerBoldStyle);
         headRow1.createCell(2).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(7, 7, 1, 2));
+        sheet.addMergedRegion(new CellRangeAddress(6, 6, 1, 2));
 
         Cell cCodeSub1 = headRow2.createCell(1);
         cCodeSub1.setCellValue("Mã HV");
@@ -636,14 +673,14 @@ public class ExcelService {
         cName1.setCellValue("Họ và tên");
         cName1.setCellStyle(styles.headerBoldStyle);
         headRow2.createCell(3).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(7, 8, 3, 3));
+        sheet.addMergedRegion(new CellRangeAddress(6, 7, 3, 3));
 
         // Col 4: Ngày tháng năm sinh (IN ĐẬM)
         Cell cDob1 = headRow1.createCell(4);
         cDob1.setCellValue("Ngày tháng\nnăm sinh");
         cDob1.setCellStyle(styles.headerBoldStyle);
         headRow2.createCell(4).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(7, 8, 4, 4));
+        sheet.addMergedRegion(new CellRangeAddress(6, 7, 4, 4));
 
         // Nhóm: Kết quả kiểm tra thường xuyên = {N} (IN ĐẬM)
         int subStart = 5;
@@ -656,7 +693,7 @@ public class ExcelService {
                 headRow1.createCell(c).setCellStyle(styles.headerBoldStyle);
             }
             if (subEnd > subStart) {
-                sheet.addMergedRegion(new CellRangeAddress(7, 7, subStart, subEnd));
+                sheet.addMergedRegion(new CellRangeAddress(6, 6, subStart, subEnd));
             }
 
             for (int i = 0; i < numSubjects; i++) {
@@ -676,11 +713,11 @@ public class ExcelService {
             c.setCellValue(fixedAfter[i]);
             c.setCellStyle(styles.headerBoldStyle);
             headRow2.createCell(col).setCellStyle(styles.headerBoldStyle);
-            sheet.addMergedRegion(new CellRangeAddress(7, 8, col, col));
+            sheet.addMergedRegion(new CellRangeAddress(6, 7, col, col));
         }
 
-        // Data Rows (from r=9)
-        int curRow = 9;
+        // Data Rows (from r=8)
+        int curRow = 8;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
         if (matrix.getRows() != null) {
@@ -854,41 +891,33 @@ public class ExcelService {
         cTitle.setCellStyle(styles.titleStyle);
         sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
 
-        // Row 3: Khóa & Lớp đào tạo IN ĐẬM
+        // Row 3: Đơn vị lớp IN ĐẬM
         Row r3 = sheet.createRow(3);
         r3.setHeightInPoints(24);
         Cell cSub = r3.createCell(0);
-        cSub.setCellValue("Khóa " + courseName + " - Đào tạo " + majorName + " (" + className + ")");
+        cSub.setCellValue("Đơn vị: " + className + " - " + resolveKhoaHeader(clazz, matrix));
         cSub.setCellStyle(styles.subTitleStyle);
         sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
 
-        // Row 4: Quyết định kèm theo
+        // Row 4: Ngày tiếp nhận, khai giảng, bế giảng (Đã bỏ dòng Quyết định kèm theo)
         Row r4 = sheet.createRow(4);
         r4.setHeightInPoints(20);
-        Cell cDec = r4.createCell(0);
-        cDec.setCellValue("(Kèm theo Quyết định số:            /QĐ-TQS ngày       tháng 4 năm 2026 của Trường Quân sự)");
-        cDec.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
-
-        // Row 5: Ngày tiếp nhận, khai giảng, bế giảng
-        Row r5 = sheet.createRow(5);
-        r5.setHeightInPoints(20);
-        Cell cDate = r5.createCell(0);
+        Cell cDate = r4.createCell(0);
         cDate.setCellValue("Tiếp nhận 03/02/2026    Khai giảng: 05/02/2026    Bế giảng : 29/5/2026");
         cDate.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(5, 5, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, totalCols - 1));
 
-        // Row 7: Quân số lớp IN ĐẬM NGHIÊNG
+        // Row 6: Quân số lớp IN ĐẬM NGHIÊNG
         int numRows = matrix.getRows() != null ? matrix.getRows().size() : 0;
-        Row r7 = sheet.createRow(7);
-        r7.setHeightInPoints(22);
-        Cell cCount = r7.createCell(totalCols - 1);
+        Row r6 = sheet.createRow(6);
+        r6.setHeightInPoints(22);
+        Cell cCount = r6.createCell(totalCols - 1);
         cCount.setCellValue(className + ": " + numRows + " đ/c");
         cCount.setCellStyle(styles.italicRightBoldStyle);
 
-        // Row 9 & 10: Table Headers (0-indexed: r=9, r=10)
-        Row hRow1 = sheet.createRow(9);
-        Row hRow2 = sheet.createRow(10);
+        // Row 8 & 9: Table Headers (0-indexed: r=8, r=9)
+        Row hRow1 = sheet.createRow(8);
+        Row hRow2 = sheet.createRow(9);
         hRow1.setHeightInPoints(34);
         hRow2.setHeightInPoints(36);
 
@@ -897,14 +926,14 @@ public class ExcelService {
         cTT1.setCellValue("TT");
         cTT1.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(0).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 0, 0));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 0, 0));
 
         // C1-C2: Số vào sổ gốc cấp chứng chỉ (IN ĐẬM)
         Cell cCert = hRow1.createCell(1);
         cCert.setCellValue("Số vào sổ gốc cấp chứng chỉ");
         cCert.setCellStyle(styles.headerBoldStyle);
         hRow1.createCell(2).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 9, 1, 2));
+        sheet.addMergedRegion(new CellRangeAddress(8, 8, 1, 2));
 
         Cell cCertSub1 = hRow2.createCell(1);
         cCertSub1.setCellValue("Số TT");
@@ -919,14 +948,14 @@ public class ExcelService {
         cName1.setCellValue("Họ và tên");
         cName1.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(3).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 3, 3));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 3, 3));
 
         // C4: Ngày tháng năm sinh (IN ĐẬM)
         Cell cDob1 = hRow1.createCell(4);
         cDob1.setCellValue("Ngày tháng\nnăm sinh");
         cDob1.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(4).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 4, 4));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 4, 4));
 
         // C5-C8: Nhóm Kết quả thi (IN ĐẬM)
         Cell cExamGroup = hRow1.createCell(5);
@@ -935,7 +964,7 @@ public class ExcelService {
         for (int col = 6; col <= 8; col++) {
             hRow1.createCell(col).setCellStyle(styles.headerBoldStyle);
         }
-        sheet.addMergedRegion(new CellRangeAddress(9, 9, 5, 8));
+        sheet.addMergedRegion(new CellRangeAddress(8, 8, 5, 8));
 
         String[] examSubs = {"CTĐ,\nCTCT", "Kỹ,\nC.thuật", "Chuyên\nngành", "TB thi"};
         for (int i = 0; i < examSubs.length; i++) {
@@ -949,38 +978,38 @@ public class ExcelService {
         cHocLuc.setCellValue("Học lực\n(TB học tập)");
         cHocLuc.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(9).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 9, 9));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 9, 9));
 
         // C10: TB khóa học (Xét TN) (IN ĐẬM)
         Cell cTbKhoa = hRow1.createCell(10);
         cTbKhoa.setCellValue("TB khóa\nhọc (Xét TN)");
         cTbKhoa.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(10).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 10, 10));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 10, 10));
 
         // C11: Rèn luyện (IN ĐẬM)
         Cell cRenLuyen = hRow1.createCell(11);
         cRenLuyen.setCellValue("Rèn\nluyện");
         cRenLuyen.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(11).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 11, 11));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 11, 11));
 
         // C12: Phân loại TN (IN ĐẬM)
         Cell cPhanLoai = hRow1.createCell(12);
         cPhanLoai.setCellValue("Phân loại\nTN");
         cPhanLoai.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(12).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 12, 12));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 12, 12));
 
         // C13: Quê quán (IN ĐẬM)
         Cell cQueQuan = hRow1.createCell(13);
         cQueQuan.setCellValue("Quê quán");
         cQueQuan.setCellStyle(styles.headerBoldStyle);
         hRow2.createCell(13).setCellStyle(styles.headerBoldStyle);
-        sheet.addMergedRegion(new CellRangeAddress(9, 10, 13, 13));
+        sheet.addMergedRegion(new CellRangeAddress(8, 9, 13, 13));
 
-        // Data Rows (from r=11)
-        int curRow = 11;
+        // Data Rows (from r=10)
+        int curRow = 10;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
         int countGioi = 0, countKha = 0, countTbKha = 0, countTb = 0;
