@@ -1242,6 +1242,68 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 </th>
               ))}
             </tr>
+
+            {/* Header Row 3: HÀNG HIỂN THỊ SỐ TÍN CHỈ CỦA CÁC MÔN HỌC */}
+            <tr className="bg-slate-100/90 border-t border-b border-slate-300">
+              <th className="sticky-col-1 py-1.5 px-1 text-center font-bold text-[10px] text-slate-500 bg-slate-100 border-r border-slate-200">
+                TC
+              </th>
+              <th className="sticky-col-2 py-1.5 px-2 text-right font-extrabold text-[11px] text-slate-700 bg-slate-100 uppercase tracking-wider">
+                Số tín chỉ:
+              </th>
+              <th className="py-1.5 px-1 text-center font-bold text-[10px] text-slate-400 bg-slate-100">
+                —
+              </th>
+
+              {/* Số tín chỉ của từng môn học */}
+              {safeColumns.map((col) => (
+                <th
+                  key={`credit_${col.subjectId}`}
+                  className="py-1 px-0.5 text-center bg-emerald-50 text-emerald-900 border-x border-slate-200 font-mono"
+                  title={`${col.subjectName}: ${col.credits || 3} Tín chỉ`}
+                >
+                  <span className="inline-flex items-center justify-center w-full px-1 py-0.5 rounded bg-emerald-100/90 text-emerald-900 border border-emerald-300/80 font-bold text-[11px]">
+                    {col.credits || 3}
+                  </span>
+                </th>
+              ))}
+
+              {/* Các cột tổng kết và thi tốt nghiệp */}
+              {isPrivilegedUser && (
+                <>
+                  <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
+                    —
+                  </th>
+                  <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
+                    —
+                  </th>
+
+                  {safeGradExamSubjects.map((sub) => (
+                    <th
+                      key={`credit_grad_${sub.id}`}
+                      className="py-1 px-1 text-center bg-amber-50 text-amber-700 font-bold text-[10px] border-x border-slate-200"
+                      title="Môn thi tốt nghiệp"
+                    >
+                      —
+                    </th>
+                  ))}
+
+                  <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
+                    —
+                  </th>
+                  <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
+                    —
+                  </th>
+                  <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
+                    —
+                  </th>
+                </>
+              )}
+
+              <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold">
+                —
+              </th>
+            </tr>
           </thead>
 
           <tbody>
