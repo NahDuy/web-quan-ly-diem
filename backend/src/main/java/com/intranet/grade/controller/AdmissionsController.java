@@ -21,7 +21,11 @@ public class AdmissionsController {
     @GetMapping("/training-targets")
     public ResponseEntity<List<Map<String, String>>> getTrainingTargets() {
         return ResponseEntity.ok(List.of(
-                Map.of("code", "SQDB", "name", "Sĩ quan Dự bị (SQDB)", "classPrefix", "SQDB", "studentPrefix", "26"),
+                Map.of("code", "AUTO", "name", "Tự động nhận diện từ File (SQDB Hạng 1, Sinh viên, Xuất ngũ...)", "classPrefix", "AUTO", "studentPrefix", "AUTO"),
+                Map.of("code", "SQDB_H1", "name", "SQDB (Hạng 1) - Sĩ quan Dự bị từ HSQ dự bị hạng 1", "classPrefix", "SQDB(H1)", "studentPrefix", "26H1-"),
+                Map.of("code", "SQDB_SV", "name", "SQDB (Sinh viên) - Sĩ quan Dự bị từ sinh viên TNĐH", "classPrefix", "SQDB(SV)", "studentPrefix", "26SV-"),
+                Map.of("code", "SQDB_XN", "name", "SQDB (Xuất ngũ) - Sĩ quan Dự bị từ HSQ xuất ngũ", "classPrefix", "SQDB(XN)", "studentPrefix", "26XN-"),
+                Map.of("code", "SQDB", "name", "Sĩ quan Dự bị (SQDB - Chung)", "classPrefix", "SQDB", "studentPrefix", "26"),
                 Map.of("code", "TDT", "name", "Tiểu đội trưởng (TĐT)", "classPrefix", "TDT", "studentPrefix", "26TDT-"),
                 Map.of("code", "KDT", "name", "Khẩu đội trưởng (KĐT)", "classPrefix", "KDT", "studentPrefix", "26KDT-"),
                 Map.of("code", "NVKT", "name", "Nhân viên Chuyên môn Kỹ thuật", "classPrefix", "NVKT", "studentPrefix", "26NVKT-"),

@@ -5,7 +5,11 @@ import {
 } from 'lucide-react';
 
 const TRAINING_TARGETS = [
-  { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', classPrefix: 'SQDB', studentPrefix: '26' },
+  { code: 'AUTO', name: 'Tự động nhận diện từ File (SQDB Hạng 1, Sinh viên, Xuất ngũ...)', classPrefix: 'AUTO', studentPrefix: 'AUTO' },
+  { code: 'SQDB_H1', name: 'SQDB (Hạng 1) - Sĩ quan Dự bị từ HSQ dự bị hạng 1', classPrefix: 'SQDB(H1)', studentPrefix: '26H1-' },
+  { code: 'SQDB_SV', name: 'SQDB (Sinh viên) - Sĩ quan Dự bị từ sinh viên TNĐH', classPrefix: 'SQDB(SV)', studentPrefix: '26SV-' },
+  { code: 'SQDB_XN', name: 'SQDB (Xuất ngũ) - Sĩ quan Dự bị từ HSQ xuất ngũ', classPrefix: 'SQDB(XN)', studentPrefix: '26XN-' },
+  { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB - Chung)', classPrefix: 'SQDB', studentPrefix: '26' },
   { code: 'TDT', name: 'Tiểu đội trưởng (TĐT)', classPrefix: 'TDT', studentPrefix: '26TDT-' },
   { code: 'KDT', name: 'Khẩu đội trưởng (KĐT)', classPrefix: 'KDT', studentPrefix: '26KDT-' },
   { code: 'NVKT', name: 'Nhân viên Kỹ thuật (NVKT)', classPrefix: 'NVKT', studentPrefix: '26NVKT-' },
@@ -14,7 +18,7 @@ const TRAINING_TARGETS = [
 
 export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess }) {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [targetType, setTargetType] = useState('SQDB');
+  const [targetType, setTargetType] = useState('AUTO');
   const [academicYear, setAcademicYear] = useState(2026);
   const [classNamingMode, setClassNamingMode] = useState('THEO_NAM');
   
@@ -269,7 +273,7 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Năm & Hệ Đào tạo</span>
                   <span className="text-sm font-bold text-white mt-1 block">
-                    {previewData.academicYear} — {TRAINING_TARGETS.find(t => t.code === targetType)?.name || targetType}
+                    {previewData.academicYear} — {targetType === 'AUTO' ? 'Tự động phân loại theo Khóa/Lớp' : (TRAINING_TARGETS.find(t => t.code === targetType)?.name || targetType)}
                   </span>
                 </div>
               </div>
@@ -284,6 +288,10 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
                 <div className="divide-y divide-slate-800 border border-slate-800 rounded-xl bg-slate-950 overflow-hidden">
                   {previewData.sections.map((sec, idx) => {
                     const isExpanded = expandedSection === idx;
+                    const isH1 = sec.targetType?.includes('H1') || sec.targetName?.includes('Hạng 1');
+                    const isSV = sec.targetType?.includes('SV') || sec.targetName?.includes('Sinh viên');
+                    const isXN = sec.targetType?.includes('XN') || sec.targetName?.includes('Xuất ngũ');
+
                     return (
                       <div key={idx} className="transition">
                         <div 
@@ -295,14 +303,28 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
                               {idx + 1}
                             </span>
                             <div>
-                              <p className="text-xs font-bold text-white flex items-center gap-2">
-                                {sec.className}
-                                <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/50 text-[10px] font-mono">
+                              <p className="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
+                                <span>{sec.className}</span>
+                                <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/50 text-[10px] font-mono font-bold">
                                   {sec.classCode}
                                 </span>
+                                {sec.targetName && (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                    isH1
+                                      ? 'bg-amber-950 text-amber-300 border-amber-600/70 shadow-xs'
+                                      : isSV
+                                      ? 'bg-purple-950 text-purple-300 border-purple-600/70 shadow-xs'
+                                      : isXN
+                                      ? 'bg-cyan-950 text-cyan-300 border-cyan-600/70 shadow-xs'
+                                      : 'bg-blue-950 text-blue-300 border-blue-600/70'
+                                  }`}>
+                                    {isH1 ? '🎖️ SQDB (Hạng 1)' : isSV ? '🎓 SQDB (Sinh viên)' : isXN ? '⭐ SQDB (Xuất ngũ)' : `🎯 ${sec.targetName}`}
+                                  </span>
+                                )}
                               </p>
                               <p className="text-[11px] text-slate-400 mt-0.5">
                                 Chuyên ngành: <b className="text-yellow-300">{sec.majorName} ({sec.majorCode})</b> — {sec.studentCount} học viên
+                                {sec.khoaName && <span className="ml-2 text-slate-500">({sec.khoaName})</span>}
                               </p>
                             </div>
                           </div>

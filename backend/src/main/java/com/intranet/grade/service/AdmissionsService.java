@@ -47,7 +47,7 @@ public class AdmissionsService {
             String currentTitle = "";
             String currentKhoa = "";
             String currentMajorText = "";
-            String currentDetectedTarget = targetTypeOverride != null && !targetTypeOverride.isBlank() ? targetTypeOverride : "SQDB";
+            String currentDetectedTarget = detectTargetTypeFromText("", targetTypeOverride);
             String currentTargetName = getTargetName(currentDetectedTarget);
 
             List<ParsedStudentDTO> currentStudents = new ArrayList<>();
@@ -60,19 +60,26 @@ public class AdmissionsService {
 
                 String rowText = getRowFullText(row);
 
-                // Detect Section Header: "Khóa..." or "DANH SÁCH..."
+                // Detect Section Header: "Khóa..." or "DANH SÁCH..." or "Đào tạo..."
                 if (rowText.contains("Khóa") || rowText.contains("Đào tạo")) {
+                    if (rowText.toLowerCase().contains("khóa") || rowText.toLowerCase().contains("sĩ quan dự bị")) {
+                        if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
+                            ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
+                            sections.add(sec);
+                            totalStudents += currentStudents.size();
+                            currentStudents = new ArrayList<>();
+                            currentMajorText = "";
+                        }
+                    }
                     if (rowText.contains("Khóa")) {
                         currentKhoa = extractKhoaText(rowText);
                     }
-                    if (targetTypeOverride == null || targetTypeOverride.isBlank()) {
-                        currentDetectedTarget = detectTargetTypeFromText(rowText);
-                        currentTargetName = getTargetName(currentDetectedTarget);
-                    }
+                    currentDetectedTarget = detectTargetTypeFromText(rowText, targetTypeOverride);
+                    currentTargetName = getTargetName(currentDetectedTarget);
                 }
 
                 if (rowText.contains("Chuyên ngành:")) {
-                    // If we previously accumulated students, finalize the previous section
+                    // If we previously accumulated students for another major within the same section
                     if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
                         ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
                         sections.add(sec);
@@ -90,7 +97,7 @@ public class AdmissionsService {
                     Integer stt = parseNumericCell(c0);
                     String name = getCellString(c1).trim();
 
-                    if (stt != null && !name.isBlank() && !name.contains("Họ và tên") && !name.contains("Chỉ tiêu") && !name.contains("Tổng")) {
+                    if (stt != null && !name.isBlank() && !name.contains("Họ và tên") && !name.contains("Chỉ tiêu") && !name.contains("Tổng") && !name.equalsIgnoreCase("TQSQK3")) {
                         String dob = row.getCell(2) != null ? getCellString(row.getCell(2)).trim() : "";
                         String pob = row.getCell(3) != null ? getCellString(row.getCell(3)).trim() : "";
                         String gender = row.getCell(4) != null ? getCellString(row.getCell(4)).trim() : "Nam";
@@ -123,7 +130,7 @@ public class AdmissionsService {
                 .totalSections(sections.size())
                 .totalStudents(totalStudents)
                 .academicYear(year)
-                .defaultTargetType(targetTypeOverride != null ? targetTypeOverride : "SQDB")
+                .defaultTargetType(targetTypeOverride != null ? targetTypeOverride : "AUTO")
                 .sections(sections)
                 .build();
     }
@@ -139,9 +146,23 @@ public class AdmissionsService {
         for (ParsedSectionDTO sec : req.getSections()) {
             if (sec.getStudents() == null || sec.getStudents().isEmpty()) continue;
 
-            // 1. Get or Create Course (e.g. SQDB2026, TDT2026, KDT2026)
-            String courseCode = sec.getTargetType() + year;
-            String courseName = "Khóa Đào tạo " + sec.getTargetName() + " Năm " + year;
+            // 1. Get or Create Course (e.g. SQDB2026-H1, SQDB2026-SV, SQDB2026, TDT2026)
+            String courseCode;
+            String courseName;
+            if ("SQDB(H1)".equals(sec.getTargetType())) {
+                courseCode = "SQDB" + year + "-H1";
+                courseName = "Khóa Đào tạo SQDB (Hạng 1) Năm " + year;
+            } else if ("SQDB(SV)".equals(sec.getTargetType())) {
+                courseCode = "SQDB" + year + "-SV";
+                courseName = "Khóa Đào tạo SQDB (Sinh viên) Năm " + year;
+            } else if ("SQDB(XN)".equals(sec.getTargetType())) {
+                courseCode = "SQDB" + year + "-XN";
+                courseName = "Khóa Đào tạo SQDB (Xuất ngũ) Năm " + year;
+            } else {
+                courseCode = sec.getTargetType() + year;
+                courseName = "Khóa Đào tạo " + sec.getTargetName() + " Năm " + year;
+            }
+
             Course course = courseRepository.findByCode(courseCode).orElseGet(() ->
                     courseRepository.save(Course.builder()
                             .code(courseCode)
@@ -259,9 +280,10 @@ public class AdmissionsService {
         String majorCode = mapMajorCode(majorRaw);
         String majorName = mapMajorName(majorRaw);
 
-        // Class index counter
-        int counter = classCounter.getOrDefault(majorCode, 0) + 1;
-        classCounter.put(majorCode, counter);
+        // Class index counter per targetType + majorCode
+        String classKey = targetType + "_" + majorCode;
+        int counter = classCounter.getOrDefault(classKey, 0) + 1;
+        classCounter.put(classKey, counter);
 
         // Class Code
         String classCode;
@@ -271,12 +293,27 @@ public class AdmissionsService {
             classCode = targetType + year + "-" + majorCode + counter;
         }
 
-        String className = "Lớp " + targetName + " " + year + " - " + majorName + " " + counter;
+        String className;
+        if ("THEO_KHOA".equalsIgnoreCase(classNamingMode) && !khoa.isBlank()) {
+            className = "Lớp " + targetName + " (" + khoa + ") - " + majorName + (counter > 1 ? " " + counter : "");
+        } else {
+            className = "Lớp " + targetName + " " + year + " - " + majorName + " " + counter;
+        }
 
         // Generate Student Code range and assign to students
         // Code format: [targetPrefix][yearShort][majorCode][001..]
-        // Đảm bảo số thứ tự liên tục giữa các lớp cùng chuyên ngành (ví dụ: BB1: 001-050, BB2: 051-110, BB3: 111-170)
-        String prefix = targetType.equals("SQDB") ? (yearShort + majorCode) : (yearShort + targetType + "-" + majorCode);
+        String prefix;
+        if (targetType.equals("SQDB")) {
+            prefix = yearShort + majorCode;
+        } else if (targetType.equals("SQDB(H1)")) {
+            prefix = yearShort + "H1-" + majorCode;
+        } else if (targetType.equals("SQDB(SV)")) {
+            prefix = yearShort + "SV-" + majorCode;
+        } else if (targetType.equals("SQDB(XN)")) {
+            prefix = yearShort + "XN-" + majorCode;
+        } else {
+            prefix = yearShort + targetType + "-" + majorCode;
+        }
 
         String seqKey = targetType + "_" + year + "_" + majorCode;
         int startStt = studentCounter.getOrDefault(seqKey, 0) + 1;
@@ -349,17 +386,56 @@ public class AdmissionsService {
         }
     }
 
-    private String detectTargetTypeFromText(String text) {
+    private String detectTargetTypeFromText(String text, String override) {
+        if (override != null && !override.isBlank() && !override.equalsIgnoreCase("AUTO") && !override.equalsIgnoreCase("SQDB")) {
+            return normalizeTargetCode(override);
+        }
+
         String lower = text.toLowerCase();
-        if (lower.contains("khẩu đội trưởng")) return "KDT";
-        if (lower.contains("tiểu đội trưởng")) return "TDT";
-        if (lower.contains("nhân viên") || lower.contains("kỹ thuật")) return "NVKT";
-        if (lower.contains("hạ sĩ quan")) return "HSQ";
+        if (lower.contains("khẩu đội trưởng") || lower.contains("khau doi")) return "KDT";
+        if (lower.contains("tiểu đội trưởng") || lower.contains("tieu doi")) return "TDT";
+        if (lower.contains("nhân viên") || lower.contains("kỹ thuật") || lower.contains("nvkt")) return "NVKT";
+        if (lower.contains("hạ sĩ quan chỉ huy") || lower.contains("hsqch")) return "HSQ";
+
+        // SQDB Sub-targets
+        if (lower.contains("hạng 1") || lower.contains("hang 1") || lower.contains("dự bị hạng 1")) {
+            return "SQDB(H1)";
+        }
+        if (lower.contains("sinh viên") || lower.contains("sinh vien") || lower.contains("tnđh") || lower.contains("tndh") || lower.contains("đại học")) {
+            return "SQDB(SV)";
+        }
+        if (lower.contains("xuất ngũ") || lower.contains("xuat ngu")) {
+            return "SQDB(XN)";
+        }
         return "SQDB";
+    }
+
+    private String normalizeTargetCode(String code) {
+        if (code == null) return "SQDB";
+        String upper = code.trim().toUpperCase();
+        switch (upper) {
+            case "SQDB_H1":
+            case "SQDB(H1)":
+            case "SQDB-H1":
+                return "SQDB(H1)";
+            case "SQDB_SV":
+            case "SQDB(SV)":
+            case "SQDB-SV":
+                return "SQDB(SV)";
+            case "SQDB_XN":
+            case "SQDB(XN)":
+            case "SQDB-XN":
+                return "SQDB(XN)";
+            default:
+                return upper;
+        }
     }
 
     private String getTargetName(String targetCode) {
         switch (targetCode) {
+            case "SQDB(H1)": return "SQDB(Hạng 1)";
+            case "SQDB(SV)": return "SQDB(Sinh viên)";
+            case "SQDB(XN)": return "SQDB(Xuất ngũ)";
             case "TDT": return "Tiểu đội trưởng";
             case "KDT": return "Khẩu đội trưởng";
             case "NVKT": return "Nhân viên Kỹ thuật";
