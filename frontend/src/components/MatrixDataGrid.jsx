@@ -819,7 +819,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <tr>
               <th rowSpan={2} className="w-12 sticky-col-1">TT</th>
               <th rowSpan={2} className="min-w-[170px] text-left sticky-col-2">Họ và tên Học viên</th>
-              <th rowSpan={2} className="min-w-[90px]">Ngày sinh</th>
+              <th rowSpan={2} className="min-w-[78px] whitespace-nowrap px-1 text-center font-bold text-xs">
+                Ngày sinh
+              </th>
               
               {/* MERGED GROUP HEADER 1: KẾT QUẢ HỌC TẬP TOÀN KHÓA */}
               <th
@@ -920,7 +922,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 <tr key={row.studentId} className="hover:bg-slate-50 transition">
                   <td className="text-slate-500 text-xs font-mono sticky-col-1">{row.stt}</td>
                   <td className="text-left font-bold text-slate-900 sticky-col-2">{row.fullName}</td>
-                  <td className="text-xs text-slate-600">{row.dob}</td>
+                  <td className="text-[11px] text-slate-600 font-mono whitespace-nowrap px-1 text-center" title={row.dob}>
+                    {row.dob}
+                  </td>
 
                   {/* COURSE SUBJECT GRADE INPUTS */}
                   {safeColumns.map((col) => {
