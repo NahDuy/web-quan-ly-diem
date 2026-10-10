@@ -591,44 +591,40 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       
       {/* Control Bar */}
       <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-4 border border-slate-200 bg-white">
-        <div className="flex items-center space-x-4">
-          <div>
-            <label className="form-label text-[11px] mb-1">Chọn Lớp học / Đại đội</label>
+        <div className="flex items-center space-x-4 flex-1 min-w-[280px]">
+          <div className="w-full max-w-md">
+            <label className="form-label text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+              <span>Chọn Lớp học / Đại đội đào tạo:</span>
+              <span className="text-[11px] text-emerald-700 font-semibold font-mono">
+                {classList.length} lớp khả dụng
+              </span>
+            </label>
             <select
               value={classId}
               onChange={(e) => setClassId(parseInt(e.target.value))}
-              className="form-input text-xs font-semibold max-w-xs truncate"
+              className="form-input text-xs font-bold text-slate-900 w-full py-2 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg"
               style={{ cursor: 'pointer' }}
             >
               {classList.length > 0 ? (
-                classList.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.classCode} - {cls.className} ({cls.totalStudents || 0} HV)
-                  </option>
-                ))
+                classList.map((cls) => {
+                  const displayCode = cls.code || cls.classCode || `Lớp #${cls.id}`;
+                  const displayName = cls.name || cls.className || '';
+                  const studentCount = cls.totalStudents !== undefined && cls.totalStudents !== null ? cls.totalStudents : (cls.students ? cls.students.length : 0);
+                  return (
+                    <option key={cls.id} value={cls.id}>
+                      {displayCode}{displayName ? ` — ${displayName}` : ''} ({studentCount} Học viên)
+                    </option>
+                  );
+                })
               ) : (
                 <>
-                  <option value={1}>SQDB2026-HT1 (Lớp SQDB 2026 - Binh chủng Hợp thành 1)</option>
-                  <option value={2}>SQDB2026-PB1 (Lớp SQDB 2026 - Pháo binh 1)</option>
-                  <option value={3}>SQDB2026-TT1 (Lớp SQDB 2026 - Thông tin Kỹ thuật 1)</option>
-                  <option value={4}>SQDB2025-HT1 (Lớp SQDB 2025 - Binh chủng Hợp thành 1)</option>
-                  <option value={5}>SQDB2024-HT1 (Lớp SQDB 2024 - Binh chủng Hợp thành 1)</option>
+                  <option value={1}>SQDB2026-HT1 — Lớp SQDB 2026 Binh chủng Hợp thành 1</option>
+                  <option value={2}>SQDB2026-PB1 — Lớp SQDB 2026 Pháo binh 1</option>
+                  <option value={3}>SQDB2026-TT1 — Lớp SQDB 2026 Thông tin Kỹ thuật 1</option>
+                  <option value={4}>SQDB2025-HT1 — Lớp SQDB 2025 Binh chủng Hợp thành 1</option>
+                  <option value={5}>SQDB2024-HT1 — Lớp SQDB 2024 Binh chủng Hợp thành 1</option>
                 </>
               )}
-            </select>
-          </div>
-
-          <div>
-            <label className="form-label text-[11px] mb-1">Học kỳ</label>
-            <select
-              value={semester}
-              onChange={(e) => setSemester(parseInt(e.target.value))}
-              className="form-input text-xs font-semibold"
-              style={{ cursor: 'pointer' }}
-            >
-              <option value={1}>Học kỳ 1</option>
-              <option value={2}>Học kỳ 2</option>
-              <option value={3}>Tất cả các kỳ</option>
             </select>
           </div>
         </div>

@@ -25,21 +25,25 @@ public class ClassService {
     private final ClassRepository classRepository;
     private final MajorRepository majorRepository;
     private final CourseRepository courseRepository;
-    private final DepartmentRepository departmentRepository;
+    private final StudentRepository studentRepository;
     private final JdbcTemplate jdbcTemplate;
 
     public List<ClassSummaryDTO> getAllClasses() {
         return classRepository.findAll().stream()
-                .map(c -> ClassSummaryDTO.builder()
-                        .id(c.getId())
-                        .code(c.getCode())
-                        .name(c.getName())
-                        .majorCode(c.getMajor() != null ? c.getMajor().getCode() : null)
-                        .majorName(c.getMajor() != null ? c.getMajor().getName() : null)
-                        .courseCode(c.getCourse() != null ? c.getCourse().getCode() : null)
-                        .courseName(c.getCourse() != null ? c.getCourse().getName() : null)
-                        .academicYear(c.getCourse() != null ? c.getCourse().getStartYear() : null)
-                        .build())
+                .map(c -> {
+                    long count = studentRepository.findByClazzIdOrderByStudentCodeAsc(c.getId()).size();
+                    return ClassSummaryDTO.builder()
+                            .id(c.getId())
+                            .code(c.getCode())
+                            .name(c.getName())
+                            .majorCode(c.getMajor() != null ? c.getMajor().getCode() : null)
+                            .majorName(c.getMajor() != null ? c.getMajor().getName() : null)
+                            .courseCode(c.getCourse() != null ? c.getCourse().getCode() : null)
+                            .courseName(c.getCourse() != null ? c.getCourse().getName() : null)
+                            .academicYear(c.getCourse() != null ? c.getCourse().getStartYear() : null)
+                            .totalStudents(count)
+                            .build();
+                })
                 .toList();
     }
 

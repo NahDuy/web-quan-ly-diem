@@ -18,4 +18,5 @@ public class ClassSummaryDTO {
     private String courseCode;
     private String courseName;
     private Integer academicYear;
+    private Long totalStudents;
 }
