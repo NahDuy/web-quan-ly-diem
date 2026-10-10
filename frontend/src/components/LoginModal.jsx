@@ -47,8 +47,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
       if (response.ok && data.token) {
         localStorage.setItem('jwt_token', data.token);
-        onLoginSuccess(data);
+        if (onLoginSuccess) {
+          onLoginSuccess(data);
+        }
         onClose();
+        window.location.reload();
       } else {
         setError(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
       }

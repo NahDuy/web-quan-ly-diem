@@ -64,6 +64,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('jwt_token');
     setCurrentUser(null);
+    window.location.reload();
   };
 
   const pageTitle = TAB_NAMES[activeTab] || 'Bảng Quản lý Điểm';

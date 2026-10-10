@@ -167,4 +167,19 @@ public class ClassMatrixController {
                 "message", "Đã mở khóa bảng điểm của lớp thành công."
         ));
     }
+
+    @PutMapping("/subjects/{subjectId}")
+    public ResponseEntity<Map<String, Object>> updateSubject(
+            @PathVariable Integer subjectId,
+            @RequestParam(required = false) String subjectCode,
+            @RequestParam(required = false) String subjectName,
+            @RequestParam(required = false) Integer credits) {
+
+        gradeMatrixService.updateSubject(subjectId, subjectCode, subjectName, credits);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã cập nhật thông tin môn học thành công!"
+        ));
+    }
 }

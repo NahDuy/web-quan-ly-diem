@@ -65,6 +65,8 @@ export default function StudentManagementView({ currentUser }) {
   const [editPob, setEditPob] = useState('');
   const [editGender, setEditGender] = useState('Nam');
   const [editClassId, setEditClassId] = useState('');
+  const [editStatus, setEditStatus] = useState('DANG_HUAN_LUYEN');
+  const [statusFilter, setStatusFilter] = useState(''); // '' | 'DANG_HUAN_LUYEN' | 'DA_TOT_NGHIEP'
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -131,10 +133,14 @@ export default function StudentManagementView({ currentUser }) {
     fetchClasses();
   }, []);
 
-  const filteredStudents = students.filter(s =>
-    (s.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.studentCode || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(s => {
+    const matchSearch = (s.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (s.studentCode || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchSearch) return false;
+    if (statusFilter === 'DA_TOT_NGHIEP') return s.status === 'DA_TOT_NGHIEP';
+    if (statusFilter === 'DANG_HUAN_LUYEN') return s.status !== 'DA_TOT_NGHIEP';
+    return true;
+  });
 
   const handleDeleteAllClasses = async () => {
     setDeletingClasses(true);
@@ -262,6 +268,7 @@ export default function StudentManagementView({ currentUser }) {
     setEditPob(student.pob || '');
     setEditGender(student.gender || 'Nam');
     setEditClassId(student.classId ? String(student.classId) : (classList[0]?.id ? String(classList[0].id) : ''));
+    setEditStatus(student.status === 'DA_TOT_NGHIEP' ? 'DA_TOT_NGHIEP' : 'DANG_HUAN_LUYEN');
     setErrorMsg('');
     setIsEditModalOpen(true);
   };
@@ -293,7 +300,8 @@ export default function StudentManagementView({ currentUser }) {
         pob: editPob ? editPob.trim() : '',
         gender: editGender,
         rank: editRank,
-        classId: parseInt(editClassId)
+        classId: parseInt(editClassId),
+        status: editStatus
       };
 
       const res = await fetch(`/api/v1/students/${editingStudent.id}`, {
@@ -395,6 +403,18 @@ export default function StudentManagementView({ currentUser }) {
             ) : (
               <option value="" disabled>Không có lớp nào trong năm {selectedYear}</option>
             )}
+          </select>
+
+          {/* Filter by Status (Đang huấn luyện / Đã tốt nghiệp) */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold cursor-pointer"
+            title="Lọc học viên theo trạng thái"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="DANG_HUAN_LUYEN">🟢 Đang huấn luyện</option>
+            <option value="DA_TOT_NGHIEP">🔵 Đã tốt nghiệp</option>
           </select>
 
           {/* Delete Single Selected Class (Chỉ hiển thị cho 2 vai trò cao nhất: BGH / Bộ Môn) */}
@@ -526,11 +546,9 @@ export default function StudentManagementView({ currentUser }) {
                   <td className="p-3 text-xs text-slate-600">{student.pob || '-'}</td>
                   <td className="p-3 text-center">
                     {student.status === 'DA_TOT_NGHIEP' ? (
-                      <span className="badge badge-info text-[10px]">Đã tốt nghiệp</span>
-                    ) : student.status === 'THOI_HOC' ? (
-                      <span className="badge badge-danger text-[10px]">Thôi học</span>
+                      <span className="badge badge-info text-[10px] font-bold">Đã tốt nghiệp</span>
                     ) : (
-                      <span className="badge badge-success text-[10px]">Đang huấn luyện</span>
+                      <span className="badge badge-success text-[10px] font-bold">Đang huấn luyện</span>
                     )}
                   </td>
                   <td className="p-3 text-center space-x-2">
@@ -793,6 +811,18 @@ export default function StudentManagementView({ currentUser }) {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Trạng thái học viên *</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                >
+                  <option value="DANG_HUAN_LUYEN">🟢 Đang huấn luyện</option>
+                  <option value="DA_TOT_NGHIEP">🔵 Đã tốt nghiệp</option>
+                </select>
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">

@@ -78,7 +78,7 @@ public class StudentService {
                 .pob(req.getPob() != null && !req.getPob().isBlank() ? req.getPob().trim() : "Hà Nội")
                 .gender(req.getGender() != null && !req.getGender().isBlank() ? req.getGender().trim() : "Nam")
                 .clazz(clazz)
-                .status("DANG_HUAN_LUYEN")
+                .status(req.getStatus() != null && !req.getStatus().isBlank() ? req.getStatus().trim() : "DANG_HUAN_LUYEN")
                 .build();
 
         Student saved = studentRepository.save(student);
@@ -140,6 +140,10 @@ public class StudentService {
             ClassEntity clazz = classRepository.findById(req.getClassId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp với ID: " + req.getClassId()));
             student.setClazz(clazz);
+        }
+
+        if (req.getStatus() != null && !req.getStatus().isBlank()) {
+            student.setStatus(req.getStatus().trim());
         }
 
         Student updated = studentRepository.save(student);

@@ -353,6 +353,16 @@ public class GradeMatrixService {
                 }
 
                 evaluationRepository.save(eval);
+
+                // Cập nhật trạng thái học viên: Khi nhập điểm tốt nghiệp xong thì cập nhật sang Đã tốt nghiệp
+                boolean hasGradScores = eval.getTbcGradExam() != null
+                        || eval.getScorePolitical() != null
+                        || eval.getScoreMilitary() != null
+                        || eval.getScoreSpecialty() != null;
+                if (hasGradScores) {
+                    student.setStatus("DA_TOT_NGHIEP");
+                    studentRepository.save(student);
+                }
             }
         }
     }
@@ -612,6 +622,29 @@ public class GradeMatrixService {
                 gradeRepository.delete(g);
             }
         }
+    }
+
+    @Transactional
+    public void updateSubject(Integer subjectId, String subjectCode, String subjectName, Integer credits) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền chỉnh sửa môn học.");
+        }
+
+        Subject subject = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học ID: " + subjectId));
+
+        if (subjectCode != null && !subjectCode.isBlank()) {
+            subject.setCode(subjectCode.trim().toUpperCase());
+        }
+        if (subjectName != null && !subjectName.isBlank()) {
+            subject.setName(subjectName.trim());
+        }
+        if (credits != null && credits > 0) {
+            subject.setCredits(credits);
+        }
+
+        subjectRepository.save(subject);
     }
 
     private CustomUserDetails getCurrentUser() {

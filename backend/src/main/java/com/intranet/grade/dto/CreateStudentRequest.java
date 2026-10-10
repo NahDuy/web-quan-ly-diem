@@ -16,6 +16,7 @@ public class CreateStudentRequest {
     private String pob;
     private String gender;
     private String rank;
+    private String status;
     
     @NotNull(message = "Lớp học (classId) là bắt buộc")
     private Integer classId;

@@ -42,5 +42,5 @@ public class Student {
 
     @Column(length = 30)
     @Builder.Default
-    private String status = "DANG_HOC";
+    private String status = "DANG_HUAN_LUYEN";
 }
