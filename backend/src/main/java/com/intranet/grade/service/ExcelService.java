@@ -46,6 +46,7 @@ public class ExcelService {
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("BangDiem_Lop_" + matrix.getClassCode());
+            setupA4LandscapePrint(sheet, 2, 3);
 
             // Fonts & Styles
             Font headerFont = workbook.createFont();
@@ -542,6 +543,35 @@ public class ExcelService {
         return styles;
     }
 
+    private void setupA4LandscapePrint(Sheet sheet, int headerStartRow0Based, int headerEndRow0Based) {
+        PrintSetup ps = sheet.getPrintSetup();
+        ps.setLandscape(true);
+        ps.setPaperSize(PrintSetup.A4_PAPERSIZE);
+
+        // Đảm bảo vừa vặn tất cả các cột trên 1 trang ngang A4 (Fit to 1 page wide)
+        sheet.setAutobreaks(true);
+        sheet.setFitToPage(true);
+        ps.setFitWidth((short) 1);
+        ps.setFitHeight((short) 0); // Tự động chia trang theo chiều dọc
+
+        // Căn lề in chuẩn văn bản quân sự (inches)
+        sheet.setMargin(Sheet.LeftMargin, 0.4);
+        sheet.setMargin(Sheet.RightMargin, 0.4);
+        sheet.setMargin(Sheet.TopMargin, 0.5);
+        sheet.setMargin(Sheet.BottomMargin, 0.5);
+
+        // Căn giữa trang theo chiều ngang
+        sheet.setHorizontallyCenter(true);
+
+        // Lặp lại hàng tiêu đề bảng ở mỗi trang in (Repeating rows)
+        if (headerStartRow0Based >= 0 && headerEndRow0Based >= headerStartRow0Based) {
+            sheet.setRepeatingRows(new CellRangeAddress(headerStartRow0Based, headerEndRow0Based, -1, -1));
+        }
+
+        // Đánh số trang chuyên nghiệp ở Footer
+        sheet.getFooter().setRight("Trang &P / &N");
+    }
+
     private String resolveKhoaHeader(ClassEntity clazz, MatrixResponseDTO matrix) {
         String code = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getCode() : null;
         String name = (clazz != null && clazz.getCourse() != null) ? clazz.getCourse().getName() : (matrix != null ? matrix.getCourseName() : null);
@@ -594,8 +624,7 @@ public class ExcelService {
         String sheetName = getUniqueSheetName(classCode, existingSheetNames);
         Sheet sheet = workbook.createSheet(sheetName);
 
-        sheet.getPrintSetup().setLandscape(true);
-        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        setupA4LandscapePrint(sheet, 6, 7);
 
         int numSubjects = matrix.getColumns() != null ? matrix.getColumns().size() : 0;
         int totalCols = Math.max(8, 5 + numSubjects + 3);
@@ -862,8 +891,7 @@ public class ExcelService {
         String sheetName = getUniqueSheetName(classCode, existingSheetNames);
         Sheet sheet = workbook.createSheet(sheetName);
 
-        sheet.getPrintSetup().setLandscape(true);
-        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        setupA4LandscapePrint(sheet, 8, 9);
 
         int totalCols = 14;
 
@@ -1206,8 +1234,7 @@ public class ExcelService {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             workbook.setForceFormulaRecalculation(true);
             Sheet sheet = workbook.createSheet("TH xet at(Kdt)");
-            sheet.getPrintSetup().setLandscape(true);
-            sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+            setupA4LandscapePrint(sheet, 4, 6);
             sheet.setDisplayGridlines(true);
 
             // Fonts
