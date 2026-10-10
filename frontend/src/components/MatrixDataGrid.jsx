@@ -222,6 +222,27 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       
       if (res.ok) {
         const data = await res.json();
+        // Tự động liên kết môn học từ Lộ trình nếu lớp chưa có cột môn nào
+        if ((!data.columns || data.columns.length === 0) && classId) {
+          try {
+            const initRes = await fetch(`/api/v1/classes/${classId}/init-from-curriculum?semester=${semester}`, {
+              method: 'POST',
+              headers
+            });
+            if (initRes.ok) {
+              const refreshedRes = await fetch(`/api/v1/classes/${classId}/matrix?semester=${semester}`, { headers });
+              if (refreshedRes.ok) {
+                const refreshedData = await refreshedRes.json();
+                setMatrixData(refreshedData);
+                setIsDemoMode(false);
+                return;
+              }
+            }
+          } catch (initErr) {
+            console.error('Auto-init curriculum error:', initErr);
+          }
+        }
+
         setMatrixData(data);
         setIsDemoMode(false);
       } else {
@@ -629,23 +650,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
-          <button
-            onClick={handleInitFromCurriculum}
-            disabled={loading}
-            className="btn btn-secondary btn-sm"
-            style={{ color: '#4338ca', borderColor: '#c7d2fe' }}
-            title="Tự động đồng bộ các môn học theo Lộ trình Đào tạo của Chuyên ngành vào Lớp này"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Lấy Môn từ Lộ Trình</span>
-          </button>
-
+        {/* Actions Bar - Căn chỉnh đồng bộ và cân đối */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddSubjectModalOpen(true)}
             className="btn btn-secondary btn-sm"
             style={{ color: '#15803d', borderColor: '#bbf7d0' }}
+            title="Thêm cột môn học linh hoạt cho lớp này"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Thêm Cột Môn</span>
@@ -657,7 +668,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             disabled={!hasUnsavedChanges || saving}
             className={`btn btn-sm flex items-center gap-1.5 transition ${
               hasUnsavedChanges
-                ? 'btn-primary font-bold shadow-md cursor-pointer'
+                ? 'btn-primary font-bold shadow-sm cursor-pointer'
                 : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
             }`}
             style={hasUnsavedChanges ? { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' } : {}}
@@ -695,6 +706,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <button
             onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
             className="btn btn-secondary btn-sm"
+            title="Nhập điểm hàng loạt từ file Excel"
           >
             <Upload className="w-3.5 h-3.5 text-emerald-600" />
             <span>Import Excel Điểm</span>
