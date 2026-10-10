@@ -287,6 +287,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                             Object.keys(editedConducts).length > 0 ||
                             Object.keys(editedGradExamScores).length > 0;
 
+  const totalChangesCount = Object.keys(editedScores).length +
+                            Object.keys(editedConducts).length +
+                            Object.keys(editedGradExamScores).length;
+
   const handleAddDynamicSubject = (e) => {
     e.preventDefault();
     if (!newSubName.trim() || !newSubCode.trim()) {
@@ -359,6 +363,87 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     } catch (e) { alert('Lỗi mở khóa bảng điểm'); }
   };
 
+  // Quick direct save for ongoing grade entries (e.g. nhập trước 10 đồng chí, mỗi đồng chí 5 môn)
+  const handleSaveDirect = async () => {
+    if (!hasUnsavedChanges) return;
+    setSaving(true);
+    setSaveSuccessMsg('');
+
+    const defaultReason = `Cập nhật điểm định kỳ - Lớp ${matrixData?.classCode || classId} (Học kỳ ${semester})`;
+
+    if (isDemoMode) {
+      setTimeout(() => {
+        setSaveSuccessMsg(`Đã lưu thành công ${totalChangesCount} mục điểm vào hệ thống!`);
+        setEditedScores({});
+        setEditedConducts({});
+        setEditedGradExamScores({});
+        setSaving(false);
+      }, 500);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      };
+
+      const gradeUpdates = Object.entries(editedScores).map(([key, score]) => {
+        const [studentId, subjectId] = key.split('_');
+        return {
+          studentId: parseInt(studentId),
+          subjectId: parseInt(subjectId),
+          score: score,
+        };
+      });
+
+      const evalUpdatesMap = {};
+      Object.entries(editedConducts).forEach(([sId, conduct]) => {
+        const studentId = parseInt(sId);
+        if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
+        evalUpdatesMap[studentId].conductGrade = conduct;
+      });
+      Object.entries(editedGradExamScores).forEach(([key, val]) => {
+        const [sId, gradSubId] = key.split('_');
+        const studentId = parseInt(sId);
+        if (!evalUpdatesMap[studentId]) evalUpdatesMap[studentId] = { studentId };
+        if (gradSubId === '101') evalUpdatesMap[studentId].scorePolitical = val;
+        else if (gradSubId === '102') evalUpdatesMap[studentId].scoreMilitary = val;
+        else if (gradSubId === '103') evalUpdatesMap[studentId].scoreSpecialty = val;
+      });
+      const evaluationUpdates = Object.values(evalUpdatesMap);
+
+      const body = {
+        semester,
+        reason: defaultReason,
+        gradeUpdates,
+        evaluationUpdates: evaluationUpdates.length > 0 ? evaluationUpdates : undefined,
+      };
+
+      const res = await fetch(`/api/v1/classes/${classId}/matrix/bulk-update`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        setSaveSuccessMsg(`Đã lưu thành công ${totalChangesCount} mục điểm vừa nhập vào cơ sở dữ liệu!`);
+        setEditedScores({});
+        setEditedConducts({});
+        setEditedGradExamScores({});
+        fetchMatrix();
+      } else {
+        const resData = await res.json();
+        alert(resData.message || 'Lưu thất bại');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi lưu điểm');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveBatch = async () => {
     if (!auditReason.trim()) {
       alert('Vui lòng ghi rõ lý do/quyết định sửa điểm để lưu Audit Log');
@@ -426,7 +511,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       });
 
       if (res.ok) {
-        setSaveSuccessMsg('Lưu điểm và tạo Audit Log thành công!');
+        setSaveSuccessMsg('Lưu điểm và ghi nhận Audit Log thành công!');
         setIsReasonModalOpen(false);
         setAuditReason('');
         setEditedScores({});
@@ -570,14 +655,44 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Thêm Cột Môn</span>
           </button>
 
+          {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP (Dành cho việc nhập điểm thông thường, ví dụ nhập trước 10 đồng chí, 5 môn) */}
+          <button
+            onClick={handleSaveDirect}
+            disabled={!hasUnsavedChanges || saving}
+            className={`btn btn-sm flex items-center gap-1.5 transition ${
+              hasUnsavedChanges
+                ? 'btn-primary font-bold shadow-md cursor-pointer'
+                : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+            }`}
+            style={hasUnsavedChanges ? { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' } : {}}
+            title={
+              hasUnsavedChanges
+                ? `Lưu nhanh ${totalChangesCount} ô điểm vừa nhập vào hệ thống`
+                : 'Chưa có thay đổi điểm nào cần lưu'
+            }
+          >
+            <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
+            <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
+          </button>
+
+          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Dành cho trường hợp sửa điểm / phúc khảo / điều chỉnh cần lưu vết và lý do) */}
           {hasUnsavedChanges && (
             <button
-              onClick={() => setIsReasonModalOpen(true)}
-              className="btn btn-primary btn-sm"
-              style={{ background: '#b45309', borderColor: '#92400e' }}
+              onClick={() => {
+                setAuditReason('');
+                setIsReasonModalOpen(true);
+              }}
+              disabled={saving}
+              className="btn btn-sm flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#b45309',
+                border: '1px solid #fde047'
+              }}
+              title="Lưu kèm ghi lý do/quyết định sửa điểm vào Nhật ký Audit Log"
             >
-              <Save className="w-3.5 h-3.5" />
-              <span>Lưu Điểm Hàng Loạt</span>
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
+              <span>Lưu Kèm Lý Do Sửa Điểm</span>
             </button>
           )}
 
@@ -906,36 +1021,96 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </table>
       </div>
 
-      {/* MANDATORY AUDIT REASON MODAL */}
+      {/* MANDATORY AUDIT REASON MODAL (CHO TRƯỜNG HỢP SỬA ĐIỂM CẦN GHI NHẬN AUDIT LOG) */}
       {isReasonModalOpen && (
         <div className="modal-overlay" onClick={() => setIsReasonModalOpen(false)}>
-          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center space-x-3 mb-4 text-amber-700">
-              <ShieldAlert className="w-6 h-6" />
-              <h3 className="font-military text-base font-bold text-slate-900">Yêu cầu Ghi Lý do Điều chỉnh Điểm (Audit Log)</h3>
+          <div className="modal-panel" style={{ maxWidth: '520px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200">
+              <div className="flex items-center space-x-2.5 text-amber-800">
+                <ShieldAlert className="w-5 h-5 text-amber-700" />
+                <h3 className="font-military text-base font-bold text-slate-900">
+                  Lưu Kèm Lý Do Sửa Điểm (Audit Log)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReasonModalOpen(false)}
+                className="btn btn-icon btn-secondary btn-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <p className="text-xs text-slate-600 mb-4">
-              Mọi thao tác thay đổi ô điểm đều được tự động lưu vết chi tiết vào bảng kiểm toán <code className="text-amber-700 font-mono">grade_audit_logs</code>.
-            </p>
-
-            <div className="mb-4">
-              <label className="form-label">
-                Lý do chỉnh sửa điểm <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={auditReason}
-                onChange={(e) => setAuditReason(e.target.value)}
-                placeholder="Nhập lý do hoặc quyết định phúc khảo bài thi..."
-                rows={4}
-                className="form-input text-sm"
-              />
+            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl mb-4 text-xs text-amber-950 space-y-1">
+              <p className="font-bold">
+                ⚠️ Đang chuẩn bị lưu <span className="text-red-700">{totalChangesCount}</span> ô điểm đã chỉnh sửa.
+              </p>
+              <p className="text-[11px] text-amber-800">
+                Toàn bộ dữ liệu điểm cũ, điểm mới, tài khoản thao tác và địa chỉ IP sẽ được lưu vết vào bảng Kiểm toán (Audit Log) theo điều lệnh quân sự.
+              </p>
             </div>
 
-            <div className="flex justify-end space-x-3">
-              <button onClick={() => setIsReasonModalOpen(false)} className="btn btn-secondary" disabled={saving}>Hủy bỏ</button>
-              <button onClick={handleSaveBatch} className="btn btn-primary" disabled={saving} style={{ background: '#b45309', borderColor: '#92400e' }}>
-                {saving ? 'Đang lưu...' : 'Xác nhận & Lưu Audit Log'}
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="form-label text-xs font-bold text-slate-800 mb-1">
+                  Chọn nhanh lý do mẫu:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Chấm phúc khảo bài thi kết thúc môn',
+                    'Cập nhật điểm kiểm tra bổ sung',
+                    'Điều chỉnh điểm sau thanh tra đào tạo',
+                    'Đối chiếu khớp với sổ điểm giảng viên',
+                    'Hội đồng khoa phê duyệt sửa điểm'
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setAuditReason(preset)}
+                      className="px-2 py-1 text-[11px] rounded bg-slate-100 hover:bg-amber-100 hover:text-amber-900 border border-slate-200 text-slate-700 transition cursor-pointer"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-bold text-slate-800 mb-1">
+                  Nội dung lý do / Số quyết định <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={auditReason}
+                  onChange={(e) => setAuditReason(e.target.value)}
+                  placeholder="Ghi rõ lý do hoặc số quyết định (VD: Quyết định phúc khảo số 45/QĐ-ĐTT...)"
+                  rows={3}
+                  className="form-input text-xs leading-relaxed"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsReasonModalOpen(false)}
+                className="btn btn-secondary btn-sm px-4"
+                disabled={saving}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBatch}
+                className="btn btn-primary btn-sm px-4 font-bold flex items-center gap-1.5"
+                disabled={saving || !auditReason.trim()}
+                style={{
+                  background: auditReason.trim() ? '#b45309' : '#cbd5e1',
+                  borderColor: auditReason.trim() ? '#92400e' : '#94a3b8'
+                }}
+              >
+                <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
+                <span>{saving ? 'Đang lưu...' : 'Xác Nhận & Lưu Audit Log'}</span>
               </button>
             </div>
           </div>
