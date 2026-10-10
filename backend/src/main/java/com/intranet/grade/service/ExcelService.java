@@ -2383,4 +2383,226 @@ public class ExcelService {
             );
         }
     }
+
+    public byte[] exportMajorsToExcel() throws IOException {
+        List<Major> majors = new ArrayList<>(majorRepository.findAll());
+        majors.sort(Comparator.comparing(Major::getCode, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("ChuyenNganh_QuyUoc");
+            sheet.setDisplayGridlines(true);
+            setupA4LandscapePrint(sheet, 5, 5);
+
+            // Fonts & Styles
+            Font agencyTitleFont = workbook.createFont();
+            agencyTitleFont.setFontName("Times New Roman");
+            agencyTitleFont.setFontHeightInPoints((short) 13);
+            agencyTitleFont.setBold(true);
+
+            CellStyle agencyTitleStyle = workbook.createCellStyle();
+            agencyTitleStyle.setFont(agencyTitleFont);
+            agencyTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+            agencyTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            Font agencySubFont = workbook.createFont();
+            agencySubFont.setFontName("Times New Roman");
+            agencySubFont.setFontHeightInPoints((short) 13);
+            agencySubFont.setBold(true);
+            agencySubFont.setUnderline(Font.U_SINGLE);
+
+            CellStyle agencySubStyle = workbook.createCellStyle();
+            agencySubStyle.setFont(agencySubFont);
+            agencySubStyle.setAlignment(HorizontalAlignment.CENTER);
+            agencySubStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            Font mottoFont = workbook.createFont();
+            mottoFont.setFontName("Times New Roman");
+            mottoFont.setFontHeightInPoints((short) 11);
+            mottoFont.setBold(true);
+            mottoFont.setUnderline(Font.U_SINGLE);
+
+            CellStyle mottoStyle = workbook.createCellStyle();
+            mottoStyle.setFont(mottoFont);
+            mottoStyle.setAlignment(HorizontalAlignment.CENTER);
+            mottoStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            Font mainTitleFont = workbook.createFont();
+            mainTitleFont.setFontName("Times New Roman");
+            mainTitleFont.setFontHeightInPoints((short) 15);
+            mainTitleFont.setBold(true);
+
+            CellStyle mainTitleStyle = workbook.createCellStyle();
+            mainTitleStyle.setFont(mainTitleFont);
+            mainTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+            mainTitleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            Font headerFont = workbook.createFont();
+            headerFont.setFontName("Times New Roman");
+            headerFont.setFontHeightInPoints((short) 11);
+            headerFont.setBold(true);
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            headerStyle.setWrapText(true);
+            headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            Font dataFont = workbook.createFont();
+            dataFont.setFontName("Times New Roman");
+            dataFont.setFontHeightInPoints((short) 11);
+
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setFont(dataFont);
+            dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            dataStyle.setBorderTop(BorderStyle.THIN);
+            dataStyle.setBorderBottom(BorderStyle.THIN);
+            dataStyle.setBorderLeft(BorderStyle.THIN);
+            dataStyle.setBorderRight(BorderStyle.THIN);
+
+            CellStyle centerDataStyle = workbook.createCellStyle();
+            centerDataStyle.cloneStyleFrom(dataStyle);
+            centerDataStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            CellStyle boldCenterStyle = workbook.createCellStyle();
+            boldCenterStyle.cloneStyleFrom(centerDataStyle);
+            Font boldFont = workbook.createFont();
+            boldFont.setFontName("Times New Roman");
+            boldFont.setFontHeightInPoints((short) 11);
+            boldFont.setBold(true);
+            boldCenterStyle.setFont(boldFont);
+
+            // Row 0: Agency header Left (QUÂN KHU 3) & Right (CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM)
+            Row r0 = sheet.createRow(0);
+            r0.setHeightInPoints(22);
+            Cell c0_0 = r0.createCell(0);
+            c0_0.setCellValue("QUÂN KHU 3");
+            c0_0.setCellStyle(agencyTitleStyle);
+
+            Cell c0_4 = r0.createCell(4);
+            c0_4.setCellValue("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM");
+            c0_4.setCellStyle(agencyTitleStyle);
+
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 4, 6));
+
+            // Row 1: Left (TRƯỜNG QUÂN SỰ) & Right (Độc lập - Tự do - Hạnh phúc)
+            Row r1 = sheet.createRow(1);
+            r1.setHeightInPoints(22);
+            Cell c1_0 = r1.createCell(0);
+            c1_0.setCellValue("TRƯỜNG QUÂN SỰ");
+            c1_0.setCellStyle(agencySubStyle);
+
+            Cell c1_4 = r1.createCell(4);
+            c1_4.setCellValue("Độc lập - Tự do - Hạnh phúc");
+            c1_4.setCellStyle(mottoStyle);
+
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 4, 6));
+
+            // Row 3: Main Title
+            Row r3 = sheet.createRow(3);
+            r3.setHeightInPoints(26);
+            Cell c3 = r3.createCell(0);
+            c3.setCellValue("DANH MỤC CÁC CHUYÊN NGÀNH ĐÀO TẠO & QUY ƯỚC MÃ QUÂN SỰ");
+            c3.setCellStyle(mainTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 6));
+
+            // Row 4: Subtitle Note
+            Font noteFont = workbook.createFont();
+            noteFont.setFontName("Times New Roman");
+            noteFont.setFontHeightInPoints((short) 11);
+            noteFont.setItalic(true);
+            CellStyle noteStyle = workbook.createCellStyle();
+            noteStyle.setFont(noteFont);
+            noteStyle.setAlignment(HorizontalAlignment.CENTER);
+            Row r4 = sheet.createRow(4);
+            r4.setHeightInPoints(18);
+            Cell c4 = r4.createCell(0);
+            c4.setCellValue("(Phục vụ quản lý đào tạo, tự động hóa cấp Mã Lớp & Mã Học viên toàn trường)");
+            c4.setCellStyle(noteStyle);
+            sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 6));
+
+            // Row 5: Table Header
+            Row r5 = sheet.createRow(5);
+            r5.setHeightInPoints(28);
+            String[] headers = {
+                    "STT",
+                    "Mã Quy Ước",
+                    "Tên Chuyên Ngành Đào Tạo",
+                    "Khoa / Bộ Môn Phụ Trách",
+                    "Số Lớp Trực Thuộc",
+                    "Mẫu Mã Lớp Chuẩn (2026)",
+                    "Mẫu Mã Học Viên (MSSV 2026)"
+            };
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = r5.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Data Rows
+            int rowIdx = 6;
+            int stt = 1;
+            for (Major m : majors) {
+                Row row = sheet.createRow(rowIdx++);
+                row.setHeightInPoints(22);
+
+                long classCount = classRepository.countByMajorId(m.getId());
+                String deptName = m.getDepartment() != null ? m.getDepartment().getName() : "Bộ môn Binh chủng Hợp thành";
+
+                // STT
+                Cell cStt = row.createCell(0);
+                cStt.setCellValue(stt++);
+                cStt.setCellStyle(centerDataStyle);
+
+                // Mã Quy ước
+                Cell cCode = row.createCell(1);
+                cCode.setCellValue(m.getCode());
+                cCode.setCellStyle(boldCenterStyle);
+
+                // Tên chuyên ngành
+                Cell cName = row.createCell(2);
+                cName.setCellValue(m.getName());
+                cName.setCellStyle(dataStyle);
+
+                // Khoa / Bộ môn
+                Cell cDept = row.createCell(3);
+                cDept.setCellValue(deptName);
+                cDept.setCellStyle(dataStyle);
+
+                // Số lớp
+                Cell cClassCount = row.createCell(4);
+                cClassCount.setCellValue(classCount);
+                cClassCount.setCellStyle(centerDataStyle);
+
+                // Mẫu mã lớp (2026)
+                Cell cClassPattern = row.createCell(5);
+                cClassPattern.setCellValue("SQDB-XN-" + m.getCode() + "-01");
+                cClassPattern.setCellStyle(centerDataStyle);
+
+                // Mẫu mã HV (2026)
+                Cell cStudentPattern = row.createCell(6);
+                cStudentPattern.setCellValue("26XN-" + m.getCode() + "001");
+                cStudentPattern.setCellStyle(centerDataStyle);
+            }
+
+            // Column widths
+            sheet.setColumnWidth(0, 6 * 256);   // STT
+            sheet.setColumnWidth(1, 14 * 256);  // Mã
+            sheet.setColumnWidth(2, 32 * 256);  // Tên
+            sheet.setColumnWidth(3, 30 * 256);  // Bộ môn
+            sheet.setColumnWidth(4, 12 * 256);  // Số lớp
+            sheet.setColumnWidth(5, 24 * 256);  // Mã lớp
+            sheet.setColumnWidth(6, 24 * 256);  // Mã HV
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
 }

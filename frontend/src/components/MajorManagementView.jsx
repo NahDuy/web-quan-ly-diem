@@ -1,16 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookmarkCheck, Plus, Edit2, Trash2, Search, Building2, 
-  Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles, Shield
+  Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles, Shield, Download
 } from 'lucide-react';
+
+const DEFAULT_TARGET_GROUPS = [
+  { code: 'SQDB(XN)', shortCode: 'XN', name: 'SQDB Xuất ngũ', desc: 'Hạ sĩ quan xuất ngũ', classPattern: 'SQDB-XN-[NGÀNH]-01', studentPattern: '26XN-[NGÀNH]001', isCustom: false },
+  { code: 'SQDB(H1)', shortCode: 'H1', name: 'SQDB Hạng 1', desc: 'Quân nhân DB hạng 1', classPattern: 'SQDB-H1-[NGÀNH]-01', studentPattern: '26H1-[NGÀNH]001', isCustom: false },
+  { code: 'SQDB(SV)', shortCode: 'SV', name: 'SQDB Sinh viên', desc: 'Sinh viên tốt nghiệp ĐH', classPattern: 'SQDB-SV-[NGÀNH]-01', studentPattern: '26SV-[NGÀNH]001', isCustom: false },
+  { code: 'KDT', shortCode: 'KDT', name: 'Khẩu đội trưởng', desc: 'Khẩu đội trưởng Hỏa lực & Pháo', classPattern: 'KDT-DL-01', studentPattern: '26KDT-DL001', isCustom: false },
+  { code: 'TDT', shortCode: 'TDT', name: 'Tiểu đội trưởng', desc: 'Tiểu đội trưởng Bộ binh & Trinh sát', classPattern: 'TDT-BB-01', studentPattern: '26TDT-BB001', isCustom: false },
+  { code: 'NVKT', shortCode: 'NVKT', name: 'Nhân viên Kỹ thuật', desc: 'Nhân viên Chuyên môn Kỹ thuật', classPattern: 'NVKT-NVQY-01', studentPattern: '26NVKT-NVQY001', isCustom: false },
+  { code: 'HSQ', shortCode: 'HSQ', name: 'Hạ sĩ quan Chỉ huy', desc: 'Hạ sĩ quan Chỉ huy Quân sự', classPattern: 'HSQ-CH-01', studentPattern: '26HSQ-CH001', isCustom: false },
+];
 
 export default function MajorManagementView() {
   const [majors, setMajors] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Modal State
+  const [exporting, setExporting] = useState(false);
+
+  // Target Groups State
+  const [targetGroups, setTargetGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('military_target_groups_major');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading target groups', e);
+    }
+    return DEFAULT_TARGET_GROUPS;
+  });
+
+  // Modal State for Target Group
+  const [isAddTargetModalOpen, setIsAddTargetModalOpen] = useState(false);
+  const [newTargetCode, setNewTargetCode] = useState('');
+  const [newTargetName, setNewTargetName] = useState('');
+  const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
+  const [addTargetError, setAddTargetError] = useState('');
+
+  // Modal State for Major
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMajor, setEditingMajor] = useState(null);
   const [formCode, setFormCode] = useState('');
@@ -62,6 +94,78 @@ export default function MajorManagementView() {
       setErrorMsg(errorText);
       setTimeout(() => setErrorMsg(''), 4500);
     }
+  };
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/majors/export-excel', { headers });
+      if (!res.ok) throw new Error('Không thể tải file Excel danh mục');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Danh_Muc_Chuyen_Nganh_Quan_Su_${new Date().getFullYear()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showNotification('Đã xuất danh sách chuyên ngành ra file Excel chuẩn in A4 thành công!');
+    } catch (err) {
+      console.error(err);
+      showNotification('', 'Lỗi khi tải file Excel danh mục chuyên ngành');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleSaveTargetGroup = (e) => {
+    e.preventDefault();
+    if (!newTargetCode.trim() || !newTargetName.trim()) {
+      setAddTargetError('Vui lòng nhập đầy đủ Mã và Tên đối tượng đào tạo!');
+      return;
+    }
+    const cleanCode = newTargetCode.trim().toUpperCase();
+    if (targetGroups.some(tg => tg.code.toUpperCase() === cleanCode)) {
+      setAddTargetError(`Mã đối tượng "${cleanCode}" đã tồn tại trong danh mục!`);
+      return;
+    }
+
+    const cleanShort = cleanCode.replace(/[^A-Za-z0-9]/g, '');
+    const newTarget = {
+      code: cleanCode,
+      shortCode: cleanCode,
+      name: newTargetName.trim(),
+      desc: newTargetDesc.trim() || 'Thời gian 06 tháng',
+      classPattern: `${cleanCode}-[NGÀNH]-01`,
+      studentPattern: `26${cleanShort}-[NGÀNH]001`,
+      isCustom: true
+    };
+
+    const updated = [...targetGroups, newTarget];
+    setTargetGroups(updated);
+    try {
+      localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
+    } catch (err) {}
+
+    setIsAddTargetModalOpen(false);
+    setNewTargetCode('');
+    setNewTargetName('');
+    setNewTargetDesc('Thời gian 06 tháng');
+    setAddTargetError('');
+    showNotification(`Đã thêm đối tượng đào tạo "${newTarget.name}" (${newTarget.code}) thành công!`);
+  };
+
+  const handleDeleteTargetGroup = (code, name) => {
+    if (!window.confirm(`XÁC NHẬN XÓA ĐỐI TƯỢNG ĐÀO TẠO?\n\nBạn có chắc muốn xóa "${name}" (${code})?`)) return;
+    const updated = targetGroups.filter(tg => tg.code !== code);
+    setTargetGroups(updated);
+    try {
+      localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
+    } catch (err) {}
+    showNotification(`Đã xóa đối tượng đào tạo "${name}"`);
   };
 
   const handleOpenAdd = () => {
@@ -174,13 +278,46 @@ export default function MajorManagementView() {
             </div>
           </div>
 
-          <button
-            onClick={handleOpenAdd}
-            className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm Chuyên ngành Mới
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="btn btn-secondary btn-sm flex items-center gap-2 shadow-sm text-slate-700 bg-white hover:bg-slate-50 border-slate-300 font-bold"
+              title="Xuất toàn bộ danh sách chuyên ngành ra file Excel chuẩn in A4 ngang"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              <span>{exporting ? 'Đang xuất file...' : 'Xuất DS Chuyên Ngành (Excel)'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setNewTargetCode('');
+                setNewTargetName('');
+                setNewTargetDesc('Thời gian 06 tháng');
+                setAddTargetError('');
+                setIsAddTargetModalOpen(true);
+              }}
+              className="btn btn-sm flex items-center gap-1.5 shadow-sm"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde047',
+                fontWeight: 700
+              }}
+              title="Thêm đối tượng đào tạo mới vào hệ thống"
+            >
+              <Plus className="w-4 h-4 text-amber-700" />
+              <span>+ Thêm Đối Tượng</span>
+            </button>
+
+            <button
+              onClick={handleOpenAdd}
+              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Chuyên ngành Mới</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -221,72 +358,65 @@ export default function MajorManagementView() {
 
       {/* Military Training Targets Showcase */}
       <div className="glass-panel p-5 bg-white border border-amber-200 rounded-xl space-y-3 shadow-xs">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-amber-600" />
             <h3 className="text-sm font-bold text-amber-900 uppercase font-military-title">
-              QUY ƯỚC CÁC ĐỐI TƯỢNG ĐÀO TẠO TẠI NHÀ TRƯỜNG
+              QUY ƯỚC CÁC ĐỐI TƯỢNG ĐÀO TẠO TẠI NHÀ TRƯỜNG ({targetGroups.length})
             </h3>
           </div>
-          <span className="text-[11px] text-emerald-700 font-semibold">
-            Được tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-emerald-700 font-semibold hidden sm:inline">
+              Tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
+            </span>
+            <button
+              onClick={() => {
+                setNewTargetCode('');
+                setNewTargetName('');
+                setNewTargetDesc('Thời gian 06 tháng');
+                setAddTargetError('');
+                setIsAddTargetModalOpen(true);
+              }}
+              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-600" />
+              Thêm Đối Tượng
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              SQDB(XN)
-            </span>
-            <p className="text-xs font-bold text-slate-900">SQDB Xuất ngũ</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-XN-TSBB-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26XN-TSBB001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              SQDB(H1)
-            </span>
-            <p className="text-xs font-bold text-slate-900">SQDB Hạng 1</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-H1-TSBB-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26H1-TSBB001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              SQDB(SV)
-            </span>
-            <p className="text-xs font-bold text-slate-900">SQDB Sinh viên</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-SV-BCHT-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26SV-BCHT001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-red-400 hover:bg-red-50/30 transition">
-            <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              KDT
-            </span>
-            <p className="text-xs font-bold text-slate-900">Khẩu đội trưởng</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">KDT-DL-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26KDT-DL001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              TDT
-            </span>
-            <p className="text-xs font-bold text-slate-900">Tiểu đội trưởng</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">TDT-BB-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TDT-BB001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-purple-400 hover:bg-purple-50/30 transition">
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 border border-purple-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              NVKT
-            </span>
-            <p className="text-xs font-bold text-slate-900">Nhân viên Kỹ thuật</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">NVKT-NVQY-01</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26NVKT-NVQY001</code></p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {targetGroups.map((tg) => (
+            <div 
+              key={tg.code} 
+              className="relative group p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition flex flex-col justify-between"
+            >
+              {tg.isCustom && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTargetGroup(tg.code, tg.name)}
+                  title="Xóa đối tượng này"
+                  className="absolute top-1.5 right-1.5 text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <div>
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+                  {tg.code}
+                </span>
+                <p className="text-xs font-bold text-slate-900 leading-snug line-clamp-1" title={tg.name}>
+                  {tg.name}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Mã lớp: <code className="text-emerald-700 font-mono font-bold">{tg.classPattern || `${tg.code}-[NGÀNH]-01`}</code>
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  Mã HV: <code className="text-amber-800 font-mono font-bold">{tg.studentPattern || `26${tg.code.replace(/[^A-Za-z0-9]/g, '')}-[NGÀNH]001`}</code>
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -507,6 +637,126 @@ export default function MajorManagementView() {
               </div>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Add Target Group Modal */}
+      {isAddTargetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-5 bg-amber-50/70 border-b border-amber-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 text-amber-800 rounded-lg border border-amber-300">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 font-military-title">
+                    Thêm Đối Tượng Đào Tạo Mới
+                  </h3>
+                  <p className="text-[11px] text-amber-900">
+                    Khai báo quy ước mã lớp và mã học viên chuẩn
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddTargetModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error */}
+            {addTargetError && (
+              <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-300 text-red-800 text-xs rounded-lg flex items-center gap-2 font-bold">
+                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                {addTargetError}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSaveTargetGroup} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Mã Quy ước Đối tượng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: SQDB(XN), SQDB(H1), KDT, TDT, NVKT, HSQ..."
+                  value={newTargetCode}
+                  onChange={(e) => setNewTargetCode(e.target.value.toUpperCase())}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-amber-900 font-mono font-bold uppercase focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Mã viết tắt chuẩn hóa để nhận diện trong file đầu vào và sinh mã
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Tên Đối tượng Đào tạo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Sĩ quan Dự bị Xuất ngũ, Khẩu đội trưởng..."
+                  value={newTargetName}
+                  onChange={(e) => setNewTargetName(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Mô tả / Thời gian Đào tạo
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Thời gian 06 tháng, Đào tạo theo chỉ tiêu..."
+                  value={newTargetDesc}
+                  onChange={(e) => setNewTargetDesc(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              {/* Dynamic Preview Box */}
+              {newTargetCode.trim() && (
+                <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-900 uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    Mẫu quy ước tự động sinh:
+                  </div>
+                  <div className="text-[11px] space-y-1">
+                    <p className="text-slate-600">
+                      Mẫu mã lớp: <code className="font-mono text-emerald-700 font-bold">{newTargetCode.trim().toUpperCase()}-[NGÀNH]-01</code>
+                    </p>
+                    <p className="text-slate-600">
+                      Mẫu mã học viên: <code className="font-mono text-amber-800 font-bold">26{newTargetCode.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase()}-[NGÀNH]001</code>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTargetModalOpen(false)}
+                  className="btn btn-secondary px-4 py-2 text-xs cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary px-5 py-2 text-xs font-bold cursor-pointer"
+                >
+                  Lưu Đối Tượng Đào Tạo
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
