@@ -611,50 +611,51 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       )}
       
       {/* Control Bar */}
-      <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-4 border border-slate-200 bg-white">
-        <div className="flex items-center space-x-4 flex-1 min-w-[280px]">
-          <div className="w-full max-w-md">
-            <label className="form-label text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-              <span>Chọn Lớp học / Đại đội đào tạo:</span>
-              <span className="text-[11px] text-emerald-700 font-semibold font-mono">
-                {classList.length} lớp khả dụng
-              </span>
-            </label>
-            <select
-              value={classId}
-              onChange={(e) => setClassId(parseInt(e.target.value))}
-              className="form-input text-xs font-bold text-slate-900 w-full py-2 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg"
-              style={{ cursor: 'pointer' }}
-            >
-              {classList.length > 0 ? (
-                classList.map((cls) => {
-                  const displayCode = cls.code || cls.classCode || `Lớp #${cls.id}`;
-                  const displayName = cls.name || cls.className || '';
-                  const studentCount = cls.totalStudents !== undefined && cls.totalStudents !== null ? cls.totalStudents : (cls.students ? cls.students.length : 0);
-                  return (
-                    <option key={cls.id} value={cls.id}>
-                      {displayCode}{displayName ? ` — ${displayName}` : ''} ({studentCount} Học viên)
-                    </option>
-                  );
-                })
-              ) : (
-                <>
-                  <option value={1}>SQDB2026-HT1 — Lớp SQDB 2026 Binh chủng Hợp thành 1</option>
-                  <option value={2}>SQDB2026-PB1 — Lớp SQDB 2026 Pháo binh 1</option>
-                  <option value={3}>SQDB2026-TT1 — Lớp SQDB 2026 Thông tin Kỹ thuật 1</option>
-                  <option value={4}>SQDB2025-HT1 — Lớp SQDB 2025 Binh chủng Hợp thành 1</option>
-                  <option value={5}>SQDB2024-HT1 — Lớp SQDB 2024 Binh chủng Hợp thành 1</option>
-                </>
-              )}
-            </select>
+      <div className="glass-panel p-3.5 flex flex-wrap items-center justify-between gap-3 border border-slate-200 bg-white shadow-xs">
+        {/* Left: Class Selection */}
+        <div className="flex items-center gap-2.5 flex-1 min-w-[320px] max-w-2xl">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">
+              Chọn Lớp:
+            </span>
+            <span className="text-[11px] text-emerald-700 font-semibold font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
+              {classList.length} lớp
+            </span>
           </div>
+          <select
+            value={classId}
+            onChange={(e) => setClassId(parseInt(e.target.value))}
+            className="form-input text-xs font-bold text-slate-900 flex-1 h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg"
+            style={{ cursor: 'pointer' }}
+          >
+            {classList.length > 0 ? (
+              classList.map((cls) => {
+                const displayCode = cls.code || cls.classCode || `Lớp #${cls.id}`;
+                const displayName = cls.name || cls.className || '';
+                const studentCount = cls.totalStudents !== undefined && cls.totalStudents !== null ? cls.totalStudents : (cls.students ? cls.students.length : 0);
+                return (
+                  <option key={cls.id} value={cls.id}>
+                    {displayCode}{displayName ? ` — ${displayName}` : ''} ({studentCount} Học viên)
+                  </option>
+                );
+              })
+            ) : (
+              <>
+                <option value={1}>SQDB2026-HT1 — Lớp SQDB 2026 Binh chủng Hợp thành 1</option>
+                <option value={2}>SQDB2026-PB1 — Lớp SQDB 2026 Pháo binh 1</option>
+                <option value={3}>SQDB2026-TT1 — Lớp SQDB 2026 Thông tin Kỹ thuật 1</option>
+                <option value={4}>SQDB2025-HT1 — Lớp SQDB 2025 Binh chủng Hợp thành 1</option>
+                <option value={5}>SQDB2024-HT1 — Lớp SQDB 2024 Binh chủng Hợp thành 1</option>
+              </>
+            )}
+          </select>
         </div>
 
-        {/* Actions Bar - Căn chỉnh đồng bộ và cân đối */}
+        {/* Actions Bar - Căn chỉnh đồng bộ và cân đối với ô chọn lớp */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddSubjectModalOpen(true)}
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm h-9"
             style={{ color: '#15803d', borderColor: '#bbf7d0' }}
             title="Thêm cột môn học linh hoạt cho lớp này"
           >
@@ -666,7 +667,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <button
             onClick={handleSaveDirect}
             disabled={!hasUnsavedChanges || saving}
-            className={`btn btn-sm flex items-center gap-1.5 transition ${
+            className={`btn btn-sm h-9 flex items-center gap-1.5 transition ${
               hasUnsavedChanges
                 ? 'btn-primary font-bold shadow-sm cursor-pointer'
                 : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
@@ -690,7 +691,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 setIsReasonModalOpen(true);
               }}
               disabled={saving}
-              className="btn btn-sm flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+              className="btn btn-sm h-9 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
               style={{
                 backgroundColor: '#fef3c7',
                 color: '#b45309',
@@ -705,7 +706,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
           <button
             onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm h-9"
             title="Nhập điểm hàng loạt từ file Excel"
           >
             <Upload className="w-3.5 h-3.5 text-emerald-600" />
@@ -716,7 +717,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <div className="relative">
             <button
               onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-              className="btn btn-secondary btn-sm flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
               title="Chọn 1 trong 2 định dạng xuất file Excel"
             >
               <Download className="w-3.5 h-3.5 text-amber-600" />
