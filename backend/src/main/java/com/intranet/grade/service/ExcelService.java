@@ -1162,6 +1162,490 @@ public class ExcelService {
         }
     }
 
+    public byte[] exportTongHopXetDieuKien(Integer semester) throws IOException {
+        List<ClassEntity> classes = classRepository.findAll();
+        classes.sort((a, b) -> (a.getCode() != null ? a.getCode() : "").compareToIgnoreCase(b.getCode() != null ? b.getCode() : ""));
+        return buildTongHopXetDieuKienWorkbook(classes, semester);
+    }
+
+    public byte[] exportClassTongHopXetDieuKien(Integer classId, Integer semester) throws IOException {
+        ClassEntity clazz = classRepository.findById(classId).orElse(null);
+        List<ClassEntity> classes = clazz != null ? Collections.singletonList(clazz) : classRepository.findAll();
+        return buildTongHopXetDieuKienWorkbook(classes, semester);
+    }
+
+    private byte[] buildTongHopXetDieuKienWorkbook(List<ClassEntity> classes, Integer semester) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            workbook.setForceFormulaRecalculation(true);
+            Sheet sheet = workbook.createSheet("TH xet at(Kdt)");
+            sheet.getPrintSetup().setLandscape(true);
+            sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+            sheet.setDisplayGridlines(true);
+
+            // Fonts
+            Font fontTitle1 = workbook.createFont();
+            fontTitle1.setFontName("Times New Roman");
+            fontTitle1.setFontHeightInPoints((short) 16);
+            fontTitle1.setBold(true);
+
+            Font fontTitle2 = workbook.createFont();
+            fontTitle2.setFontName("Times New Roman");
+            fontTitle2.setFontHeightInPoints((short) 13);
+            fontTitle2.setBold(true);
+
+            Font fontHeader = workbook.createFont();
+            fontHeader.setFontName("Times New Roman");
+            fontHeader.setFontHeightInPoints((short) 11);
+            fontHeader.setBold(true);
+
+            Font fontData = workbook.createFont();
+            fontData.setFontName("Times New Roman");
+            fontData.setFontHeightInPoints((short) 11);
+
+            Font fontDataBold = workbook.createFont();
+            fontDataBold.setFontName("Times New Roman");
+            fontDataBold.setFontHeightInPoints((short) 11);
+            fontDataBold.setBold(true);
+
+            Font fontItalic = workbook.createFont();
+            fontItalic.setFontName("Times New Roman");
+            fontItalic.setFontHeightInPoints((short) 11);
+            fontItalic.setItalic(true);
+
+            DataFormat df = workbook.createDataFormat();
+            short pctFormat = df.getFormat("0.00");
+
+            // Styles
+            CellStyle titleStyle1 = workbook.createCellStyle();
+            titleStyle1.setFont(fontTitle1);
+            titleStyle1.setAlignment(HorizontalAlignment.CENTER);
+            titleStyle1.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle titleStyle2 = workbook.createCellStyle();
+            titleStyle2.setFont(fontTitle2);
+            titleStyle2.setAlignment(HorizontalAlignment.CENTER);
+            titleStyle2.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(fontHeader);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            headerStyle.setWrapText(true);
+            setThinBorders(headerStyle);
+
+            CellStyle dataCenterStyle = workbook.createCellStyle();
+            dataCenterStyle.setFont(fontData);
+            dataCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+            dataCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            setThinBorders(dataCenterStyle);
+
+            CellStyle dataLeftStyle = workbook.createCellStyle();
+            dataLeftStyle.setFont(fontData);
+            dataLeftStyle.setAlignment(HorizontalAlignment.LEFT);
+            dataLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            setThinBorders(dataLeftStyle);
+
+            CellStyle dataNumStyle = workbook.createCellStyle();
+            dataNumStyle.setFont(fontData);
+            dataNumStyle.setAlignment(HorizontalAlignment.CENTER);
+            dataNumStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            setThinBorders(dataNumStyle);
+
+            CellStyle dataPctStyle = workbook.createCellStyle();
+            dataPctStyle.setFont(fontData);
+            dataPctStyle.setAlignment(HorizontalAlignment.RIGHT);
+            dataPctStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            dataPctStyle.setDataFormat(pctFormat);
+            setThinBorders(dataPctStyle);
+
+            CellStyle boldNumStyle = workbook.createCellStyle();
+            boldNumStyle.setFont(fontDataBold);
+            boldNumStyle.setAlignment(HorizontalAlignment.CENTER);
+            boldNumStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            setThinBorders(boldNumStyle);
+
+            CellStyle boldPctStyle = workbook.createCellStyle();
+            boldPctStyle.setFont(fontDataBold);
+            boldPctStyle.setAlignment(HorizontalAlignment.RIGHT);
+            boldPctStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            boldPctStyle.setDataFormat(pctFormat);
+            setThinBorders(boldPctStyle);
+
+            CellStyle signTitleStyle = workbook.createCellStyle();
+            signTitleStyle.setFont(fontDataBold);
+            signTitleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            CellStyle signItalicStyle = workbook.createCellStyle();
+            signItalicStyle.setFont(fontItalic);
+            signItalicStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Column Widths (22 cols: 0..21)
+            sheet.setColumnWidth(0, 14 * 256);  // A: Đơn vị
+            sheet.setColumnWidth(1, 26 * 256);  // B: Chuyên ngành
+            sheet.setColumnWidth(2, 8 * 256);   // C: Khóa
+            sheet.setColumnWidth(3, 8 * 256);   // D: Đầu vào
+            sheet.setColumnWidth(4, 8 * 256);   // E: Hiện tại
+            sheet.setColumnWidth(5, 7 * 256);   // F: Giỏi Ng
+            sheet.setColumnWidth(6, 10 * 256);  // G: Giỏi %
+            sheet.setColumnWidth(7, 7 * 256);   // H: Khá Ng
+            sheet.setColumnWidth(8, 10 * 256);  // I: Khá %
+            sheet.setColumnWidth(9, 7 * 256);   // J: TB Ng
+            sheet.setColumnWidth(10, 10 * 256); // K: TB %
+            sheet.setColumnWidth(11, 11 * 256); // L: HTNV %
+            sheet.setColumnWidth(12, 11 * 256); // M: K+G %
+            sheet.setColumnWidth(13, 7 * 256);  // N: Tốt Ng
+            sheet.setColumnWidth(14, 10 * 256); // O: Tốt %
+            sheet.setColumnWidth(15, 7 * 256);  // P: Khá Ng
+            sheet.setColumnWidth(16, 10 * 256); // Q: Khá %
+            sheet.setColumnWidth(17, 7 * 256);  // R: TB Ng
+            sheet.setColumnWidth(18, 10 * 256); // S: TB %
+            sheet.setColumnWidth(19, 7 * 256);  // T: Yếu Ng
+            sheet.setColumnWidth(20, 10 * 256); // U: Yếu %
+            sheet.setColumnWidth(21, 15 * 256); // V: Quân số đủ ĐK dự thi
+
+            // Row 0: Tiêu đề 1
+            Row r0 = sheet.createRow(0);
+            r0.setHeightInPoints(28);
+            Cell c0 = r0.createCell(0);
+            c0.setCellValue("KẾT QUẢ TỔNG HỢP XẾT ĐIỀU KIỆN DỰ THI TỐT NGHIỆP NĂM 2026");
+            c0.setCellStyle(titleStyle1);
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 20));
+
+            // Row 1: Tiêu đề 2
+            Row r1 = sheet.createRow(1);
+            r1.setHeightInPoints(24);
+            Cell c1 = r1.createCell(0);
+            c1.setCellValue("Các lớp Đào tạo tiểu(khẩu) đội trưởng bộ binh, binh chủng, nhân viên chuyên môn năm 2026");
+            c1.setCellStyle(titleStyle2);
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 21));
+
+            // Row 2..3 empty
+            sheet.createRow(2).setHeightInPoints(10);
+            sheet.createRow(3).setHeightInPoints(10);
+
+            // Table Header: Row 4, 5, 6
+            Row r4 = sheet.createRow(4);
+            Row r5 = sheet.createRow(5);
+            Row r6 = sheet.createRow(6);
+            r4.setHeightInPoints(24);
+            r5.setHeightInPoints(22);
+            r6.setHeightInPoints(24);
+
+            for (int col = 0; col < 22; col++) {
+                r4.createCell(col).setCellStyle(headerStyle);
+                r5.createCell(col).setCellStyle(headerStyle);
+                r6.createCell(col).setCellStyle(headerStyle);
+            }
+
+            // Fill header values
+            r4.getCell(0).setCellValue("Đơn vị");
+            r4.getCell(1).setCellValue("Chuyên ngành");
+            r4.getCell(2).setCellValue("Khóa");
+            r4.getCell(3).setCellValue("Quân số");
+            r4.getCell(5).setCellValue("Kết quả phân loại học lực");
+            r4.getCell(13).setCellValue("Kết quả rèn luyện");
+            r4.getCell(21).setCellValue("Quân số");
+
+            r5.getCell(3).setCellValue("Đầu");
+            r5.getCell(4).setCellValue("Hiện");
+            r5.getCell(5).setCellValue("Giỏi");
+            r5.getCell(7).setCellValue("Khá");
+            r5.getCell(9).setCellValue("Trung bình");
+            r5.getCell(11).setCellValue("Tỉ lệ");
+            r5.getCell(12).setCellValue("Tỉ lệ");
+            r5.getCell(13).setCellValue("Tốt");
+            r5.getCell(15).setCellValue("Khá");
+            r5.getCell(17).setCellValue("Trung bình");
+            r5.getCell(19).setCellValue("Yếu");
+            r5.getCell(21).setCellValue("đủ điều kiện");
+
+            r6.getCell(3).setCellValue("vào");
+            r6.getCell(4).setCellValue("tại");
+            r6.getCell(5).setCellValue("Ng");
+            r6.getCell(6).setCellValue("%");
+            r6.getCell(7).setCellValue("Ng");
+            r6.getCell(8).setCellValue("%");
+            r6.getCell(9).setCellValue("Ng");
+            r6.getCell(10).setCellValue("%");
+            r6.getCell(11).setCellValue("HTNV");
+            r6.getCell(12).setCellValue("K+G");
+            r6.getCell(13).setCellValue("Ng");
+            r6.getCell(14).setCellValue("%");
+            r6.getCell(15).setCellValue("Ng");
+            r6.getCell(16).setCellValue("%");
+            r6.getCell(17).setCellValue("Ng");
+            r6.getCell(18).setCellValue("%");
+            r6.getCell(19).setCellValue("Ng");
+            r6.getCell(20).setCellValue("%");
+            r6.getCell(21).setCellValue("dự thi");
+
+            // Header Merges
+            sheet.addMergedRegion(new CellRangeAddress(4, 6, 0, 0)); // Đơn vị
+            sheet.addMergedRegion(new CellRangeAddress(4, 6, 1, 1)); // Chuyên ngành
+            sheet.addMergedRegion(new CellRangeAddress(4, 6, 2, 2)); // Khóa
+            sheet.addMergedRegion(new CellRangeAddress(4, 4, 3, 4)); // Quân số
+            sheet.addMergedRegion(new CellRangeAddress(4, 4, 5, 12)); // Kết quả học lực
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 5, 6)); // Giỏi
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 7, 8)); // Khá
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10)); // TB
+            sheet.addMergedRegion(new CellRangeAddress(4, 4, 13, 20)); // Kết quả rèn luyện
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 13, 14)); // Tốt
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 15, 16)); // Khá
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 17, 18)); // TB
+            sheet.addMergedRegion(new CellRangeAddress(5, 5, 19, 20)); // Yếu
+
+            int rowIdx = 7;
+            int startDataRow = 8; // 1-indexed
+
+            if (classes == null || classes.isEmpty()) {
+                Row emptyRow = sheet.createRow(rowIdx++);
+                emptyRow.setHeightInPoints(20);
+                for (int c = 0; c < 22; c++) {
+                    emptyRow.createCell(c).setCellStyle(dataCenterStyle);
+                }
+                emptyRow.getCell(0).setCellValue("-");
+                emptyRow.getCell(1).setCellValue("Không có dữ liệu lớp học");
+            } else {
+                for (ClassEntity clazz : classes) {
+                    Row dRow = sheet.createRow(rowIdx++);
+                    dRow.setHeightInPoints(20);
+                    int excelRow = rowIdx; // 1-indexed (since rowIdx was incremented)
+
+                    for (int c = 0; c < 22; c++) {
+                        dRow.createCell(c);
+                    }
+
+                    String classCode = clazz.getCode() != null ? clazz.getCode() : "Lớp " + clazz.getId();
+                    String majorName = clazz.getMajor() != null ? clazz.getMajor().getName() : "Bộ binh";
+                    String courseText = "2026";
+                    if (clazz.getCourse() != null) {
+                        courseText = clazz.getCourse().getCode() != null ? clazz.getCourse().getCode().replaceAll("[^0-9]", "") : "2026";
+                        if (courseText.isEmpty()) courseText = "2026";
+                    }
+
+                    // Calculate stats
+                    MatrixResponseDTO matrix = gradeMatrixService.getClassMatrix(clazz.getId(), semester);
+                    int totalStudents = matrix.getRows() != null ? matrix.getRows().size() : 0;
+                    int activeStudents = totalStudents;
+
+                    int cGioi = 0, cKha = 0, cTB = 0;
+                    int cTot = 0, cKhaCond = 0, cTBCond = 0, cYeuCond = 0;
+                    int cDuDK = 0;
+
+                    if (matrix.getRows() != null) {
+                        for (StudentRowDTO s : matrix.getRows()) {
+                            Double gpa = s.getTbcScore() != null ? s.getTbcScore().doubleValue() : 0.0;
+                            if (gpa >= 8.0) cGioi++;
+                            else if (gpa >= 7.0) cKha++;
+                            else if (gpa >= 5.0) cTB++;
+
+                            String cond = s.getConductGrade() != null ? s.getConductGrade().toUpperCase().trim() : "KHA";
+                            if (cond.contains("TOT") || cond.contains("TỐT") || cond.contains("XUAT_SAC") || cond.contains("XUẤT SẮC")) {
+                                cTot++;
+                            } else if (cond.contains("KHA") || cond.contains("KHÁ")) {
+                                cKhaCond++;
+                            } else if (cond.contains("TRUNG_BINH") || cond.contains("TB")) {
+                                cTBCond++;
+                            } else {
+                                cYeuCond++;
+                            }
+
+                            boolean conductOk = !cond.contains("YEU") && !cond.contains("YẾU") && !cond.contains("KEM") && !cond.contains("KÉM");
+                            if (gpa >= 5.0 && conductOk) {
+                                cDuDK++;
+                            }
+                        }
+                    }
+
+                    dRow.getCell(0).setCellValue(classCode);
+                    dRow.getCell(0).setCellStyle(dataCenterStyle);
+
+                    dRow.getCell(1).setCellValue(majorName);
+                    dRow.getCell(1).setCellStyle(dataLeftStyle);
+
+                    dRow.getCell(2).setCellValue(courseText);
+                    dRow.getCell(2).setCellStyle(dataCenterStyle);
+
+                    dRow.getCell(3).setCellValue(totalStudents);
+                    dRow.getCell(3).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(4).setCellValue(activeStudents);
+                    dRow.getCell(4).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(5).setCellValue(cGioi);
+                    dRow.getCell(5).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(6).setCellFormula(String.format("IF(E%d>0, F%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(6).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(7).setCellValue(cKha);
+                    dRow.getCell(7).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(8).setCellFormula(String.format("IF(E%d>0, H%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(8).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(9).setCellValue(cTB);
+                    dRow.getCell(9).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(10).setCellFormula(String.format("IF(E%d>0, J%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(10).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(11).setCellFormula(String.format("G%d+I%d+K%d", excelRow, excelRow, excelRow));
+                    dRow.getCell(11).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(12).setCellFormula(String.format("G%d+I%d", excelRow, excelRow));
+                    dRow.getCell(12).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(13).setCellValue(cTot);
+                    dRow.getCell(13).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(14).setCellFormula(String.format("IF(E%d>0, N%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(14).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(15).setCellValue(cKhaCond);
+                    dRow.getCell(15).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(16).setCellFormula(String.format("IF(E%d>0, P%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(16).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(17).setCellValue(cTBCond);
+                    dRow.getCell(17).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(18).setCellFormula(String.format("IF(E%d>0, R%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(18).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(19).setCellValue(cYeuCond);
+                    dRow.getCell(19).setCellStyle(dataNumStyle);
+
+                    dRow.getCell(20).setCellFormula(String.format("IF(E%d>0, T%d/E%d*100, 0)", excelRow, excelRow, excelRow));
+                    dRow.getCell(20).setCellStyle(dataPctStyle);
+
+                    dRow.getCell(21).setCellValue(cDuDK);
+                    dRow.getCell(21).setCellStyle(dataNumStyle);
+                }
+            }
+
+            int endDataRow = rowIdx; // 1-indexed of last data row
+            int totIdx = rowIdx++;
+            int totExcelRow = totIdx + 1;
+
+            // Summary Row: Cộng toàn trường
+            Row totRow = sheet.createRow(totIdx);
+            totRow.setHeightInPoints(22);
+            for (int c = 0; c < 22; c++) {
+                totRow.createCell(c);
+            }
+
+            totRow.getCell(0).setCellValue("Cộng toàn trường");
+            totRow.getCell(0).setCellStyle(headerStyle);
+            totRow.getCell(1).setCellStyle(headerStyle);
+            sheet.addMergedRegion(new CellRangeAddress(totIdx, totIdx, 0, 1));
+
+            totRow.getCell(2).setCellValue("");
+            totRow.getCell(2).setCellStyle(headerStyle);
+
+            totRow.getCell(3).setCellFormula(String.format("SUM(D%d:D%d)", startDataRow, endDataRow));
+            totRow.getCell(3).setCellStyle(boldNumStyle);
+
+            totRow.getCell(4).setCellFormula(String.format("SUM(E%d:E%d)", startDataRow, endDataRow));
+            totRow.getCell(4).setCellStyle(boldNumStyle);
+
+            totRow.getCell(5).setCellFormula(String.format("SUM(F%d:F%d)", startDataRow, endDataRow));
+            totRow.getCell(5).setCellStyle(boldNumStyle);
+
+            totRow.getCell(6).setCellFormula(String.format("IF(E%d>0, F%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(6).setCellStyle(boldPctStyle);
+
+            totRow.getCell(7).setCellFormula(String.format("SUM(H%d:H%d)", startDataRow, endDataRow));
+            totRow.getCell(7).setCellStyle(boldNumStyle);
+
+            totRow.getCell(8).setCellFormula(String.format("IF(E%d>0, H%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(8).setCellStyle(boldPctStyle);
+
+            totRow.getCell(9).setCellFormula(String.format("SUM(J%d:J%d)", startDataRow, endDataRow));
+            totRow.getCell(9).setCellStyle(boldNumStyle);
+
+            totRow.getCell(10).setCellFormula(String.format("IF(E%d>0, J%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(10).setCellStyle(boldPctStyle);
+
+            totRow.getCell(11).setCellFormula(String.format("G%d+I%d+K%d", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(11).setCellStyle(boldPctStyle);
+
+            totRow.getCell(12).setCellFormula(String.format("G%d+I%d", totExcelRow, totExcelRow));
+            totRow.getCell(12).setCellStyle(boldPctStyle);
+
+            totRow.getCell(13).setCellFormula(String.format("SUM(N%d:N%d)", startDataRow, endDataRow));
+            totRow.getCell(13).setCellStyle(boldNumStyle);
+
+            totRow.getCell(14).setCellFormula(String.format("IF(E%d>0, N%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(14).setCellStyle(boldPctStyle);
+
+            totRow.getCell(15).setCellFormula(String.format("SUM(P%d:P%d)", startDataRow, endDataRow));
+            totRow.getCell(15).setCellStyle(boldNumStyle);
+
+            totRow.getCell(16).setCellFormula(String.format("IF(E%d>0, P%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(16).setCellStyle(boldPctStyle);
+
+            totRow.getCell(17).setCellFormula(String.format("SUM(R%d:R%d)", startDataRow, endDataRow));
+            totRow.getCell(17).setCellStyle(boldNumStyle);
+
+            totRow.getCell(18).setCellFormula(String.format("IF(E%d>0, R%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(18).setCellStyle(boldPctStyle);
+
+            totRow.getCell(19).setCellFormula(String.format("SUM(T%d:T%d)", startDataRow, endDataRow));
+            totRow.getCell(19).setCellStyle(boldNumStyle);
+
+            totRow.getCell(20).setCellFormula(String.format("IF(E%d>0, T%d/E%d*100, 0)", totExcelRow, totExcelRow, totExcelRow));
+            totRow.getCell(20).setCellStyle(boldPctStyle);
+
+            totRow.getCell(21).setCellFormula(String.format("SUM(V%d:V%d)", startDataRow, endDataRow));
+            totRow.getCell(21).setCellStyle(boldNumStyle);
+
+            // Signature block
+            int signRowIdx = totIdx + 2;
+            Row dateRow = sheet.createRow(signRowIdx++);
+            dateRow.setHeightInPoints(20);
+            Cell dateCell = dateRow.createCell(15);
+            dateCell.setCellValue("Ngày ..... tháng ..... năm 2026");
+            dateCell.setCellStyle(signItalicStyle);
+            sheet.addMergedRegion(new CellRangeAddress(dateRow.getRowNum(), dateRow.getRowNum(), 15, 21));
+
+            Row titleSignRow = sheet.createRow(signRowIdx++);
+            titleSignRow.setHeightInPoints(22);
+            Cell signL = titleSignRow.createCell(5);
+            signL.setCellValue("NGƯỜI LẬP BIỂU");
+            signL.setCellStyle(signTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(titleSignRow.getRowNum(), titleSignRow.getRowNum(), 5, 8));
+
+            Cell signR = titleSignRow.createCell(15);
+            signR.setCellValue("TRƯỞNG PHÒNG ĐÀO TẠO");
+            signR.setCellStyle(signTitleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(titleSignRow.getRowNum(), titleSignRow.getRowNum(), 15, 21));
+
+            Row noteSignRow = sheet.createRow(signRowIdx++);
+            noteSignRow.setHeightInPoints(20);
+            Cell noteL = noteSignRow.createCell(5);
+            noteL.setCellValue("(Ký và ghi rõ họ tên)");
+            noteL.setCellStyle(signItalicStyle);
+            sheet.addMergedRegion(new CellRangeAddress(noteSignRow.getRowNum(), noteSignRow.getRowNum(), 5, 8));
+
+            Cell noteR = noteSignRow.createCell(15);
+            noteR.setCellValue("(Ký và ghi rõ họ tên)");
+            noteR.setCellStyle(signItalicStyle);
+            sheet.addMergedRegion(new CellRangeAddress(noteSignRow.getRowNum(), noteSignRow.getRowNum(), 15, 21));
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private void setThinBorders(CellStyle style) {
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+    }
+
     private String formatConductGrade(String conduct) {
         if (conduct == null || conduct.trim().isEmpty()) return "Khá";
         String c = conduct.trim().toUpperCase();

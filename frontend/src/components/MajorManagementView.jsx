@@ -233,23 +233,32 @@ export default function MajorManagementView() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
             <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              SQDB
+              SQDB(XN)
             </span>
-            <p className="text-xs font-bold text-slate-900">Sĩ quan Dự bị</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB2026-TSBB1</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TSBB001</code></p>
+            <p className="text-xs font-bold text-slate-900">SQDB Xuất ngũ</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-XN-TSBB-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26XN-TSBB001</code></p>
           </div>
 
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              TDT
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              SQDB(H1)
             </span>
-            <p className="text-xs font-bold text-slate-900">Tiểu đội trưởng</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">TDT2026-BB1</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TDT-BB001</code></p>
+            <p className="text-xs font-bold text-slate-900">SQDB Hạng 1</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-H1-TSBB-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26H1-TSBB001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition">
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              SQDB(SV)
+            </span>
+            <p className="text-xs font-bold text-slate-900">SQDB Sinh viên</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">SQDB-SV-BCHT-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26SV-BCHT001</code></p>
           </div>
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-red-400 hover:bg-red-50/30 transition">
@@ -257,8 +266,17 @@ export default function MajorManagementView() {
               KDT
             </span>
             <p className="text-xs font-bold text-slate-900">Khẩu đội trưởng</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">KDT2026-COI1</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26KDT-COI001</code></p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">KDT-DL-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26KDT-DL001</code></p>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition">
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
+              TDT
+            </span>
+            <p className="text-xs font-bold text-slate-900">Tiểu đội trưởng</p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">TDT-BB-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26TDT-BB001</code></p>
           </div>
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-purple-400 hover:bg-purple-50/30 transition">
@@ -266,17 +284,8 @@ export default function MajorManagementView() {
               NVKT
             </span>
             <p className="text-xs font-bold text-slate-900">Nhân viên Kỹ thuật</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">NVKT2026-TT1</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26NVKT-TT001</code></p>
-          </div>
-
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-emerald-400 hover:bg-emerald-50/30 transition">
-            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
-              HSQ
-            </span>
-            <p className="text-xs font-bold text-slate-900">Hạ sĩ quan Chỉ huy</p>
-            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">HSQ2026-BB1</code></p>
-            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26HSQ-BB001</code></p>
+            <p className="text-[10px] text-slate-500 mt-1">Mã lớp: <code className="text-emerald-700 font-mono font-bold">NVKT-NVQY-01</code></p>
+            <p className="text-[10px] text-slate-500">Mã HV: <code className="text-amber-800 font-mono font-bold">26NVKT-NVQY001</code></p>
           </div>
         </div>
       </div>
@@ -352,10 +361,10 @@ export default function MajorManagementView() {
                       )}
                     </td>
                     <td className="p-3 font-mono text-[11px] text-emerald-700 font-semibold">
-                      SQDB2026-{major.code}1
+                      SQDB-XN-{major.code}-01
                     </td>
                     <td className="p-3 font-mono text-[11px] text-amber-800 font-bold">
-                      26{major.code}001
+                      26XN-{major.code}001
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -468,11 +477,11 @@ export default function MajorManagementView() {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-2.5 bg-white border border-amber-200 rounded">
                       <span className="text-[10px] text-slate-500 block">Mã Lớp dự kiến:</span>
-                      <span className="font-mono text-emerald-700 font-bold">SQDB2026-{formCode.trim().toUpperCase()}1</span>
+                      <span className="font-mono text-emerald-700 font-bold">SQDB-XN-{formCode.trim().toUpperCase()}-01</span>
                     </div>
                     <div className="p-2.5 bg-white border border-amber-200 rounded">
                       <span className="text-[10px] text-slate-500 block">Mã Học viên dự kiến:</span>
-                      <span className="font-mono text-amber-800 font-bold">26{formCode.trim().toUpperCase()}001</span>
+                      <span className="font-mono text-amber-800 font-bold">26XN-{formCode.trim().toUpperCase()}001</span>
                     </div>
                   </div>
                 </div>

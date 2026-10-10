@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2, ClipboardCheck } from 'lucide-react';
 
 const INITIAL_MILITARY_MOCK_MATRIX = {
   classId: 1,
@@ -799,6 +799,22 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     window.location.href = `/api/v1/classes/export-all-classes-tot-nghiep?semester=${semester}`;
   };
 
+  const handleExportTongHopXetDieuKien = () => {
+    if (isDemoMode) {
+      alert('Tải file Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp (mẫu TH xet at) tự động khi kết nối Backend.');
+      return;
+    }
+    window.location.href = `/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}`;
+  };
+
+  const handleExportClassTongHopXetDieuKien = () => {
+    if (isDemoMode) {
+      alert('Tải file Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp (mẫu TH xet at) tự động khi kết nối Backend.');
+      return;
+    }
+    window.location.href = `/api/v1/classes/${classId}/export-tong-hop-xet-dieu-kien?semester=${semester}`;
+  };
+
   const handleExportExcel = () => {
     handleExportHocPhan();
   };
@@ -1050,6 +1066,29 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     </div>
                   </button>
 
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportClassTongHopXetDieuKien();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 shrink-0 mt-0.5">
+                      <ClipboardCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>TH Xét ĐK Dự thi Tốt nghiệp (Lớp này)</span>
+                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-mono font-semibold rounded">
+                          TH xet at
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Quân số, tỷ lệ học lực Giỏi/Khá/TB, HTNV, rèn luyện & ĐK dự thi
+                      </div>
+                    </div>
+                  </button>
+
                   <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
 
                   {/* PHẦN 2: XUẤT TOÀN BỘ CÁC LỚP (MỖI LỚP 1 SHEET) */}
@@ -1096,6 +1135,29 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
                         Tổng hợp phân loại tốt nghiệp toàn khóa, mỗi lớp lưu trên 1 sheet riêng biệt
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setExportDropdownOpen(false);
+                      handleExportTongHopXetDieuKien();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-blue-700 text-white rounded-lg border border-blue-800 shrink-0 mt-0.5 shadow-xs">
+                      <ClipboardCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                        <span>5. Báo cáo Tổng hợp Xét ĐK Dự thi (Toàn trường)</span>
+                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-mono font-semibold rounded">
+                          TH xet at(Kdt)
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Mẫu chuẩn sheet TH xet at(Kdt) tổng hợp toàn bộ các lớp & chuyên ngành
                       </div>
                     </div>
                   </button>

@@ -285,19 +285,26 @@ public class AdmissionsService {
         int counter = classCounter.getOrDefault(classKey, 0) + 1;
         classCounter.put(classKey, counter);
 
-        // Class Code
+        // Class Code quy ước chuẩn: [Đào tạo]-[Đối tượng]-[Chuyên ngành]-[Lớp]
+        // Ví dụ: SQDB-XN-TSBB-01, SQDB-H1-TSBB-01, SQDB-SV-BCHT-01, KDT-DL-01
+        String targetPrefix;
+        if ("SQDB(XN)".equals(targetType)) targetPrefix = "SQDB-XN";
+        else if ("SQDB(H1)".equals(targetType)) targetPrefix = "SQDB-H1";
+        else if ("SQDB(SV)".equals(targetType)) targetPrefix = "SQDB-SV";
+        else targetPrefix = targetType; // TDT, KDT, NVKT, HSQ, SQDB
+
         String classCode;
         if ("THEO_KHOA".equalsIgnoreCase(classNamingMode) && !khoa.isBlank()) {
-            classCode = khoa + "-" + majorCode + (counter > 1 ? String.valueOf(counter) : "");
+            classCode = String.format("%s-%s-%02d", khoa, majorCode, counter);
         } else {
-            classCode = targetType + year + "-" + majorCode + counter;
+            classCode = String.format("%s-%s-%02d", targetPrefix, majorCode, counter);
         }
 
         String className;
         if ("THEO_KHOA".equalsIgnoreCase(classNamingMode) && !khoa.isBlank()) {
             className = "Lớp " + targetName + " (" + khoa + ") - " + majorName + (counter > 1 ? " " + counter : "");
         } else {
-            className = "Lớp " + targetName + " " + year + " - " + majorName + " " + counter;
+            className = "Lớp " + targetName + " " + year + " - " + majorName + " " + String.format("%02d", counter);
         }
 
         // Generate Student Code range and assign to students
@@ -347,24 +354,47 @@ public class AdmissionsService {
     private String mapMajorCode(String raw) {
         if (raw == null) return "BB";
         String upper = raw.trim().toUpperCase();
-        if (upper.equals("TSBB") || upper.equals("COI") || upper.equals("DKZ") || upper.equals("PK127")
-                || upper.equals("BB") || upper.equals("PB") || upper.equals("TT") || upper.equals("CB")
-                || upper.equals("TTG") || upper.equals("HH") || upper.equals("HC") || upper.equals("KT")
-                || upper.equals("QY") || upper.equals("HT") || upper.equals("BCHT")) {
+        Set<String> validCodes = Set.of(
+            "TSBB", "DL", "C60", "COI", "C100", "DKZ", "SPG9", "AGS17",
+            "PK127", "PK37", "PK57", "PXK", "KTPB", "VTD", "HTD", "BVU",
+            "NVQY", "NVBQVK", "NVBQD", "NA", "CB", "BB", "BCHT", "PB",
+            "TT", "TTG", "HH", "HC", "KT", "QY", "HT"
+        );
+        if (validCodes.contains(upper)) {
+            if ("HT".equals(upper)) return "BCHT";
             return upper;
         }
+
         String lower = raw.toLowerCase();
-        if (lower.contains("trinh sát")) return "TSBB";
-        if (lower.contains("cối")) return "COI";
-        if (lower.contains("đkz") || lower.contains("dkz") || lower.contains("spg")) return "DKZ";
-        if (lower.contains("smpk") || lower.contains("12,7") || lower.contains("12.7")) return "PK127";
+        if (lower.contains("đại liên") || lower.contains("dai lien") || lower.contains("at đại liên") || lower.equals("dl")) return "DL";
+        if (lower.contains("cối 60") || lower.contains("coi 60") || lower.contains("c60")) return "C60";
+        if (lower.contains("cối 100") || lower.contains("coi 100") || lower.contains("c100")) return "C100";
+        if (lower.contains("cối 82") || lower.contains("coi 82") || lower.contains("co82") || lower.contains("cối") || lower.contains("coi")) return "COI";
+        if (lower.contains("ags17") || lower.contains("ags-17") || lower.contains("ags")) return "AGS17";
+        if (lower.contains("spg9") || lower.contains("spg-9") || lower.contains("spg")) return "SPG9";
+        if (lower.contains("đkz") || lower.contains("dkz")) return "DKZ";
+        if (lower.contains("ppk 37") || lower.contains("pk37") || lower.contains("37mm")) return "PK37";
+        if (lower.contains("ppk 57") || lower.contains("pk57") || lower.contains("57mm")) return "PK57";
+        if (lower.contains("pháo xe kéo") || lower.contains("pxk")) return "PXK";
+        if (lower.contains("kế toán pháo") || lower.contains("ktpb")) return "KTPB";
+        if (lower.contains("vô tuyến") || lower.contains("vtd")) return "VTD";
+        if (lower.contains("hữu tuyến") || lower.contains("htd")) return "HTD";
+        if (lower.contains("báo vụ") || lower.contains("bvu")) return "BVU";
+        if (lower.contains("quân y") || lower.contains("nvqy")) return "NVQY";
+        if (lower.contains("bảo quản vũ khí") || lower.contains("bqvk") || lower.contains("nvbqvk")) return "NVBQVK";
+        if (lower.contains("bảo quản đạn") || lower.contains("bqd") || lower.contains("nvbqd")) return "NVBQD";
+        if (lower.contains("nấu ăn") || lower.contains("na")) return "NA";
+        if (lower.contains("công binh") || lower.contains("cbct") || lower.contains("cb")) return "CB";
+        if (lower.contains("trinh sát") || lower.contains("tsbb") || lower.contains("tsbd")) return "TSBB";
+        if (lower.contains("smpk") || lower.contains("12,7") || lower.contains("12.7") || lower.contains("pk127")) return "PK127";
         if (lower.contains("bcht") || lower.contains("hợp thành")) return "BCHT";
-        if (lower.contains("bộ binh")) return "BB";
-        if (lower.contains("pháo binh")) return "PB";
-        if (lower.contains("thông tin")) return "TT";
-        if (lower.contains("công binh")) return "CB";
-        if (lower.contains("tăng") || lower.contains("thiết giáp")) return "TTG";
-        if (lower.contains("phòng hóa") || lower.contains("hóa học")) return "HH";
+        if (lower.contains("bộ binh") || lower.equals("bb")) return "BB";
+        if (lower.contains("pháo binh") || lower.equals("pb")) return "PB";
+        if (lower.contains("thông tin") || lower.equals("tt")) return "TT";
+        if (lower.contains("tăng") || lower.contains("thiết giáp") || lower.equals("ttg")) return "TTG";
+        if (lower.contains("phòng hóa") || lower.contains("hóa học") || lower.equals("hh")) return "HH";
+        if (lower.contains("hậu cần") || lower.equals("hc")) return "HC";
+        if (lower.contains("quân khí") || lower.equals("kt")) return "KT";
         return "BB";
     }
 
@@ -372,16 +402,35 @@ public class AdmissionsService {
         String code = mapMajorCode(raw);
         switch (code) {
             case "TSBB": return "Trinh sát Bộ binh";
+            case "DL": return "Khẩu đội trưởng Đại liên";
+            case "C60": return "Súng Cối 60mm";
             case "COI": return "Súng Cối 82mm";
-            case "DKZ": return "Súng ĐKZ (82-K65, SPG-9)";
+            case "C100": return "Súng Cối 100mm";
+            case "DKZ": return "Súng ĐKZ 82-K65";
+            case "SPG9": return "Khẩu đội trưởng ĐKZ SPG-9";
+            case "AGS17": return "Súng phóng lựu AGS-17";
             case "PK127": return "Súng máy Phòng không 12,7mm";
+            case "PK37": return "Khẩu đội trưởng PPK 37mm";
+            case "PK57": return "Khẩu đội trưởng PPK 57mm";
+            case "PXK": return "Khẩu đội trưởng Pháo xe kéo";
+            case "KTPB": return "Tiểu đội trưởng Kế toán Pháo binh";
+            case "VTD": return "Tiểu đội trưởng Vô tuyến điện";
+            case "HTD": return "Tiểu đội trưởng Hữu tuyến điện";
+            case "BVU": return "Nhân viên Báo vụ";
+            case "NVQY": return "Nhân viên Quân y Đại đội";
+            case "NVBQVK": return "Nhân viên Bảo quản Vũ khí";
+            case "NVBQD": return "Nhân viên Bảo quản Đạn";
+            case "NA": return "Tiểu đội trưởng Nấu ăn";
+            case "CB": return "Công binh công trình";
+            case "BB": return "Binh chủng Hợp thành (Bộ binh)";
             case "BCHT": return "Binh chủng Hợp thành";
-            case "BB": return "Bộ binh";
             case "PB": return "Binh chủng Pháo binh";
-            case "TT": return "Thông tin Kỹ thuật";
-            case "CB": return "Công binh";
-            case "TTG": return "Tăng - Thiết giáp";
-            case "HH": return "Phòng hóa";
+            case "TT": return "Thông tin Kỹ thuật / Liên lạc";
+            case "TTG": return "Binh chủng Tăng - Thiết giáp";
+            case "HH": return "Binh chủng Phòng hóa";
+            case "HC": return "Hậu cần Quân sự";
+            case "KT": return "Kỹ thuật Quân khí";
+            case "QY": return "Quân y";
             default: return raw.replace("Chuyên ngành:", "").split(";")[0].trim();
         }
     }
