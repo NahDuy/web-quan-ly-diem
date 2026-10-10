@@ -173,8 +173,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [replaceNewSubjectId, setReplaceNewSubjectId] = useState('');
   const [replacingSubject, setReplacingSubject] = useState(false);
 
-  // State for Export Format Dropdown
+  // State for Export Format Dropdown & Class Selection Modal
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [selectClassesModalOpen, setSelectClassesModalOpen] = useState(false);
+  const [selectedExportClassIds, setSelectedExportClassIds] = useState([]);
+  const [classFilterTerm, setClassFilterTerm] = useState('');
 
   const fetchClasses = async () => {
     try {
@@ -801,19 +804,51 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const handleExportTongHopXetDieuKien = () => {
     if (isDemoMode) {
-      alert('Tải file Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp (mẫu TH xet at) tự động khi kết nối Backend.');
+      alert('Tải Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp tự động khi kết nối Backend.');
       return;
     }
     window.location.href = `/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}`;
   };
 
-  const handleExportClassTongHopXetDieuKien = () => {
-    if (isDemoMode) {
-      alert('Tải file Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp (mẫu TH xet at) tự động khi kết nối Backend.');
+  const handleOpenSelectClassesModal = () => {
+    setExportDropdownOpen(false);
+    setSelectedExportClassIds(classList.map(c => c.id));
+    setClassFilterTerm('');
+    setSelectClassesModalOpen(true);
+  };
+
+  const handleToggleClassSelection = (id) => {
+    setSelectedExportClassIds(prev =>
+      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllClasses = () => {
+    setSelectedExportClassIds(classList.map(c => c.id));
+  };
+
+  const handleDeselectAllClasses = () => {
+    setSelectedExportClassIds([]);
+  };
+
+  const handleExportCustomClassesTongHop = () => {
+    if (selectedExportClassIds.length === 0) {
+      alert('Vui lòng chọn ít nhất một lớp học để xuất báo cáo.');
       return;
     }
-    window.location.href = `/api/v1/classes/${classId}/export-tong-hop-xet-dieu-kien?semester=${semester}`;
+    setSelectClassesModalOpen(false);
+    window.location.href = `/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}&classIds=${selectedExportClassIds.join(',')}`;
   };
+
+  const filteredExportClasses = useMemo(() => {
+    if (!classFilterTerm.trim()) return classList;
+    const term = classFilterTerm.toLowerCase();
+    return classList.filter(c =>
+      (c.code && c.code.toLowerCase().includes(term)) ||
+      (c.name && c.name.toLowerCase().includes(term)) ||
+      (c.majorName && c.majorName.toLowerCase().includes(term))
+    );
+  }, [classList, classFilterTerm]);
 
   const handleExportExcel = () => {
     handleExportHocPhan();
@@ -1025,20 +1060,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       setExportDropdownOpen(false);
                       handleExportHocPhan();
                     }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
                     <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0 mt-0.5">
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>1. Kết quả Học phần (Lớp này)</span>
-                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-mono font-semibold rounded">
-                          KetQuaHocPhan
-                        </span>
+                      <div className="text-xs font-bold text-slate-900">
+                        1. Kết quả Học phần (Lớp này)
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Kiểm tra thường xuyên theo môn, TBC học phần & phân loại rèn luyện
+                        Điểm kiểm tra thường xuyên theo môn, TBC học phần và phân loại rèn luyện
                       </div>
                     </div>
                   </button>
@@ -1048,43 +1080,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       setExportDropdownOpen(false);
                       handleExportTotNghiep();
                     }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
                     <div className="p-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 shrink-0 mt-0.5">
                       <Award className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>2. Kết quả Tốt nghiệp (Lớp này)</span>
-                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-semibold rounded">
-                          KetQuaTotNghiep
-                        </span>
+                      <div className="text-xs font-bold text-slate-900">
+                        2. Kết quả Tốt nghiệp (Lớp này)
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Số vào sổ gốc, điểm thi TN (CTĐ-CTCT, Kỹ thuật), TB khóa & xếp loại TN
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setExportDropdownOpen(false);
-                      handleExportClassTongHopXetDieuKien();
-                    }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
-                  >
-                    <div className="p-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 shrink-0 mt-0.5">
-                      <ClipboardCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>TH Xét ĐK Dự thi Tốt nghiệp (Lớp này)</span>
-                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-mono font-semibold rounded">
-                          TH xet at
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Quân số, tỷ lệ học lực Giỏi/Khá/TB, HTNV, rèn luyện & ĐK dự thi
+                        Số vào sổ gốc, điểm thi tốt nghiệp các môn, điểm TB khóa và xếp loại tốt nghiệp
                       </div>
                     </div>
                   </button>
@@ -1104,17 +1110,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       setExportDropdownOpen(false);
                       handleExportAllClassesHocPhan();
                     }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
                     <div className="p-1.5 bg-emerald-600 text-white rounded-lg border border-emerald-700 shrink-0 mt-0.5 shadow-xs">
                       <Layers className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                        <span>3. Sổ Kết quả Học phần — Toàn bộ lớp</span>
+                      <div className="text-xs font-bold text-emerald-950">
+                        3. Sổ Kết quả Học phần — Toàn bộ các lớp
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Tổng hợp tất cả {classList.length} lớp đào tạo, mỗi lớp lưu trên 1 sheet riêng biệt
+                        Tổng hợp tất cả các lớp đào tạo trong khóa, mỗi lớp lưu trên một sheet riêng biệt
                       </div>
                     </div>
                   </button>
@@ -1124,40 +1130,61 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                       setExportDropdownOpen(false);
                       handleExportAllClassesTotNghiep();
                     }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-amber-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
                     <div className="p-1.5 bg-amber-600 text-white rounded-lg border border-amber-700 shrink-0 mt-0.5 shadow-xs">
                       <Layers className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                        <span>4. Sổ Kết quả Tốt nghiệp — Toàn bộ lớp</span>
+                      <div className="text-xs font-bold text-amber-950">
+                        4. Sổ Kết quả Tốt nghiệp — Toàn bộ các lớp
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Tổng hợp phân loại tốt nghiệp toàn khóa, mỗi lớp lưu trên 1 sheet riêng biệt
+                        Tổng hợp kết quả và phân loại tốt nghiệp toàn khóa, mỗi lớp lưu trên một sheet riêng biệt
                       </div>
                     </div>
                   </button>
+
+                  <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
+
+                  {/* PHẦN 3: BÁO CÁO TỔNG HỢP XÉT ĐK DỰ THI */}
+                  <div className="px-3.5 py-1 text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp</span>
+                  </div>
 
                   <button
                     onClick={() => {
                       setExportDropdownOpen(false);
                       handleExportTongHopXetDieuKien();
                     }}
-                    className="w-full px-3.5 py-2 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
                   >
                     <div className="p-1.5 bg-blue-700 text-white rounded-lg border border-blue-800 shrink-0 mt-0.5 shadow-xs">
                       <ClipboardCheck className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                        <span>5. Báo cáo Tổng hợp Xét ĐK Dự thi (Toàn trường)</span>
-                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-mono font-semibold rounded">
-                          TH xet at(Kdt)
-                        </span>
+                      <div className="text-xs font-bold text-blue-950">
+                        5. Báo cáo Tổng hợp Xét ĐK Dự thi — Toàn trường
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Mẫu chuẩn sheet TH xet at(Kdt) tổng hợp toàn bộ các lớp & chuyên ngành
+                        Thống kê phân loại học lực, tỷ lệ rèn luyện và quân số đủ điều kiện dự thi của toàn trường
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleOpenSelectClassesModal}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-blue-50/70 flex items-start gap-3 transition cursor-pointer"
+                  >
+                    <div className="p-1.5 bg-blue-100 text-blue-800 rounded-lg border border-blue-300 shrink-0 mt-0.5 shadow-xs">
+                      <Filter className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-blue-950">
+                        6. Báo cáo Tổng hợp Xét ĐK Dự thi — Chọn danh sách lớp
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Lựa chọn cụ thể các lớp cần lập bảng tổng hợp xét điều kiện dự thi tốt nghiệp
                       </div>
                     </div>
                   </button>
@@ -1919,6 +1946,144 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chọn danh sách lớp xuất Báo cáo Tổng hợp Xét ĐK Dự thi */}
+      {selectClassesModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            
+            {/* Header */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 text-blue-800 rounded-lg border border-blue-300">
+                  <ClipboardCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 font-military-title">
+                    Chọn danh sách lớp xuất Báo cáo Xét ĐK Dự thi
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Báo cáo sẽ tổng hợp kết quả của các lớp được tích chọn bên dưới
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectClassesModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filter & Quick Actions toolbar */}
+            <div className="p-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  placeholder="Tìm theo mã lớp, tên lớp, chuyên ngành..."
+                  value={classFilterTerm}
+                  onChange={(e) => setClassFilterTerm(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={handleSelectAllClasses}
+                  className="px-2.5 py-1 text-blue-700 hover:bg-blue-50 rounded border border-blue-200 font-semibold cursor-pointer"
+                >
+                  Chọn tất cả
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeselectAllClasses}
+                  className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 rounded border border-slate-200 font-semibold cursor-pointer"
+                >
+                  Bỏ chọn tất cả
+                </button>
+              </div>
+            </div>
+
+            {/* Class List */}
+            <div className="p-3 overflow-y-auto space-y-1.5 flex-1 divide-y divide-slate-100">
+              {filteredExportClasses.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  Không tìm thấy lớp học nào phù hợp với từ khóa
+                </div>
+              ) : (
+                filteredExportClasses.map((c) => {
+                  const isChecked = selectedExportClassIds.includes(c.id);
+                  return (
+                    <label
+                      key={c.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleToggleClassSelection(c.id);
+                      }}
+                      className={`flex items-center gap-3 p-2.5 rounded-lg border transition cursor-pointer select-none ${
+                        isChecked 
+                          ? 'bg-blue-50/60 border-blue-200 hover:bg-blue-50' 
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-blue-900">
+                            {c.code || `Lớp #${c.id}`}
+                          </span>
+                          {c.majorName && (
+                            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[10px] rounded font-medium truncate">
+                              {c.majorName}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                          {c.name || 'Lớp đào tạo'}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-600 shrink-0">
+                        {c.studentCount != null ? `${c.studentCount} HV` : ''}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <div className="text-xs text-slate-600">
+                Đã chọn: <span className="font-bold text-blue-700">{selectedExportClassIds.length}</span> / {classList.length} lớp
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectClassesModalOpen(false)}
+                  className="btn btn-secondary px-3.5 py-1.5 text-xs cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCustomClassesTongHop}
+                  disabled={selectedExportClassIds.length === 0}
+                  className="btn btn-primary px-4 py-1.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-blue-700 hover:bg-blue-800 text-white"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Xuất Báo cáo ({selectedExportClassIds.length} lớp)</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

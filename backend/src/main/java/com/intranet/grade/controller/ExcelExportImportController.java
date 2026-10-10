@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -41,8 +42,6 @@ public class ExcelExportImportController {
             return exportHocPhan(classId, semester);
         } else if ("tot_nghiep".equalsIgnoreCase(type) || "totnghiep".equalsIgnoreCase(type)) {
             return exportTotNghiep(classId, semester);
-        } else if ("xet_dieu_kien".equalsIgnoreCase(type) || "th_xet_at".equalsIgnoreCase(type) || "xetdieukien".equalsIgnoreCase(type)) {
-            return exportTongHopXetDieuKienLop(classId, semester);
         }
 
         byte[] excelBytes = excelService.exportClassMatrixToExcel(classId, semester);
@@ -85,21 +84,6 @@ public class ExcelExportImportController {
                 .body(excelBytes);
     }
 
-    @GetMapping("/{classId}/export-tong-hop-xet-dieu-kien")
-    public ResponseEntity<byte[]> exportTongHopXetDieuKienLop(
-            @PathVariable Integer classId,
-            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
-
-        byte[] excelBytes = excelService.exportClassTongHopXetDieuKien(classId, semester);
-        String classIdent = getSafeClassIdentifier(classId);
-        String filename = "TH_XetDieuKienDuThi_" + classIdent + ".xlsx";
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(excelBytes);
-    }
-
     @GetMapping("/export-all-classes-hoc-phan")
     public ResponseEntity<byte[]> exportAllClassesHocPhan(
             @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
@@ -128,10 +112,13 @@ public class ExcelExportImportController {
 
     @GetMapping("/export-tong-hop-xet-dieu-kien")
     public ResponseEntity<byte[]> exportTongHopXetDieuKien(
-            @RequestParam(required = false, defaultValue = "1") Integer semester) throws IOException {
+            @RequestParam(required = false, defaultValue = "1") Integer semester,
+            @RequestParam(required = false) List<Integer> classIds) throws IOException {
 
-        byte[] excelBytes = excelService.exportTongHopXetDieuKien(semester);
-        String filename = "TH_XetDieuKienDuThi_ToanTruong_2026.xlsx";
+        byte[] excelBytes = excelService.exportTongHopXetDieuKien(semester, classIds);
+        String filename = (classIds != null && !classIds.isEmpty())
+                ? "TH_XetDieuKienDuThi_TuyChonLop_2026.xlsx"
+                : "TH_XetDieuKienDuThi_ToanTruong_2026.xlsx";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

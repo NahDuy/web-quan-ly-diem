@@ -1162,15 +1162,14 @@ public class ExcelService {
         }
     }
 
-    public byte[] exportTongHopXetDieuKien(Integer semester) throws IOException {
-        List<ClassEntity> classes = classRepository.findAll();
+    public byte[] exportTongHopXetDieuKien(Integer semester, List<Integer> classIds) throws IOException {
+        List<ClassEntity> classes;
+        if (classIds != null && !classIds.isEmpty()) {
+            classes = classRepository.findAllById(classIds);
+        } else {
+            classes = classRepository.findAll();
+        }
         classes.sort((a, b) -> (a.getCode() != null ? a.getCode() : "").compareToIgnoreCase(b.getCode() != null ? b.getCode() : ""));
-        return buildTongHopXetDieuKienWorkbook(classes, semester);
-    }
-
-    public byte[] exportClassTongHopXetDieuKien(Integer classId, Integer semester) throws IOException {
-        ClassEntity clazz = classRepository.findById(classId).orElse(null);
-        List<ClassEntity> classes = clazz != null ? Collections.singletonList(clazz) : classRepository.findAll();
         return buildTongHopXetDieuKienWorkbook(classes, semester);
     }
 
