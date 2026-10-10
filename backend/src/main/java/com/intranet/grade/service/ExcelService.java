@@ -306,13 +306,13 @@ public class ExcelService {
 
         Font agencyFont = workbook.createFont();
         agencyFont.setBold(true);
-        agencyFont.setFontHeightInPoints((short) 12);
+        agencyFont.setFontHeightInPoints((short) 14);
         agencyFont.setFontName("Times New Roman");
 
         Font agencyUnderlineFont = workbook.createFont();
         agencyUnderlineFont.setBold(true);
         agencyUnderlineFont.setUnderline(Font.U_SINGLE);
-        agencyUnderlineFont.setFontHeightInPoints((short) 12);
+        agencyUnderlineFont.setFontHeightInPoints((short) 14);
         agencyUnderlineFont.setFontName("Times New Roman");
 
         Font titleFont = workbook.createFont();
@@ -430,13 +430,13 @@ public class ExcelService {
 
         Font agencyFont = workbook.createFont();
         agencyFont.setBold(true);
-        agencyFont.setFontHeightInPoints((short) 12);
+        agencyFont.setFontHeightInPoints((short) 14);
         agencyFont.setFontName("Times New Roman");
 
         Font agencyUnderlineFont = workbook.createFont();
         agencyUnderlineFont.setBold(true);
         agencyUnderlineFont.setUnderline(Font.U_SINGLE);
-        agencyUnderlineFont.setFontHeightInPoints((short) 12);
+        agencyUnderlineFont.setFontHeightInPoints((short) 14);
         agencyUnderlineFont.setFontName("Times New Roman");
 
         Font titleFont = workbook.createFont();
@@ -632,41 +632,41 @@ public class ExcelService {
 
         // Row 0: QUÂN KHU 3 (bên trái)
         Row r0 = sheet.createRow(0);
-        r0.setHeightInPoints(22);
+        r0.setHeightInPoints(26);
         Cell cAgency1 = r0.createCell(0);
         cAgency1.setCellValue("QUÂN KHU 3");
         cAgency1.setCellStyle(styles.agencyStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-        // Row 1: TRƯỜNG QUÂN SỰ (bên trái)
+        // Row 1: TRƯỜNG QUÂN SỰ (bên trái, in đậm, gạch chân)
         Row r1 = sheet.createRow(1);
-        r1.setHeightInPoints(24);
+        r1.setHeightInPoints(26);
         Cell cAgency2 = r1.createCell(0);
         cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
         cAgency2.setCellStyle(styles.agencyUnderlineStyle);
         sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
 
-        // Tiêu đề chính IN ĐẬM: Đặt ngang hàng với QUÂN KHU 3 & TRƯỜNG QUÂN SỰ (từ cột 3 đến hết, gộp cả Row 0 và Row 1)
+        // Tiêu đề chính IN ĐẬM: Đặt ngang hàng với QUÂN KHU 3 & TRƯỜNG QUÂN SỰ (từ cột 3 đến hết, gộp Row 0 và Row 1)
         Cell cTitle = r0.createCell(3);
         cTitle.setCellValue("KẾT QUẢ KIỂM TRA THƯỜNG XUYÊN");
         cTitle.setCellStyle(styles.titleStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 1, 3, totalCols - 1));
 
-        // Row 2: Đơn vị lớp IN ĐẬM
+        // Row 2: Đơn vị lớp IN ĐẬM (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
         Row r2 = sheet.createRow(2);
         r2.setHeightInPoints(24);
-        Cell cUnit = r2.createCell(0);
+        Cell cUnit = r2.createCell(3);
         cUnit.setCellValue("Đơn vị: " + className + " - " + resolveKhoaHeader(clazz, matrix));
         cUnit.setCellStyle(styles.subTitleStyle);
-        sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(2, 2, 3, totalCols - 1));
 
-        // Row 3: Khai giảng / Bế giảng (Đã bỏ dòng Quyết định kèm theo)
+        // Row 3: Khai giảng / Bế giảng (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
         Row r3 = sheet.createRow(3);
         r3.setHeightInPoints(20);
-        Cell cDates = r3.createCell(0);
+        Cell cDates = r3.createCell(3);
         cDates.setCellValue("Khai giảng: 18/6/2026         Bế giảng : 18/10/2026");
         cDates.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 3, totalCols - 1));
 
         // Row 4 đệm cách nhẹ
         sheet.createRow(4).setHeightInPoints(8);
@@ -899,41 +899,41 @@ public class ExcelService {
 
         // Row 0: QUÂN KHU 3 (bên trái)
         Row r0 = sheet.createRow(0);
-        r0.setHeightInPoints(22);
+        r0.setHeightInPoints(26);
         Cell cAgency1 = r0.createCell(0);
         cAgency1.setCellValue("QUÂN KHU 3");
         cAgency1.setCellStyle(styles.agencyStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-        // Row 1: TRƯỜNG QUÂN SỰ (bên trái)
+        // Row 1: TRƯỜNG QUÂN SỰ (bên trái, in đậm, gạch chân)
         Row r1 = sheet.createRow(1);
-        r1.setHeightInPoints(24);
+        r1.setHeightInPoints(26);
         Cell cAgency2 = r1.createCell(0);
         cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
         cAgency2.setCellStyle(styles.agencyUnderlineStyle);
         sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
 
-        // Tiêu đề chính IN ĐẬM: Đặt ngang hàng với QUÂN KHU 3 & TRƯỜNG QUÂN SỰ (từ cột 3 đến hết, gộp cả Row 0 và Row 1)
+        // Tiêu đề chính IN ĐẬM: Đặt ngang hàng với QUÂN KHU 3 & TRƯỜNG QUÂN SỰ (từ cột 3 đến hết, gộp Row 0 và Row 1)
         Cell cTitle = r0.createCell(3);
         cTitle.setCellValue("KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP");
         cTitle.setCellStyle(styles.titleStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 1, 3, totalCols - 1));
 
-        // Row 2: Đơn vị lớp IN ĐẬM
+        // Row 2: Đơn vị lớp IN ĐẬM (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
         Row r2 = sheet.createRow(2);
         r2.setHeightInPoints(24);
-        Cell cSub = r2.createCell(0);
+        Cell cSub = r2.createCell(3);
         cSub.setCellValue("Đơn vị: " + className + " - " + resolveKhoaHeader(clazz, matrix));
         cSub.setCellStyle(styles.subTitleStyle);
-        sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(2, 2, 3, totalCols - 1));
 
-        // Row 3: Ngày tiếp nhận, khai giảng, bế giảng (Đã bỏ dòng Quyết định kèm theo)
+        // Row 3: Ngày tiếp nhận, khai giảng, bế giảng (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
         Row r3 = sheet.createRow(3);
         r3.setHeightInPoints(20);
-        Cell cDate = r3.createCell(0);
+        Cell cDate = r3.createCell(3);
         cDate.setCellValue("Tiếp nhận 03/02/2026    Khai giảng: 05/02/2026    Bế giảng : 29/5/2026");
         cDate.setCellStyle(styles.italicCenterStyle);
-        sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 3, totalCols - 1));
 
         // Row 4: Quân số lớp IN ĐẬM NGHIÊNG
         int numRows = matrix.getRows() != null ? matrix.getRows().size() : 0;
