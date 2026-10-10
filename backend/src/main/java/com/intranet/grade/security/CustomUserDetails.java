@@ -18,6 +18,7 @@ public class CustomUserDetails implements UserDetails {
     private final String fullName;
     private final String role;
     private final Integer departmentId;
+    private final String departmentName;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
@@ -27,6 +28,7 @@ public class CustomUserDetails implements UserDetails {
         this.fullName = user.getFullName();
         this.role = user.getRole().getCode();
         this.departmentId = user.getDepartment() != null ? user.getDepartment().getId() : null;
+        this.departmentName = user.getDepartment() != null ? user.getDepartment().getName() : null;
         this.authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole().getCode()));
     }
 

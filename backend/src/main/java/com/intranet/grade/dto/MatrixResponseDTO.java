@@ -27,4 +27,7 @@ public class MatrixResponseDTO {
 
     private List<SubjectColumnDTO> columns;
     private List<StudentRowDTO> rows;
+
+    private Boolean isTeacherView;
+    private String departmentFilterName;
 }

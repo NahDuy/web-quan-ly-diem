@@ -126,6 +126,35 @@ public class ClassMatrixController {
         ));
     }
 
+    @PostMapping("/{classId}/replace-subject")
+    public ResponseEntity<Map<String, Object>> replaceSubjectInClass(
+            @PathVariable Integer classId,
+            @RequestParam Integer oldSubjectId,
+            @RequestParam Integer newSubjectId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+
+        gradeMatrixService.replaceSubjectInClass(classId, semester, oldSubjectId, newSubjectId);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã đổi môn học cho riêng lớp này thành công mà không ảnh hưởng đến chương trình đào tạo chung!"
+        ));
+    }
+
+    @DeleteMapping("/{classId}/remove-subject/{subjectId}")
+    public ResponseEntity<Map<String, Object>> removeSubjectFromClass(
+            @PathVariable Integer classId,
+            @PathVariable Integer subjectId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+
+        gradeMatrixService.removeSubjectFromClass(classId, semester, subjectId);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã xóa môn học khỏi bảng điểm của lớp thành công!"
+        ));
+    }
+
     @PostMapping("/{classId}/unlock")
     public ResponseEntity<Map<String, Object>> unlockGradeMatrix(
             @PathVariable Integer classId,

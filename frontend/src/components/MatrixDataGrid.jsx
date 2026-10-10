@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2 } from 'lucide-react';
 
 const INITIAL_MILITARY_MOCK_MATRIX = {
   classId: 1,
@@ -160,13 +160,18 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   // State for Dynamic Extra Subject Column Modal
   const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
-  const [addSubjectTab, setAddSubjectTab] = useState('existing'); // 'existing' | 'new'
+  const [addSubjectTab, setAddSubjectTab] = useState('existing'); // 'existing' | 'new' | 'replace'
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubCredits, setNewSubCredits] = useState('3');
   const [addingSubject, setAddingSubject] = useState(false);
+
+  // State for swapping / replacing subject in class
+  const [replaceOldSubjectId, setReplaceOldSubjectId] = useState('');
+  const [replaceNewSubjectId, setReplaceNewSubjectId] = useState('');
+  const [replacingSubject, setReplacingSubject] = useState(false);
 
   // State for Export Format Dropdown
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -268,11 +273,24 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     fetchMatrix();
   }, [classId, semester]);
 
+  const isPrivilegedUser = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role);
+
   const handleScoreChange = (studentId, subjectId, value) => {
-    if (matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)) {
+    if (matrixData.isLocked && !isPrivilegedUser) {
       alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
+
+    // Yêu cầu: Giáo viên chỉ được nhập 1 lần, chỉ có admin với PĐT mới có quyền sửa
+    if (!isPrivilegedUser) {
+      const studentRow = matrixData?.rows?.find((r) => r.studentId === studentId);
+      const existingGrade = studentRow?.grades?.[subjectId];
+      if (existingGrade && existingGrade.score !== null && existingGrade.score !== undefined) {
+        alert('Giáo viên chỉ được nhập điểm 1 lần. Điểm đã lưu trong hệ thống chỉ có Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền chỉnh sửa!');
+        return;
+      }
+    }
+
     const key = `${studentId}_${subjectId}`;
     if (value === '' || value === null || value === undefined) {
       setEditedScores((prev) => ({
@@ -302,7 +320,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleConductChange = (studentId, value) => {
-    if (matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)) {
+    if (!isPrivilegedUser) {
+      alert('Giáo viên không có quyền chỉnh sửa xếp loại rèn luyện.');
+      return;
+    }
+    if (matrixData.isLocked && !isPrivilegedUser) {
       alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
@@ -310,7 +332,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleGradExamScoreChange = (studentId, gradSubId, value) => {
-    if (matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)) {
+    if (!isPrivilegedUser) {
+      alert('Giáo viên không có quyền chỉnh sửa điểm thi tốt nghiệp.');
+      return;
+    }
+    if (matrixData.isLocked && !isPrivilegedUser) {
       alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
@@ -366,8 +392,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       if (res.ok) {
         const data = await res.json();
         setAvailableSubjects(data || []);
-        if (data && data.length > 0 && !selectedSubjectId) {
-          setSelectedSubjectId(data[0].id);
+        if (data && data.length > 0) {
+          if (!selectedSubjectId) setSelectedSubjectId(data[0].id);
+          if (!replaceNewSubjectId) setReplaceNewSubjectId(data[0].id);
         }
       }
     } catch (err) {
@@ -439,6 +466,65 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Lỗi kết nối khi tạo môn học');
     } finally {
       setAddingSubject(false);
+    }
+  };
+
+  const handleReplaceSubject = async (e) => {
+    e.preventDefault();
+    if (!replaceOldSubjectId || !replaceNewSubjectId) {
+      alert('Vui lòng chọn cả môn hiện tại cần đổi và môn mới thay thế!');
+      return;
+    }
+    if (String(replaceOldSubjectId) === String(replaceNewSubjectId)) {
+      alert('Môn mới thay thế phải khác môn hiện tại!');
+      return;
+    }
+
+    setReplacingSubject(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/classes/${classId}/replace-subject?semester=${semester}&oldSubjectId=${replaceOldSubjectId}&newSubjectId=${replaceNewSubjectId}`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsAddSubjectModalOpen(false);
+        setReplaceOldSubjectId('');
+        setReplaceNewSubjectId('');
+        setSaveSuccessMsg(data.message || 'Đã đổi môn học thành công cho riêng lớp này mà không ảnh hưởng chương trình đào tạo chung!');
+        await fetchMatrix();
+      } else {
+        alert(data.message || 'Không thể đổi môn học cho lớp này');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi đổi môn học');
+    } finally {
+      setReplacingSubject(false);
+    }
+  };
+
+  const handleRemoveSubjectFromClass = async (subjectId, subjectName) => {
+    if (!window.confirm(`XÁC NHẬN XÓA CỘT MÔN: "${subjectName}" khỏi bảng điểm của lớp này?\n(Thao tác này chỉ áp dụng riêng cho lớp này, hoàn toàn không ảnh hưởng đến chương trình đào tạo chung)`)) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/classes/${classId}/remove-subject/${subjectId}?semester=${semester}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaveSuccessMsg(data.message || 'Đã xóa cột môn khỏi lớp thành công!');
+        await fetchMatrix();
+      } else {
+        alert(data.message || 'Không thể xóa môn khỏi lớp');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi xóa môn khỏi lớp');
     }
   };
 
@@ -717,7 +803,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     handleExportHocPhan();
   };
 
-  const safeColumns = matrixData?.columns || [];
+  const rawColumns = matrixData?.columns || [];
+  const safeColumns = useMemo(() => {
+    if (isPrivilegedUser) return rawColumns;
+    if (currentUser?.departmentId) {
+      return rawColumns.filter((c) => c.departmentId === currentUser.departmentId);
+    }
+    return rawColumns;
+  }, [rawColumns, isPrivilegedUser, currentUser?.departmentId]);
+
   const safeGradExamSubjects = matrixData?.gradExamSubjects || [
     { id: 101, code: 'TN01', name: 'Thi Chính trị' },
     { id: 102, code: 'TN02', name: 'Thi Quân sự chung' },
@@ -750,10 +844,27 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Trạng thái: Bảng điểm mở. Giáo viên/Cán bộ huấn luyện có thể nhập và chỉnh sửa điểm.</span>
           </div>
 
-          <button onClick={handleLockMatrix} className="btn btn-secondary btn-xs font-bold" style={{ color: '#b45309', borderColor: '#fde047' }}>
-            <Lock className="w-3.5 h-3.5 text-amber-600" />
-            Xác nhận & Khóa Bảng Điểm
-          </button>
+          {isPrivilegedUser && (
+            <button onClick={handleLockMatrix} className="btn btn-secondary btn-xs font-bold" style={{ color: '#b45309', borderColor: '#fde047' }}>
+              <Lock className="w-3.5 h-3.5 text-amber-600" />
+              Xác nhận & Khóa Bảng Điểm
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Thông báo phân quyền giáo viên theo Khoa/Bộ môn */}
+      {!isPrivilegedUser && (
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-blue-50/90 border border-blue-200 rounded-xl text-xs text-blue-900 shadow-xs">
+          <div className="flex items-center gap-2.5 font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse shrink-0"></span>
+            <span>
+              Phân quyền Giáo viên/Bộ môn: Đang hiển thị các môn thuộc <strong>{matrixData?.departmentFilterName || currentUser?.departmentName || 'Khoa/Bộ môn phụ trách'}</strong>. Các môn khác và cột điểm tổng kết, rèn luyện, tốt nghiệp được ẩn theo quy định.
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-200 shrink-0">
+            {safeColumns.length} môn phụ trách
+          </span>
         </div>
       )}
       
@@ -800,19 +911,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
         {/* Actions Bar - Căn chỉnh đồng bộ và cân đối với ô chọn lớp */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => {
-              fetchAvailableSubjects();
-              setIsAddSubjectModalOpen(true);
-            }}
-            className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
-            style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
-            title="Thêm cột môn học linh hoạt cho lớp này"
-          >
-            <Plus className="w-3.5 h-3.5 text-emerald-700" />
-            <span className="font-semibold text-emerald-800">Thêm Cột Môn</span>
-          </button>
+          {isPrivilegedUser && (
+            <button
+              type="button"
+              onClick={() => {
+                fetchAvailableSubjects();
+                setIsAddSubjectModalOpen(true);
+              }}
+              className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+              title="Thêm cột hoặc đổi môn học cho lớp này"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="font-semibold text-emerald-800">Thêm / Đổi Cột Môn</span>
+            </button>
+          )}
 
           {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP (Dành cho việc nhập điểm thông thường, ví dụ nhập trước 10 đồng chí, 5 môn) */}
           <button
@@ -834,8 +947,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
           </button>
 
-          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Dành cho trường hợp sửa điểm / phúc khảo / điều chỉnh cần lưu vết và lý do) */}
-          {hasUnsavedChanges && (
+          {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Dành cho trường hợp sửa điểm / phúc khảo / điều chỉnh cần lưu vết và lý do - Chỉ Admin/PĐT) */}
+          {isPrivilegedUser && hasUnsavedChanges && (
             <button
               onClick={() => {
                 setAuditReason('');
@@ -1055,38 +1168,44 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 colSpan={safeColumns.length}
                 className="py-2 px-3 bg-slate-100 text-slate-800 font-extrabold text-xs border-b border-slate-300 tracking-wider uppercase"
               >
-                KẾT QUẢ HỌC TẬP TOÀN KHÓA ({safeColumns.length} MÔN)
+                {isPrivilegedUser
+                  ? `KẾT QUẢ HỌC TẬP TOÀN KHÓA (${safeColumns.length} MÔN)`
+                  : `CÁC MÔN HỌC THUỘC KHOA PHỤ TRÁCH (${safeColumns.length} MÔN)`}
               </th>
 
-              <th rowSpan={2} className="min-w-[70px] text-center">
-                <span>Điểm TB</span>
-                <span className="block text-[10px] text-slate-500 font-normal">Toàn khóa</span>
-              </th>
-              <th rowSpan={2} className="min-w-[110px] text-center">
-                <span>Rèn Luyện</span>
-                <span className="block text-[10px] text-slate-500 font-normal">Kỷ luật</span>
-              </th>
+              {isPrivilegedUser && (
+                <>
+                  <th rowSpan={2} className="min-w-[70px] text-center">
+                    <span>Điểm TB</span>
+                    <span className="block text-[10px] text-slate-500 font-normal">Toàn khóa</span>
+                  </th>
+                  <th rowSpan={2} className="min-w-[110px] text-center">
+                    <span>Rèn Luyện</span>
+                    <span className="block text-[10px] text-slate-500 font-normal">Kỷ luật</span>
+                  </th>
 
-              {/* MERGED GROUP HEADER 2: ĐIỂM THI TỐT NGHIỆP (3 MÔN THI TN) */}
-              <th
-                colSpan={safeGradExamSubjects.length}
-                className="py-2 px-3 bg-amber-50 text-amber-800 font-extrabold text-xs border-b border-amber-300 tracking-wider uppercase"
-              >
-                ĐIỂM THI TỐT NGHIỆP ({safeGradExamSubjects.length} MÔN THI)
-              </th>
+                  {/* MERGED GROUP HEADER 2: ĐIỂM THI TỐT NGHIỆP (3 MÔN THI TN) */}
+                  <th
+                    colSpan={safeGradExamSubjects.length}
+                    className="py-2 px-3 bg-amber-50 text-amber-800 font-extrabold text-xs border-b border-amber-300 tracking-wider uppercase"
+                  >
+                    ĐIỂM THI TỐT NGHIỆP ({safeGradExamSubjects.length} MÔN THI)
+                  </th>
 
-              <th rowSpan={2} className="min-w-[80px] text-center">
-                <span>Điểm TN</span>
-                <span className="block text-[10px] text-slate-500 font-normal">TBC 3 môn</span>
-              </th>
-              <th rowSpan={2} className="min-w-[95px] text-center">
-                <span>Điểm Xét TN</span>
-                <span className="block text-[10px] text-slate-500 font-normal">(TB×1+TN×2)/3</span>
-              </th>
-              <th rowSpan={2} className="min-w-[95px] text-center">
-                <span>Xếp Loại</span>
-                <span className="block text-[10px] text-slate-500 font-normal">Tốt nghiệp</span>
-              </th>
+                  <th rowSpan={2} className="min-w-[80px] text-center">
+                    <span>Điểm TN</span>
+                    <span className="block text-[10px] text-slate-500 font-normal">TBC 3 môn</span>
+                  </th>
+                  <th rowSpan={2} className="min-w-[95px] text-center">
+                    <span>Điểm Xét TN</span>
+                    <span className="block text-[10px] text-slate-500 font-normal">(TB×1+TN×2)/3</span>
+                  </th>
+                  <th rowSpan={2} className="min-w-[95px] text-center">
+                    <span>Xếp Loại</span>
+                    <span className="block text-[10px] text-slate-500 font-normal">Tốt nghiệp</span>
+                  </th>
+                </>
+              )}
               <th rowSpan={2} className="min-w-[110px]">Quê quán</th>
             </tr>
 
@@ -1094,15 +1213,28 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <tr>
               {/* Sub-headers for Course Subjects */}
               {safeColumns.map((col) => (
-                <th key={col.subjectId} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
+                <th key={col.subjectId} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom relative group">
                   <div className="th-vertical-subject" title={`${col.subjectName} (${col.subjectCode}) - ${col.credits} tín chỉ`}>
                     {col.subjectName} <span className="text-emerald-700 text-[10px]">({col.credits}TC)</span>
                   </div>
+                  {isPrivilegedUser && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveSubjectFromClass(col.subjectId, col.subjectName);
+                      }}
+                      className="absolute top-1 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer"
+                      title={`Xóa môn "${col.subjectName}" khỏi lớp này (không ảnh hưởng chương trình đào tạo)`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
                 </th>
               ))}
 
               {/* Sub-headers for 3 Graduation Exam Subjects */}
-              {safeGradExamSubjects.map((sub) => (
+              {isPrivilegedUser && safeGradExamSubjects.map((sub) => (
                 <th key={sub.id} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
                   <div className="th-vertical-subject text-amber-700" title={`${sub.name} (${sub.code})`}>
                     {sub.name} <span className="text-amber-800 text-[10px]">({sub.code})</span>
@@ -1162,6 +1294,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     const key = `${row.studentId}_${col.subjectId}`;
                     const isEdited = isCellEdited(row.studentId, col.subjectId);
                     const currentScoreVal = isEdited ? editedScores[key] : (gradeDetail ? gradeDetail.score : '');
+                    const hasExistingScore = gradeDetail && gradeDetail.score !== null && gradeDetail.score !== undefined;
+                    const isLockedForTeacher = !isPrivilegedUser && hasExistingScore;
 
                     return (
                       <td key={col.subjectId} className={isEdited ? 'cell-modified' : ''}>
@@ -1170,7 +1304,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                           step="0.1"
                           min="0"
                           max="10"
-                          disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
+                          disabled={(matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher}
                           value={currentScoreVal !== null && currentScoreVal !== undefined ? currentScoreVal : ''}
                           onChange={(e) => handleScoreChange(row.studentId, col.subjectId, e.target.value)}
                           onBlur={(e) => {
@@ -1183,87 +1317,98 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                             }
                           }}
                           placeholder="-"
-                          className={`cell-input ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                          title={isLockedForTeacher ? 'Điểm đã lưu vào hệ thống. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên mới có quyền chỉnh sửa.' : ''}
+                          className={`cell-input ${isEdited ? 'text-amber-800 font-extrabold' : ''} ${
+                            isLockedForTeacher
+                              ? 'bg-slate-100 text-slate-700 cursor-not-allowed font-medium opacity-90'
+                              : matrixData.isLocked && !isPrivilegedUser
+                              ? 'cursor-not-allowed opacity-50'
+                              : ''
+                          }`}
                         />
                       </td>
                     );
                   })}
 
-                  {/* TB (TRUNG BÌNH CỘNG TOÀN KHÓA) */}
-                  <td className="font-bold text-sm text-amber-800 bg-amber-50/60">
-                    {row.tbcScore !== null ? row.tbcScore.toFixed(2) : '-'}
-                  </td>
-
-                  {/* PHÂN LOẠI RÈN LUYỆN */}
-                  <td>
-                    <select
-                      disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
-                      value={currentConduct || 'KHA'}
-                      onChange={(e) => handleConductChange(row.studentId, e.target.value)}
-                      className="form-input text-xs rounded px-1.5 py-1 text-slate-800 focus:outline-none disabled:opacity-50 font-semibold"
-                      style={{ cursor: 'pointer', minWidth: '95px' }}
-                    >
-                      <option value="XUAT_SAC">Xuất sắc</option>
-                      <option value="TOT">Tốt</option>
-                      <option value="KHA">Khá</option>
-                      <option value="TRUNG_BINH">Trung bình</option>
-                      <option value="YEU">Yếu</option>
-                    </select>
-                  </td>
-
-                  {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS */}
-                  {safeGradExamSubjects.map((gradSub) => {
-                    const key = `${row.studentId}_${gradSub.id}`;
-                    const isEdited = isGradExamCellEdited(row.studentId, gradSub.id);
-                    const val = isEdited ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : '');
-
-                    return (
-                      <td key={gradSub.id} className={isEdited ? 'cell-modified' : ''}>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="10"
-                          disabled={matrixData.isLocked && !['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role)}
-                          value={val !== null && val !== undefined ? val : ''}
-                          onChange={(e) => handleGradExamScoreChange(row.studentId, gradSub.id, e.target.value)}
-                          onBlur={(e) => {
-                            const v = e.target.value;
-                            if (v !== '') {
-                              const num = parseFloat(v);
-                              if (!isNaN(num) && (num < 0 || num > 10)) {
-                                handleGradExamScoreChange(row.studentId, gradSub.id, Math.min(10, Math.max(0, num)).toString());
-                              }
-                            }
-                          }}
-                          placeholder="-"
-                          className={`cell-input text-amber-800 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
-                        />
+                  {isPrivilegedUser && (
+                    <>
+                      {/* TB (TRUNG BÌNH CỘNG TOÀN KHÓA) */}
+                      <td className="font-bold text-sm text-amber-800 bg-amber-50/60">
+                        {row.tbcScore !== null ? row.tbcScore.toFixed(2) : '-'}
                       </td>
-                    );
-                  })}
 
-                  {/* ĐIỂM TN (TBC 3 MÔN THI TN) */}
-                  <td className="font-bold text-sm text-blue-700 bg-blue-50/60">
-                    {tbcGradExamScore !== null ? tbcGradExamScore.toFixed(2) : '-'}
-                  </td>
+                      {/* PHÂN LOẠI RÈN LUYỆN */}
+                      <td>
+                        <select
+                          disabled={matrixData.isLocked && !isPrivilegedUser}
+                          value={currentConduct || 'KHA'}
+                          onChange={(e) => handleConductChange(row.studentId, e.target.value)}
+                          className="form-input text-xs rounded px-1.5 py-1 text-slate-800 focus:outline-none disabled:opacity-50 font-semibold"
+                          style={{ cursor: 'pointer', minWidth: '95px' }}
+                        >
+                          <option value="XUAT_SAC">Xuất sắc</option>
+                          <option value="TOT">Tốt</option>
+                          <option value="KHA">Khá</option>
+                          <option value="TRUNG_BINH">Trung bình</option>
+                          <option value="YEU">Yếu</option>
+                        </select>
+                      </td>
 
-                  {/* ĐIỂM TỐT NGHIỆP CHUNG: (TB*1 + TN*2)/3 */}
-                  <td className="font-extrabold text-sm text-emerald-800 bg-emerald-50/60">
-                    {calculatedGradScore !== null ? calculatedGradScore.toFixed(2) : '-'}
-                  </td>
+                      {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS */}
+                      {safeGradExamSubjects.map((gradSub) => {
+                        const key = `${row.studentId}_${gradSub.id}`;
+                        const isEdited = isGradExamCellEdited(row.studentId, gradSub.id);
+                        const val = isEdited ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : '');
 
-                  {/* XÉT TN */}
-                  <td>
-                    <span className={`badge ${
-                      gradClassification === 'XUẤT SẮC' ? 'badge-warning' :
-                      gradClassification === 'GIỎI' ? 'badge-success' :
-                      gradClassification === 'KHÁ' ? 'badge-info' :
-                      gradClassification === 'TRUNG BÌNH' ? 'badge' : 'badge-danger'
-                    }`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
-                      {gradClassification}
-                    </span>
-                  </td>
+                        return (
+                          <td key={gradSub.id} className={isEdited ? 'cell-modified' : ''}>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="10"
+                              disabled={matrixData.isLocked && !isPrivilegedUser}
+                              value={val !== null && val !== undefined ? val : ''}
+                              onChange={(e) => handleGradExamScoreChange(row.studentId, gradSub.id, e.target.value)}
+                              onBlur={(e) => {
+                                const v = e.target.value;
+                                if (v !== '') {
+                                  const num = parseFloat(v);
+                                  if (!isNaN(num) && (num < 0 || num > 10)) {
+                                    handleGradExamScoreChange(row.studentId, gradSub.id, Math.min(10, Math.max(0, num)).toString());
+                                  }
+                                }
+                              }}
+                              placeholder="-"
+                              className={`cell-input text-amber-800 ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                            />
+                          </td>
+                        );
+                      })}
+
+                      {/* ĐIỂM TN (TBC 3 MÔN THI TN) */}
+                      <td className="font-bold text-sm text-blue-700 bg-blue-50/60">
+                        {tbcGradExamScore !== null ? tbcGradExamScore.toFixed(2) : '-'}
+                      </td>
+
+                      {/* ĐIỂM TỐT NGHIỆP CHUNG: (TB*1 + TN*2)/3 */}
+                      <td className="font-extrabold text-sm text-emerald-800 bg-emerald-50/60">
+                        {calculatedGradScore !== null ? calculatedGradScore.toFixed(2) : '-'}
+                      </td>
+
+                      {/* XÉT TN */}
+                      <td>
+                        <span className={`badge ${
+                          gradClassification === 'XUẤT SẮC' ? 'badge-warning' :
+                          gradClassification === 'GIỎI' ? 'badge-success' :
+                          gradClassification === 'KHÁ' ? 'badge-info' :
+                          gradClassification === 'TRUNG BÌNH' ? 'badge' : 'badge-danger'
+                        }`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+                          {gradClassification}
+                        </span>
+                      </td>
+                    </>
+                  )}
 
                   <td className="text-xs text-slate-600">{row.pob || 'Hà Nội'}</td>
                 </tr>
@@ -1388,35 +1533,55 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               </button>
             </div>
 
-            {/* TAB SELECTOR: CHỌN MÔN CÓ SẴN HOẶC TẠO MÔN MỚI */}
+            {/* TAB SELECTOR: CHỌN MÔN CÓ SẴN, TẠO MÔN MỚI HOẶC ĐỔI MÔN CHO RIÊNG LỚP */}
             <div className="flex items-center gap-2 mb-4 p-1 bg-slate-100 rounded-lg border border-slate-200">
               <button
                 type="button"
                 onClick={() => setAddSubjectTab('existing')}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   addSubjectTab === 'existing'
                     ? 'bg-emerald-700 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>1. Chọn Môn Có Sẵn ({availableSubjects.length})</span>
+                <span>1. Môn Có Sẵn</span>
               </button>
               <button
                 type="button"
                 onClick={() => setAddSubjectTab('new')}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   addSubjectTab === 'new'
                     ? 'bg-emerald-700 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>2. Tạo Môn Mới Linh Hoạt</span>
+                <span>2. Tạo Môn Mới</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddSubjectTab('replace');
+                  if (!replaceOldSubjectId && rawColumns.length > 0) {
+                    setReplaceOldSubjectId(rawColumns[0].subjectId);
+                  }
+                  if (!replaceNewSubjectId && availableSubjects.length > 0) {
+                    setReplaceNewSubjectId(availableSubjects[0].id);
+                  }
+                }}
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  addSubjectTab === 'replace'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span>3. Đổi Môn Cho Lớp</span>
               </button>
             </div>
 
-            {addSubjectTab === 'existing' ? (
+            {addSubjectTab === 'existing' && (
               <form onSubmit={handleAddExistingSubject} className="space-y-4">
                 <div>
                   <label className="form-label text-xs font-bold text-slate-700 mb-1">
@@ -1470,7 +1635,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   </button>
                 </div>
               </form>
-            ) : (
+            )}
+
+            {addSubjectTab === 'new' && (
               <form onSubmit={handleAddNewSubject} className="space-y-4">
                 <div>
                   <label className="form-label text-xs font-bold text-slate-700 mb-1">
@@ -1537,6 +1704,93 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   >
                     <Plus className="w-4 h-4" />
                     <span>{addingSubject ? 'Đang tạo...' : 'Tạo & Gán Cột Vào Bảng Điểm'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {addSubjectTab === 'replace' && (
+              <form onSubmit={handleReplaceSubject} className="space-y-4">
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Môn học hiện tại của lớp cần thay thế <span className="text-red-500">*</span>
+                  </label>
+                  {rawColumns.length > 0 ? (
+                    <select
+                      value={replaceOldSubjectId}
+                      onChange={(e) => setReplaceOldSubjectId(e.target.value)}
+                      className="form-input text-xs font-semibold text-slate-900"
+                      required
+                    >
+                      <option value="">-- Chọn môn hiện tại cần đổi --</option>
+                      {rawColumns.map((col) => (
+                        <option key={col.subjectId} value={col.subjectId}>
+                          {col.subjectCode} — {col.subjectName} ({col.credits} TC)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                      Lớp này hiện chưa có cột môn học nào để thay thế.
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Môn học mới thay thế <span className="text-red-500">*</span>
+                  </label>
+                  {availableSubjects.length > 0 ? (
+                    <select
+                      value={replaceNewSubjectId}
+                      onChange={(e) => setReplaceNewSubjectId(e.target.value)}
+                      className="form-input text-xs font-semibold text-slate-900"
+                      required
+                    >
+                      <option value="">-- Chọn môn mới thay thế từ danh mục --</option>
+                      {availableSubjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.code} — {sub.name} ({sub.credits} Tín chỉ)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                      Đang tải danh mục môn học...
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900 space-y-1">
+                  <p className="font-semibold text-amber-950 flex items-center gap-1.5">
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Phạm vi áp dụng riêng biệt cho lớp:</span>
+                  </p>
+                  <p>
+                    Thao tác đổi môn này chỉ áp dụng <strong>riêng cho lớp {matrixData?.classCode}</strong>, hoàn toàn <strong>KHÔNG</strong> ảnh hưởng đến chương trình đào tạo chung hay bất kỳ lớp nào khác.
+                  </p>
+                  <p className="text-amber-700">
+                    Môn mới sẽ xuất hiện trên bảng điểm và thay thế vị trí của môn cũ trong lớp này.
+                  </p>
+                </div>
+
+                <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddSubjectModalOpen(false)}
+                    disabled={replacingSubject}
+                    className="btn btn-secondary text-xs cursor-pointer"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={replacingSubject || !replaceOldSubjectId || !replaceNewSubjectId}
+                    className="btn btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    style={{ backgroundColor: '#b45309', borderColor: '#92400e' }}
+                  >
+                    <ArrowLeftRight className={`w-4 h-4 ${replacingSubject ? 'animate-spin' : ''}`} />
+                    <span>{replacingSubject ? 'Đang đổi môn...' : 'Xác Nhận Đổi Môn Cho Lớp'}</span>
                   </button>
                 </div>
               </form>

@@ -52,7 +52,8 @@ export default function App() {
       username: 'giangvien_a',
       fullName: 'Thượng úy Nguyễn Văn Giảng',
       role: 'ROLE_GIANGVIEN',
-      departmentId: 2
+      departmentId: 2,
+      departmentName: 'Bộ môn Binh chủng Hợp thành'
     });
   };
 

@@ -49,6 +49,7 @@ public class AuthController {
                     .fullName(userDetails.getFullName())
                     .role(userDetails.getRole())
                     .departmentId(userDetails.getDepartmentId())
+                    .departmentName(userDetails.getDepartmentName())
                     .build());
         } catch (org.springframework.security.core.AuthenticationException ex) {
             return ResponseEntity.status(401).body(java.util.Map.of(
@@ -124,6 +125,7 @@ public class AuthController {
                 .fullName(userDetails.getFullName())
                 .role(userDetails.getRole())
                 .departmentId(userDetails.getDepartmentId())
+                .departmentName(userDetails.getDepartmentName())
                 .build());
     }
 }

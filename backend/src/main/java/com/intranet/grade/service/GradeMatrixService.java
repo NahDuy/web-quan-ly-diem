@@ -55,6 +55,17 @@ public class GradeMatrixService {
             subjects = autoPopulateSubjectsFromCurriculum(clazz, sem);
         }
 
+        CustomUserDetails currentUser = getCurrentUser();
+        boolean isPrivileged = currentUser == null || Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode());
+        boolean isTeacherView = !isPrivileged && currentUser.getDepartmentId() != null;
+        String deptFilterName = isTeacherView ? currentUser.getDepartmentName() : null;
+
+        if (isTeacherView) {
+            subjects = subjects.stream()
+                    .filter(s -> s.getDepartment() != null && s.getDepartment().getId().equals(currentUser.getDepartmentId()))
+                    .collect(Collectors.toList());
+        }
+
         List<SubjectColumnDTO> columns = subjects.stream().map(s -> SubjectColumnDTO.builder()
                 .subjectId(s.getId())
                 .subjectCode(s.getCode())
@@ -167,6 +178,14 @@ public class GradeMatrixService {
             if (scorePol != null) gradExamScoresMap.put(101, scorePol);
             if (scoreMil != null) gradExamScoresMap.put(102, scoreMil);
             if (scoreSpe != null) gradExamScoresMap.put(103, scoreSpe);
+            if (isTeacherView) {
+                tbcScore = null;
+                conduct = null;
+                gradExamScoresMap = Collections.emptyMap();
+                tbcGradExamScore = null;
+                finalGradScore = null;
+                classification = null;
+            }
 
             rows.add(StudentRowDTO.builder()
                     .stt(stt++)
@@ -199,20 +218,32 @@ public class GradeMatrixService {
                 .lockedByUsername(lockOpt.map(l -> l.getLockedBy() != null ? l.getLockedBy().getUsername() : null).orElse(null))
                 .columns(columns)
                 .rows(rows)
+                .isTeacherView(isTeacherView)
+                .departmentFilterName(deptFilterName)
                 .build();
     }
 
     @Transactional
     public void bulkUpdateMatrix(Integer classId, BulkUpdateMatrixRequest request, String clientIp) {
         CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null) {
+            throw new AccessDeniedException("Yêu cầu đăng nhập để cập nhật điểm.");
+        }
+        boolean isPrivileged = Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode());
+
         int sem = request.getSemester() != null ? request.getSemester() : 1;
 
         // Check if grade sheet is locked
         Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem);
         if (lockOpt.isPresent() && lockOpt.get().getIsLocked()) {
-            if (!Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            if (!isPrivileged) {
                 throw new AccessDeniedException("BẢNG ĐIỂM ĐÃ BỊ KHÓA (LOCKED). Bạn không có quyền thay đổi.");
             }
+        }
+
+        // Giáo viên không có quyền sửa điểm rèn luyện hoặc điểm thi tốt nghiệp
+        if (!isPrivileged && request.getEvaluationUpdates() != null && !request.getEvaluationUpdates().isEmpty()) {
+            throw new AccessDeniedException("Giáo viên không có quyền chỉnh sửa điểm rèn luyện hoặc điểm thi tốt nghiệp. Chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền.");
         }
 
         ClassEntity clazz = classRepository.findById(classId)
@@ -232,6 +263,13 @@ public class GradeMatrixService {
                 Subject subject = subjectRepository.findById(item.getSubjectId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học ID: " + item.getSubjectId()));
 
+                // Kiểm tra môn học thuộc quyền phụ trách của giáo viên
+                if (!isPrivileged && currentUser.getDepartmentId() != null) {
+                    if (subject.getDepartment() == null || !subject.getDepartment().getId().equals(currentUser.getDepartmentId())) {
+                        throw new AccessDeniedException("Giáo viên chỉ được nhập điểm cho các môn thuộc khoa/bộ môn của mình (" + subject.getName() + " không thuộc quyền phụ trách).");
+                    }
+                }
+
                 Grade grade = gradeRepository.findByStudentIdAndSubjectIdAndClazzId(item.getStudentId(), item.getSubjectId(), classId)
                         .orElseGet(() -> Grade.builder()
                                 .student(student)
@@ -241,6 +279,12 @@ public class GradeMatrixService {
                                 .build());
 
                 BigDecimal oldScore = grade.getScore();
+
+                // Yêu cầu: Giáo viên chỉ được nhập 1 lần, chỉ có admin với PĐT mới có quyền sửa
+                if (!isPrivileged && oldScore != null) {
+                    throw new AccessDeniedException("Giáo viên chỉ được nhập điểm 1 lần cho môn " + subject.getName() + " (học viên " + student.getFullName() + "). Điểm đã lưu chỉ có Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền chỉnh sửa!");
+                }
+
                 grade.setScore(item.getScore());
                 grade.setUpdatedBy(userEntity);
                 grade = gradeRepository.saveAndFlush(grade);
@@ -507,7 +551,74 @@ public class GradeMatrixService {
         return result;
     }
 
+    @Transactional
+    public void replaceSubjectInClass(Integer classId, Integer semester, Integer oldSubjectId, Integer newSubjectId) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền đổi môn học cho lớp.");
+        }
+
+        ClassEntity clazz = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học: " + classId));
+        Subject oldSubject = subjectRepository.findById(oldSubjectId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học cũ ID: " + oldSubjectId));
+        Subject newSubject = subjectRepository.findById(newSubjectId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học mới ID: " + newSubjectId));
+
+        int sem = semester != null ? semester : 1;
+
+        // Tìm ClassSubject của lớp và môn cũ
+        ClassSubject cs = classSubjectRepository.findByClazzIdAndSubjectIdAndSemester(classId, oldSubjectId, sem)
+                .orElseThrow(() -> new IllegalArgumentException("Môn học " + oldSubject.getName() + " không có trong danh sách môn của lớp " + clazz.getCode()));
+
+        // Thay đổi sang môn mới cho riêng lớp này mà KHÔNG ảnh hưởng đến khung chương trình đào tạo chung
+        cs.setSubject(newSubject);
+        cs.setIsExtra(true); // Đánh dấu môn linh hoạt của lớp
+        classSubjectRepository.save(cs);
+
+        // Khởi tạo điểm cho môn mới đối với tất cả học viên trong lớp
+        List<Student> students = studentRepository.findByClazzIdOrderByStudentCodeAsc(clazz.getId());
+        for (Student st : students) {
+            if (gradeRepository.findByStudentIdAndSubjectIdAndClazzId(st.getId(), newSubject.getId(), clazz.getId()).isEmpty()) {
+                gradeRepository.save(Grade.builder()
+                        .student(st)
+                        .subject(newSubject)
+                        .clazz(clazz)
+                        .semester(sem)
+                        .score(null)
+                        .status("PENDING")
+                        .build());
+            }
+        }
+    }
+
+    @Transactional
+    public void removeSubjectFromClass(Integer classId, Integer semester, Integer subjectId) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền xóa môn học khỏi lớp.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        ClassSubject cs = classSubjectRepository.findByClazzIdAndSubjectIdAndSemester(classId, subjectId, sem)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học cần xóa trong lớp này"));
+
+        classSubjectRepository.delete(cs);
+
+        // Xóa bản ghi điểm của môn này trong lớp này
+        List<Grade> grades = gradeRepository.findByClazzIdAndSemester(classId, sem);
+        for (Grade g : grades) {
+            if (g.getSubject().getId().equals(subjectId)) {
+                gradeRepository.delete(g);
+            }
+        }
+    }
+
     private CustomUserDetails getCurrentUser() {
-        return (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+            return (CustomUserDetails) auth.getPrincipal();
+        }
+        return null;
     }
 }
