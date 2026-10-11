@@ -307,6 +307,14 @@ public class GradeMatrixService {
                     throw new AccessDeniedException("Giáo viên chỉ được nhập điểm 1 lần cho môn " + subject.getName() + " (học viên " + student.getFullName() + "). Điểm đã lưu chỉ có Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền chỉnh sửa!");
                 }
 
+                // Bảo mật: Nếu điều chỉnh điểm cũ đã có trong hệ thống, bắt buộc phải có lý do giải trình cụ thể
+                boolean isScoreModified = oldScore != null && (item.getScore() == null || oldScore.compareTo(item.getScore()) != 0);
+                if (isScoreModified) {
+                    if (request.getReason() == null || request.getReason().trim().isEmpty() || request.getReason().startsWith("Cập nhật điểm định kỳ")) {
+                        throw new IllegalArgumentException("Học viên " + student.getFullName() + " (môn " + subject.getName() + ") đã có điểm (" + oldScore + "). Việc điều chỉnh điểm cũ bắt buộc phải có lý do / số quyết định giải trình cụ thể để ghi nhận Audit Log!");
+                    }
+                }
+
                 grade.setScore(item.getScore());
                 grade.setUpdatedBy(userEntity);
                 grade = gradeRepository.saveAndFlush(grade);
@@ -354,6 +362,26 @@ public class GradeMatrixService {
                                 .conductGrade("KHA")
                                 .graduationClassification("CHUA_XET")
                                 .build());
+
+                // Kiểm tra sửa kết quả rèn luyện hoặc điểm thi tốt nghiệp đã có sẵn
+                boolean isEvalModified = false;
+                if (item.getConductGrade() != null && eval.getConductGrade() != null && !item.getConductGrade().equals(eval.getConductGrade())) {
+                    isEvalModified = true;
+                }
+                if (item.getScorePolitical() != null && eval.getScorePolitical() != null && eval.getScorePolitical().compareTo(item.getScorePolitical()) != 0) {
+                    isEvalModified = true;
+                }
+                if (item.getScoreMilitary() != null && eval.getScoreMilitary() != null && eval.getScoreMilitary().compareTo(item.getScoreMilitary()) != 0) {
+                    isEvalModified = true;
+                }
+                if (item.getScoreSpecialty() != null && eval.getScoreSpecialty() != null && eval.getScoreSpecialty().compareTo(item.getScoreSpecialty()) != 0) {
+                    isEvalModified = true;
+                }
+                if (isEvalModified) {
+                    if (request.getReason() == null || request.getReason().trim().isEmpty() || request.getReason().startsWith("Cập nhật điểm định kỳ")) {
+                        throw new IllegalArgumentException("Học viên " + student.getFullName() + " đã có điểm tốt nghiệp/kết quả rèn luyện. Việc điều chỉnh dữ liệu cũ bắt buộc phải có lý do / căn cứ quyết định giải trình cụ thể để lưu Audit Log!");
+                    }
+                }
 
                 if (item.getConductGrade() != null) {
                     eval.setConductGrade(item.getConductGrade());

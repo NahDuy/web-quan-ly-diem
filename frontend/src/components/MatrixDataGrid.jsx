@@ -341,6 +341,79 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                             Object.keys(editedConducts).length +
                             Object.keys(editedGradExamScores).length;
 
+  // Phát hiện các ô đang sửa có phải là "SỬA ĐIỂM CŨ ĐÃ CÓ" không
+  const oldScoreChanges = useMemo(() => {
+    const list = [];
+    if (!matrixData?.rows) return list;
+
+    // 1. Kiểm tra điểm môn học phần
+    Object.entries(editedScores).forEach(([key, newScore]) => {
+      const [sId, subId] = key.split('_');
+      const studentId = parseInt(sId);
+      const subjectId = parseInt(subId);
+      const studentRow = matrixData.rows.find((r) => r.studentId === studentId);
+      const gradeDetail = studentRow?.grades ? studentRow.grades[subjectId] : null;
+      const oldScore = gradeDetail?.score;
+
+      if (oldScore !== null && oldScore !== undefined && oldScore !== '') {
+        const parsedNew = (newScore !== '' && newScore !== null && newScore !== undefined) ? parseFloat(newScore) : null;
+        const parsedOld = parseFloat(oldScore);
+        if (parsedNew !== parsedOld) {
+          const colInfo = (matrixData.columns || []).find(c => c.subjectId === subjectId);
+          list.push({
+            type: 'Môn học',
+            studentName: studentRow?.fullName || `Học viên #${studentId}`,
+            subjectName: colInfo?.subjectName || `Môn #${subjectId}`,
+            oldVal: parsedOld,
+            newVal: parsedNew !== null ? parsedNew : 'Xóa điểm'
+          });
+        }
+      }
+    });
+
+    // 2. Kiểm tra điểm rèn luyện
+    Object.entries(editedConducts).forEach(([sId, newConduct]) => {
+      const studentId = parseInt(sId);
+      const studentRow = matrixData.rows.find((r) => r.studentId === studentId);
+      const oldConduct = studentRow?.conductGrade;
+      if (oldConduct && oldConduct !== newConduct) {
+        list.push({
+          type: 'Rèn luyện',
+          studentName: studentRow?.fullName || `Học viên #${studentId}`,
+          subjectName: 'Rèn luyện',
+          oldVal: oldConduct,
+          newVal: newConduct
+        });
+      }
+    });
+
+    // 3. Kiểm tra điểm thi tốt nghiệp
+    Object.entries(editedGradExamScores).forEach(([key, newScore]) => {
+      const [sId, gradSubId] = key.split('_');
+      const studentId = parseInt(sId);
+      const studentRow = matrixData.rows.find((r) => r.studentId === studentId);
+      const oldGradScore = studentRow?.gradExamScores ? studentRow.gradExamScores[parseInt(gradSubId)] : null;
+      if (oldGradScore !== null && oldGradScore !== undefined && oldGradScore !== '') {
+        const parsedNew = (newScore !== '' && newScore !== null && newScore !== undefined) ? parseFloat(newScore) : null;
+        const parsedOld = parseFloat(oldGradScore);
+        if (parsedNew !== parsedOld) {
+          const gradSubName = gradSubId === '101' ? 'Thi Chính trị' : gradSubId === '102' ? 'Thi Quân sự chung' : 'Thi Chuyên ngành';
+          list.push({
+            type: 'Tốt nghiệp',
+            studentName: studentRow?.fullName || `Học viên #${studentId}`,
+            subjectName: gradSubName,
+            oldVal: parsedOld,
+            newVal: parsedNew !== null ? parsedNew : 'Xóa điểm'
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [editedScores, editedConducts, editedGradExamScores, matrixData]);
+
+  const hasOldScoreModification = oldScoreChanges.length > 0;
+
   const fetchAvailableSubjects = async () => {
     try {
       const token = localStorage.getItem('jwt_token');
@@ -577,9 +650,50 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     } catch (e) { alert('Lỗi mở khóa bảng điểm'); }
   };
 
-  // Quick direct save for ongoing grade entries (e.g. nhập trước 10 đồng chí, mỗi đồng chí 5 môn)
+  // Hàm điều phối lưu điểm thông minh & chống lỗ hổng bypass
+  const handleTriggerSave = () => {
+    if (!hasUnsavedChanges) return;
+
+    // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
+    for (const [key, score] of Object.entries(editedScores)) {
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
+      }
+    }
+    for (const [key, score] of Object.entries(editedGradExamScores)) {
+      if (score !== '' && score !== null && score !== undefined) {
+        const num = parseFloat(score);
+        if (isNaN(num) || num < 0 || num > 10) {
+          alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          return;
+        }
+      }
+    }
+
+    // Nếu phát hiện có chỉnh sửa điểm cũ: BẮT BUỘC 100% mở modal nhập lý do
+    if (hasOldScoreModification) {
+      setAuditReason('');
+      setIsReasonModalOpen(true);
+    } else {
+      // Chỉ nhập mới hoàn toàn: lưu trực tiếp
+      handleSaveDirect();
+    }
+  };
+
+  // Quick direct save (chỉ dành cho nhập điểm mới lần đầu)
   const handleSaveDirect = async () => {
     if (!hasUnsavedChanges) return;
+
+    // Chặn triệt để lỗ hổng: Nếu có sửa điểm cũ, không bao giờ được lưu trực tiếp
+    if (hasOldScoreModification) {
+      setAuditReason('');
+      setIsReasonModalOpen(true);
+      return;
+    }
 
     // Kiểm tra phạm vi điểm từ 0 đến 10 trước khi lưu
     for (const [key, score] of Object.entries(editedScores)) {
@@ -953,11 +1067,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
       )}
       
-      {/* Control Bar - Tinh gọn & Phân chia khoa học thành 3 khối */}
-      <div className="glass-panel p-3 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3">
-        {/* KHỐI 1: CHỌN LỚP ĐÀO TẠO */}
-        <div className="flex items-center gap-2 flex-1 min-w-[280px] max-w-xl">
-          <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 bg-slate-100/90 rounded-lg border border-slate-200">
+      {/* Control Bar - Cân đối, chuyên nghiệp chuẩn Quân sự */}
+      <div className="glass-panel p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3">
+        {/* KHỐI 1: BỘ LỌC CHỌN LỚP & THÔNG TIN HỌC KỲ */}
+        <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+          <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 bg-slate-100 rounded-lg border border-slate-200">
             <BookOpen className="w-4 h-4 text-emerald-700" />
             <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Lớp:
@@ -969,7 +1083,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <select
             value={classId}
             onChange={(e) => setClassId(parseInt(e.target.value))}
-            className="form-input text-xs font-bold text-slate-900 flex-1 h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg cursor-pointer"
+            className="form-input text-xs font-bold text-slate-900 flex-1 max-w-md h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg cursor-pointer"
           >
             {classList.length > 0 ? (
               classList.map((cls) => {
@@ -992,89 +1106,99 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               </>
             )}
           </select>
+
+          {/* Badge trạng thái niêm phong / mở */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shrink-0">
+            {matrixData.isLocked ? (
+              <span className="inline-flex items-center gap-1 text-red-700">
+                <Lock className="w-3.5 h-3.5 text-red-600" /> Đã khóa
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <Unlock className="w-3.5 h-3.5 text-emerald-600" /> Đang mở
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* KHỐI 2: THAO TÁC NHẬP LIỆU (LƯU ĐIỂM / LƯU CÓ LÝ DO / ĐỔI MÔN) */}
-        {!isDonVi ? (
-          <div className="flex items-center gap-2">
-            {/* Nút 1: LƯU ĐIỂM TRỰC TIẾP */}
-            <button
-              onClick={handleSaveDirect}
-              disabled={!hasUnsavedChanges || saving}
-              className={`btn btn-sm h-9 flex items-center gap-1.5 transition ${
-                hasUnsavedChanges
-                  ? 'btn-primary font-bold shadow-sm cursor-pointer'
-                  : 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-              }`}
-              style={hasUnsavedChanges ? { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' } : {}}
-              title={
-                hasUnsavedChanges
-                  ? `Lưu nhanh ${totalChangesCount} ô điểm vừa nhập vào hệ thống`
-                  : 'Chưa có thay đổi điểm nào cần lưu'
-              }
-            >
-              <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
-              <span>Lưu Điểm {hasUnsavedChanges ? `(${totalChangesCount})` : ''}</span>
-            </button>
-
-            {/* Nút 2: LƯU ĐIỂM KÈM AUDIT LOG (Admin/PĐT) */}
-            {isPrivilegedUser && hasUnsavedChanges && (
+        {/* KHỐI 2: CỤM NÚT CHỨC NĂNG CÂN ĐỐI (ĐỒNG BỘ CHIỀU CAO h-9) */}
+        <div className="flex items-center gap-2 shrink-0">
+          {!isDonVi ? (
+            <>
+              {/* NÚT LƯU ĐIỂM DUY NHẤT & CHẶT CHẼ BẢO MẬT */}
               <button
-                onClick={() => {
-                  setAuditReason('');
-                  setIsReasonModalOpen(true);
-                }}
-                disabled={saving}
-                className="btn btn-sm h-9 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
-                style={{
-                  backgroundColor: '#fef3c7',
-                  color: '#b45309',
-                  border: '1px solid #fde047'
-                }}
-                title="Lưu kèm ghi lý do/quyết định sửa điểm vào Nhật ký Audit Log"
+                onClick={handleTriggerSave}
+                disabled={!hasUnsavedChanges || saving}
+                className={`btn btn-sm h-9 px-3.5 flex items-center gap-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ${
+                  !hasUnsavedChanges
+                    ? 'btn-secondary text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                    : hasOldScoreModification
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-700'
+                    : 'btn-primary font-bold shadow-sm'
+                }`}
+                style={
+                  !hasUnsavedChanges
+                    ? {}
+                    : hasOldScoreModification
+                    ? { backgroundColor: '#d97706', borderColor: '#b45309', color: '#ffffff' }
+                    : { backgroundColor: '#15803d', borderColor: '#166534', color: '#ffffff' }
+                }
+                title={
+                  !hasUnsavedChanges
+                    ? 'Chưa có thay đổi nào cần lưu'
+                    : hasOldScoreModification
+                    ? `Phát hiện ${oldScoreChanges.length} ô điểm cũ bị điều chỉnh — Bắt buộc nhập lý do/quyết định vào Nhật ký Audit Log!`
+                    : `Lưu nhanh ${totalChangesCount} ô điểm mới nhập`
+                }
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
-                <span>Lưu Kèm Lý Do</span>
+                {hasOldScoreModification ? (
+                  <ShieldAlert className="w-4 h-4 text-white" />
+                ) : (
+                  <Save className={`w-4 h-4 ${saving ? 'animate-spin' : ''}`} />
+                )}
+                <span>
+                  {!hasUnsavedChanges
+                    ? 'Lưu Điểm'
+                    : hasOldScoreModification
+                    ? `Lưu Sửa Điểm (${totalChangesCount}) *`
+                    : `Lưu Điểm Mới (${totalChangesCount})`}
+                </span>
               </button>
-            )}
 
-            {/* Nút 3: THÊM / SỬA MÔN (Admin/PĐT/Trưởng Khoa) */}
-            {canManageSubjects && (
-              <button
-                type="button"
-                onClick={() => {
-                  fetchAvailableSubjects();
-                  setAddSubjectTab('existing');
-                  setIsAddSubjectModalOpen(true);
-                }}
-                className="btn btn-secondary btn-sm h-9 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                style={{ color: '#15803d', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
-                title="Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp"
-              >
-                <Plus className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="font-semibold text-emerald-800">Thêm / Sửa Môn</span>
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs font-bold">
-            <Shield className="w-4 h-4 text-blue-600" />
-            <span>Quyền Đơn vị: Xem điểm các đối tượng</span>
-          </div>
-        )}
+              {/* NÚT THÊM / SỬA MÔN */}
+              {canManageSubjects && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchAvailableSubjects();
+                    setAddSubjectTab('existing');
+                    setIsAddSubjectModalOpen(true);
+                  }}
+                  className="btn btn-secondary btn-sm h-9 px-3 flex items-center gap-1.5 text-xs font-bold rounded-lg border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
+                  title="Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp"
+                >
+                  <Plus className="w-4 h-4 text-emerald-700" />
+                  <span>Thêm / Sửa Môn</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 h-9 px-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs font-bold">
+              <Shield className="w-4 h-4 text-blue-600" />
+              <span>Quyền Đơn vị: Xem điểm</span>
+            </div>
+          )}
 
-        {/* KHỐI 3: XUẤT BÁO CÁO KẾT QUẢ CHÍNH THỨC */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-lg">
-          {/* NÚT DROPDOWN XUẤT BÁO CÁO KẾT QUẢ */}
+          {/* NÚT XUẤT BÁO CÁO (ĐỒNG BỘ CHIỀU CAO h-9, BỎ KHUNG XÁM THỪA) */}
           <div className="relative">
             <button
               onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-              className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1 cursor-pointer rounded-md"
-              title="Chọn định dạng xuất báo cáo kết quả"
+              className="btn btn-secondary btn-sm h-9 px-3 text-xs font-bold flex items-center gap-1.5 rounded-lg border-slate-300 hover:border-slate-400 text-slate-800 bg-white shadow-2xs cursor-pointer"
+              title="Chọn định dạng xuất báo cáo kết quả chính thức"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
+              <FileSpreadsheet className="w-4 h-4 text-blue-600" />
               <span>Xuất Báo Cáo</span>
-              <ChevronDown className="w-3 h-3 text-slate-500" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
             </button>
 
             {exportDropdownOpen && (
@@ -1661,14 +1785,38 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               </button>
             </div>
 
-            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl mb-4 text-xs text-amber-950 space-y-1">
-              <p className="font-bold">
-                ⚠️ Đang chuẩn bị lưu <span className="text-red-700">{totalChangesCount}</span> ô điểm đã chỉnh sửa.
+            <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl mb-3 text-xs text-amber-950 space-y-1">
+              <p className="font-bold flex items-center justify-between">
+                <span>⚠️ Chuẩn bị lưu <strong className="text-red-700">{totalChangesCount}</strong> ô điểm (trong đó có <strong className="text-red-700">{oldScoreChanges.length}</strong> ô sửa điểm cũ).</span>
               </p>
               <p className="text-[11px] text-amber-800">
                 Toàn bộ dữ liệu điểm cũ, điểm mới, tài khoản thao tác và địa chỉ IP sẽ được lưu vết vào bảng Kiểm toán (Audit Log) theo điều lệnh quân sự.
               </p>
             </div>
+
+            {/* BẢNG TÓM TẮT CÁC Ô ĐIỂM CŨ BỊ SỬA */}
+            {oldScoreChanges.length > 0 && (
+              <div className="mb-3 border border-amber-200/80 bg-amber-50/40 rounded-xl p-3 text-xs">
+                <div className="font-bold text-amber-950 mb-1.5 flex items-center justify-between">
+                  <span>Chi tiết các điểm cũ bị sửa đổi ({oldScoreChanges.length}):</span>
+                  <span className="text-[10px] font-bold text-red-700 uppercase bg-red-100 px-1.5 py-0.5 rounded border border-red-200">
+                    Bắt buộc có lý do
+                  </span>
+                </div>
+                <div className="max-h-36 overflow-y-auto divide-y divide-amber-200/60 font-mono text-[11px] pr-1">
+                  {oldScoreChanges.map((item, idx) => (
+                    <div key={idx} className="py-1 flex items-center justify-between gap-2">
+                      <span className="text-slate-800 font-sans font-medium truncate">
+                        {item.studentName} — <strong className="text-amber-900">{item.subjectName}</strong>
+                      </span>
+                      <span className="shrink-0 text-slate-700">
+                        <span className="text-red-700 font-bold line-through">{item.oldVal}</span> ➔ <span className="text-emerald-700 font-bold">{item.newVal}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3 mb-5">
               <div>
