@@ -1706,10 +1706,12 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     const isLockedForTeacher = !isPrivilegedUser && hasExistingScore;
                     const userAssignedSubjects = currentUser?.assignedSubjectIds || matrixData?.assignedSubjectIds || [];
                     const isSubjectAllowedForTeacher = !isGiangVien || userAssignedSubjects.includes(col.subjectId);
-                    const isCellDisabled = isDonVi || (matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher || !isSubjectAllowedForTeacher;
+                    const isCellDisabled = !currentUser || isDonVi || (matrixData.isLocked && !isPrivilegedUser) || isLockedForTeacher || !isSubjectAllowedForTeacher;
 
                     let cellTitle = 'Nhập điểm (0-10, ví dụ 9.5). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo';
-                    if (isDonVi) {
+                    if (!currentUser) {
+                      cellTitle = 'Đồng chí cần đăng nhập tài khoản để thực hiện thao tác nhập điểm';
+                    } else if (isDonVi) {
                       cellTitle = 'Tài khoản Đơn vị chỉ có quyền tra cứu/xem điểm (chế độ Read-only)';
                     } else if (!isSubjectAllowedForTeacher) {
                       cellTitle = 'Bạn không được phân công giảng dạy môn học này';
@@ -1788,14 +1790,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                               id={`grad-score-input-${rowIdx}-${gradIdx}`}
                               data-row-idx={rowIdx}
                               data-grad-idx={gradIdx}
-                              disabled={matrixData.isLocked && !isPrivilegedUser}
+                              disabled={!currentUser || (matrixData.isLocked && !isPrivilegedUser)}
                               value={val !== null && val !== undefined ? val : ''}
                               onChange={(e) => handleGradExamScoreInputChange(row.studentId, gradSub.id, e.target.value)}
                               onKeyDown={(e) => handleGridKeyDown(e, rowIdx, gradIdx, true)}
                               onBlur={(e) => handleGradExamScoreBlur(row.studentId, gradSub.id, e.target.value)}
                               placeholder="-"
-                              title="Điểm thi tốt nghiệp (0-10). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo"
-                              className={`cell-input text-center text-amber-800 font-bold ${isEdited ? 'font-extrabold' : ''} ${matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                              title={!currentUser ? "Đồng chí cần đăng nhập tài khoản để thực hiện thao tác nhập điểm" : "Điểm thi tốt nghiệp (0-10). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo"}
+                              className={`cell-input text-center text-amber-800 font-bold ${isEdited ? 'font-extrabold' : ''} ${!currentUser || matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                             />
                           </td>
                         );

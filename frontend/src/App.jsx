@@ -9,6 +9,7 @@ import AuditLogView from './components/AuditLogView';
 import CurriculumRoadmapView from './components/CurriculumRoadmapView';
 import MajorManagementView from './components/MajorManagementView';
 import DepartmentUnitManagementView from './components/DepartmentUnitManagementView';
+import AuthPortalView from './components/AuthPortalView';
 import { User, LogIn, LogOut } from 'lucide-react';
 
 const TAB_NAMES = {
@@ -24,6 +25,7 @@ const TAB_NAMES = {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [importModalConfig, setImportModalConfig] = useState({
@@ -43,6 +45,7 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUser(data);
+          setAuthLoading(false);
           return;
         }
       } catch (e) {
@@ -50,6 +53,7 @@ export default function App() {
       }
     }
     setCurrentUser(null);
+    setAuthLoading(false);
   };
 
   useEffect(() => {
@@ -59,8 +63,29 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('jwt_token');
     setCurrentUser(null);
-    window.location.reload();
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs font-semibold text-slate-300 tracking-wider uppercase font-military">
+          Đang xác thực bảo mật hệ thống...
+        </p>
+      </div>
+    );
+  }
+
+  // Yêu cầu đăng nhập bắt buộc: Nếu chưa đăng nhập, hiển thị màn hình Auth Portal quân sự
+  if (!currentUser) {
+    return (
+      <AuthPortalView
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+      />
+    );
+  }
 
   const pageTitle = TAB_NAMES[activeTab] || 'Bảng Quản lý Điểm';
 
