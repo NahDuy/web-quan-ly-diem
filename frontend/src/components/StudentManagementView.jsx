@@ -9,8 +9,7 @@ export default function StudentManagementView({ currentUser }) {
   // 2. Chủ nhiệm Bộ môn (ROLE_BOMON) -> CÓ QUYỀN XÓA LỚP
   // 3. Giáo viên Huấn luyện (ROLE_GIANGVIEN) -> KHÔNG ĐƯỢC XÓA LỚP
   // 4. Học viên Quân sự (ROLE_SINHVIEN) -> KHÔNG ĐƯỢC XÓA LỚP
-  const userRole = currentUser?.role || 'ROLE_GIANGVIEN';
-  const canDeleteClasses = ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN', 'ROLE_BOMON'].includes(userRole);
+  const canDeleteClasses = ['ROLE_BGH', 'ROLE_PDT', 'ROLE_BOMON'].includes(userRole);
 
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);

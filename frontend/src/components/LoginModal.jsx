@@ -345,32 +345,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                 ⚡ Tài khoản test (Username = Password):
               </p>
 
-              {/* SUPER ADMIN ACCOUNT BUTTON */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'admin')}
-                disabled={submitting}
-                className="btn btn-xs"
-                style={{
-                  width: '100%',
-                  padding: '7px 10px',
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  background: 'linear-gradient(135deg, #ffe4e6, #fecdd3)',
-                  color: '#9f1239',
-                  border: '1px solid #f43f5e',
-                  borderRadius: '7px',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  marginBottom: '8px',
-                  boxShadow: '0 1px 2px rgba(225, 29, 72, 0.15)'
-                }}
-                title="Tài khoản: admin / admin (Toàn quyền quản trị, cứu hộ và phân quyền)"
-              >
-                <span style={{ fontSize: '0.9rem', marginRight: '4px' }}>👑</span>
-                <span>Tài khoản Quản trị viên Tối cao (Super Admin) &nbsp;—&nbsp; <strong style={{ fontFamily: 'monospace', textDecoration: 'underline' }}>admin / admin</strong></span>
-              </button>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <button
                   type="button"

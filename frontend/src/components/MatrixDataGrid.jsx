@@ -285,7 +285,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   }, [classId, semester]);
 
   const userRole = currentUser?.role || matrixData?.userRole || '';
-  const isPrivilegedUser = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(userRole);
+  const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
   const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
   const isDonVi = userRole === 'ROLE_DONVI';
   const isGiangVien = userRole === 'ROLE_GIANGVIEN';

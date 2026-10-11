@@ -32,8 +32,17 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("Checking & Initializing default security users, roles, and departments...");
 
-        Role roleAdmin = roleRepository.findByCode("ROLE_ADMIN")
-                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_ADMIN").name("Quản trị viên Hệ thống").build()));
+        // Cleanup any legacy admin user or role if exists
+        try {
+            userRepository.findByUsername("admin").ifPresent(adminUser -> {
+                jdbcTemplate.update("UPDATE grades SET updated_by = NULL WHERE updated_by = ?", adminUser.getId());
+                userRepository.delete(adminUser);
+            });
+            roleRepository.findByCode("ROLE_ADMIN").ifPresent(roleRepository::delete);
+        } catch (Exception e) {
+            log.warn("Notice cleaning up admin user: {}", e.getMessage());
+        }
+
         Role roleBgh = roleRepository.findByCode("ROLE_BGH")
                 .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_BGH").name("Ban Giám Hiệu").build()));
         Role rolePdt = roleRepository.findByCode("ROLE_PDT")
@@ -64,10 +73,7 @@ public class DataInitializer implements CommandLineRunner {
         Department donviD2 = departmentRepository.findByCode("D2")
                 .orElseGet(() -> departmentRepository.save(Department.builder().code("D2").name("Tiểu đoàn 2 - Quản lý Học viên").type("DON_VI").build()));
 
-        // 1. Tài khoản Quản trị viên tối cao duy nhất
-        createOrUpdateUser("admin", passwordEncoder.encode("admin"), "Quản trị viên Hệ thống (System Admin)", "admin@intranet.edu.vn", roleAdmin, bghDept);
-
-        // 2. Khởi tạo 5 tài khoản test tương ứng với 5 role nghiệp vụ: username = password
+        // Khởi tạo 5 tài khoản test tương ứng với 5 role nghiệp vụ: username = password
         createOrUpdateUser("bgh", passwordEncoder.encode("bgh"), "Thiếu tướng Trần Quốc Tuấn (Ban Giám Hiệu)", "bgh@intranet.edu.vn", roleBgh, bghDept);
         createOrUpdateUser("pdt", passwordEncoder.encode("pdt"), "Đại tá Nguyễn Đức Phòng (Trưởng Phòng Đào Tạo)", "pdt@intranet.edu.vn", rolePdt, pdtDept);
         createOrUpdateUser("truongkhoa", passwordEncoder.encode("truongkhoa"), "Thượng tá Lê Đình Khoa (Trưởng Khoa Binh chủng Hợp thành)", "truongkhoa@intranet.edu.vn", roleTruongKhoa, khoaBc);

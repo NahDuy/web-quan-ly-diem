@@ -22,11 +22,17 @@ import {
   School
 } from 'lucide-react';
 
-export default function DepartmentUnitManagementView({ currentUser }) {
-  const [activeSubTab, setActiveSubTab] = useState('departments'); // 'departments' | 'assignments' | 'users'
+export default function DepartmentUnitManagementView({ currentUser, initialSubTab = 'departments' }) {
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'departments' | 'assignments' | 'users'
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Data states
   const [departments, setDepartments] = useState([]);
@@ -66,7 +72,7 @@ export default function DepartmentUnitManagementView({ currentUser }) {
   const [userSearchTerm, setUserSearchTerm] = useState('');
 
   const userRole = currentUser?.role || '';
-  const isPrivileged = ['ROLE_ADMIN', 'ROLE_BGH', 'ROLE_PDT'].includes(userRole);
+  const isPrivileged = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
   const isTruongKhoa = userRole === 'ROLE_TRUONGKHOA' || userRole === 'ROLE_BOMON';
 
   // Headers helper
@@ -606,7 +612,7 @@ export default function DepartmentUnitManagementView({ currentUser }) {
           <span>2. Môn học theo Khoa & Phân công Giảng dạy</span>
         </button>
 
-        {currentUser?.role === 'ROLE_ADMIN' && (
+        {isPrivileged && (
           <button
             onClick={() => setActiveSubTab('users')}
             className={`pb-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition cursor-pointer ${
@@ -911,8 +917,8 @@ export default function DepartmentUnitManagementView({ currentUser }) {
         </div>
       )}
 
-      {/* SUB-TAB 3: USERS & ROLE MANAGEMENT (CHỈ DÀNH CHO ADMIN) */}
-      {activeSubTab === 'users' && currentUser?.role === 'ROLE_ADMIN' && (
+      {/* SUB-TAB 3: USERS & ROLE MANAGEMENT (DÀNH CHO BGH & PĐT) */}
+      {activeSubTab === 'users' && isPrivileged && (
         <div className="bg-white p-6 rounded-b-xl border border-slate-200 shadow-xs space-y-4 -mt-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>

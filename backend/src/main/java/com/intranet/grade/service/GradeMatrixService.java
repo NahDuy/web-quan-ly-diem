@@ -58,7 +58,7 @@ public class GradeMatrixService {
 
         CustomUserDetails currentUser = getCurrentUser();
         String roleCode = currentUser != null ? currentUser.getRoleCode() : "ANONYMOUS";
-        boolean isPrivileged = currentUser == null || Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(roleCode);
+        boolean isPrivileged = currentUser == null || Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(roleCode);
         boolean isDonVi = "ROLE_DONVI".equals(roleCode);
         boolean isGiangVien = "ROLE_GIANGVIEN".equals(roleCode);
         boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
@@ -244,7 +244,7 @@ public class GradeMatrixService {
             throw new AccessDeniedException("Tài khoản Đơn vị chỉ có quyền xem điểm các đối tượng, không có quyền chỉnh sửa hoặc nhập điểm.");
         }
 
-        boolean isPrivileged = Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(roleCode);
+        boolean isPrivileged = Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(roleCode);
         boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
         boolean isGiangVien = "ROLE_GIANGVIEN".equals(roleCode);
 
@@ -586,7 +586,7 @@ public class GradeMatrixService {
     @Transactional
     public void replaceSubjectInClass(Integer classId, Integer semester, Integer oldSubjectId, Integer newSubjectId) {
         CustomUserDetails currentUser = getCurrentUser();
-        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+        if (currentUser != null && !Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
             throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền đổi môn học cho lớp.");
         }
 
@@ -627,7 +627,7 @@ public class GradeMatrixService {
     @Transactional
     public void removeSubjectFromClass(Integer classId, Integer semester, Integer subjectId) {
         CustomUserDetails currentUser = getCurrentUser();
-        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+        if (currentUser != null && !Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
             throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền xóa môn học khỏi lớp.");
         }
 
@@ -649,7 +649,7 @@ public class GradeMatrixService {
     @Transactional
     public void updateSubject(Integer subjectId, String subjectCode, String subjectName, Integer credits) {
         CustomUserDetails currentUser = getCurrentUser();
-        if (currentUser != null && !Arrays.asList("ROLE_ADMIN", "ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
+        if (currentUser != null && !Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(currentUser.getRoleCode())) {
             throw new AccessDeniedException("Chỉ Quản trị viên hoặc Phòng Đào Tạo mới có quyền chỉnh sửa môn học.");
         }
 

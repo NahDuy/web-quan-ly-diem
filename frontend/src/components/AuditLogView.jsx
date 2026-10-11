@@ -40,8 +40,8 @@ const MOCK_LOGS = [
     oldValue: 8.0,
     newValue: 8.0,
     reason: 'Kiểm tra đối chiếu điểm danh và sổ điểm giảng viên',
-    modifiedByUsername: 'admin_daotao',
-    modifiedByRole: 'ROLE_ADMIN',
+    modifiedByUsername: 'pdt',
+    modifiedByRole: 'ROLE_PDT',
     ipAddress: '192.168.1.10'
   },
   {
@@ -269,7 +269,8 @@ export default function AuditLogView() {
               className="form-input text-xs py-2 w-full font-medium"
             >
               <option value="ALL">Tất cả vai trò</option>
-              <option value="ROLE_ADMIN">Quản trị viên (ADMIN)</option>
+              <option value="ROLE_BGH">Ban Giám Hiệu (BGH)</option>
+              <option value="ROLE_PDT">Phòng Đào Tạo (PĐT)</option>
               <option value="ROLE_GIANGVIEN">Giảng viên bộ môn</option>
               <option value="ROLE_BOMON">Trưởng Bộ Môn</option>
               <option value="ROLE_KHAOTHI">Ban Khảo Thí</option>
