@@ -48,4 +48,10 @@ public class GradeLock {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unlocked_by")
     private User unlockedBy;
+
+    @Column(name = "lock_deadline")
+    private ZonedDateTime lockDeadline;
+
+    @Column(name = "auto_lock_reason")
+    private String autoLockReason;
 }

@@ -41,9 +41,27 @@ public class GradeMatrixService {
 
         int sem = semester != null ? semester : 1;
 
-        // Check Lock Status
+        // Check Lock Status & Auto-Lock Deadline
         Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem);
-        boolean isLocked = lockOpt.isPresent() && lockOpt.get().getIsLocked();
+        boolean isLocked = false;
+        ZonedDateTime lockDeadline = null;
+        String autoLockReason = null;
+
+        if (lockOpt.isPresent()) {
+            GradeLock lock = lockOpt.get();
+            lockDeadline = lock.getLockDeadline();
+            autoLockReason = lock.getAutoLockReason();
+
+            if (Boolean.TRUE.equals(lock.getIsLocked())) {
+                isLocked = true;
+            } else if (lockDeadline != null && ZonedDateTime.now().isAfter(lockDeadline)) {
+                // Đã quá hạn chót hẹn lịch -> Tự động kích hoạt khóa bảng điểm
+                lock.setIsLocked(true);
+                lock.setLockedAt(lockDeadline);
+                gradeLockRepository.save(lock);
+                isLocked = true;
+            }
+        }
 
         // 1. Fetch Subjects (From ClassSubjects if configured, else auto-populate & snapshot)
         List<ClassSubject> classSubjects = classSubjectRepository.findByClazzIdAndSemesterOrderByIsExtraAscDisplayOrderAsc(classId, sem);
@@ -223,6 +241,8 @@ public class GradeMatrixService {
                 .isLocked(isLocked)
                 .lockedAt(lockOpt.map(GradeLock::getLockedAt).orElse(null))
                 .lockedByUsername(lockOpt.map(l -> l.getLockedBy() != null ? l.getLockedBy().getUsername() : null).orElse(null))
+                .lockDeadline(lockDeadline)
+                .autoLockReason(autoLockReason)
                 .columns(columns)
                 .rows(rows)
                 .isTeacherView(isTeacherView)
@@ -450,8 +470,54 @@ public class GradeMatrixService {
         if (lockOpt.isPresent()) {
             GradeLock lock = lockOpt.get();
             lock.setIsLocked(false);
+            lock.setLockDeadline(null);
+            lock.setAutoLockReason(null);
             lock.setUnlockedAt(ZonedDateTime.now());
             lock.setUnlockedBy(userRepository.findById(currentUser.getId()).orElse(null));
+            gradeLockRepository.save(lock);
+        }
+    }
+
+    @Transactional
+    public void scheduleLockMatrix(Integer classId, Integer semester, ZonedDateTime deadline, String reason) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền hẹn lịch khóa bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        ClassEntity clazz = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lớp học"));
+
+        GradeLock lock = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem)
+                .orElseGet(() -> GradeLock.builder().clazz(clazz).semester(sem).build());
+
+        lock.setLockDeadline(deadline);
+        lock.setAutoLockReason(reason != null && !reason.trim().isEmpty() ? reason.trim() : "Hạn chót nhập điểm học phần");
+
+        if (deadline != null && ZonedDateTime.now().isAfter(deadline)) {
+            lock.setIsLocked(true);
+            lock.setLockedAt(deadline);
+        } else {
+            lock.setIsLocked(false);
+        }
+
+        gradeLockRepository.save(lock);
+    }
+
+    @Transactional
+    public void cancelScheduleLock(Integer classId, Integer semester) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền hủy lịch hẹn khóa bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem);
+        if (lockOpt.isPresent()) {
+            GradeLock lock = lockOpt.get();
+            lock.setLockDeadline(null);
+            lock.setAutoLockReason(null);
             gradeLockRepository.save(lock);
         }
     }

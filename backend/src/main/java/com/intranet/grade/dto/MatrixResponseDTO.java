@@ -24,6 +24,8 @@ public class MatrixResponseDTO {
     private Boolean isLocked;
     private ZonedDateTime lockedAt;
     private String lockedByUsername;
+    private ZonedDateTime lockDeadline;
+    private String autoLockReason;
 
     private List<SubjectColumnDTO> columns;
     private List<StudentRowDTO> rows;

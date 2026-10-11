@@ -126,6 +126,42 @@ public class ClassMatrixController {
         ));
     }
 
+    @PostMapping("/{classId}/schedule-lock")
+    public ResponseEntity<Map<String, Object>> scheduleLockGradeMatrix(
+            @PathVariable Integer classId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester,
+            @RequestParam String deadline,
+            @RequestParam(required = false) String reason) {
+
+        java.time.ZonedDateTime zdt;
+        try {
+            zdt = java.time.ZonedDateTime.parse(deadline);
+        } catch (Exception e) {
+            zdt = java.time.LocalDateTime.parse(deadline).atZone(java.time.ZoneId.systemDefault());
+        }
+
+        gradeMatrixService.scheduleLockMatrix(classId, semester, zdt, reason);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã thiết lập lịch hẹn tự động khóa bảng điểm thành công!",
+                "lockDeadline", zdt.toString()
+        ));
+    }
+
+    @PostMapping("/{classId}/cancel-schedule-lock")
+    public ResponseEntity<Map<String, Object>> cancelScheduleLock(
+            @PathVariable Integer classId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+
+        gradeMatrixService.cancelScheduleLock(classId, semester);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã hủy lịch hẹn khóa bảng điểm thành công."
+        ));
+    }
+
     @PostMapping("/{classId}/replace-subject")
     public ResponseEntity<Map<String, Object>> replaceSubjectInClass(
             @PathVariable Integer classId,

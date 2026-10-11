@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2, ClipboardCheck, Edit } from 'lucide-react';
+import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2, ClipboardCheck, Edit, Clock, Calendar } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 
 const EMPTY_MATRIX = {
@@ -60,6 +60,79 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [editSubCredits, setEditSubCredits] = useState('3');
   const [editingSubject, setEditingSubject] = useState(false);
   const [deleteSubjectId, setDeleteSubjectId] = useState('');
+
+  // State for Schedule Auto-Lock Modal
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleDeadline, setScheduleDeadline] = useState('');
+  const [scheduleReason, setScheduleReason] = useState('Hạn chót hoàn thành nhập điểm học phần');
+  const [scheduling, setScheduling] = useState(false);
+
+  const handleOpenScheduleModal = () => {
+    if (matrixData?.lockDeadline) {
+      try {
+        const d = new Date(matrixData.lockDeadline);
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
+        setScheduleDeadline(localISOTime);
+        setScheduleReason(matrixData.autoLockReason || 'Hạn chót hoàn thành nhập điểm học phần');
+      } catch (e) {
+        // fallback
+      }
+    } else {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(17, 0, 0, 0);
+      const tzOffset = tomorrow.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(tomorrow.getTime() - tzOffset)).toISOString().slice(0, 16);
+      setScheduleDeadline(localISOTime);
+      setScheduleReason('Hạn chót hoàn thành nhập điểm học phần');
+    }
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!scheduleDeadline) {
+      alert('Vui lòng chọn thời gian hẹn lịch khóa bảng điểm!');
+      return;
+    }
+    setScheduling(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const res = await fetch(`/api/v1/classes/${classId}/schedule-lock?semester=${semester}&deadline=${encodeURIComponent(scheduleDeadline)}&reason=${encodeURIComponent(scheduleReason)}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSaveSuccessMsg(data.message || 'Đã thiết lập lịch hẹn tự động khóa bảng điểm thành công!');
+        setIsScheduleModalOpen(false);
+        fetchMatrix();
+      } else {
+        alert(data.message || 'Lỗi khi hẹn lịch khóa bảng điểm');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ khi hẹn lịch khóa');
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const handleCancelSchedule = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const res = await fetch(`/api/v1/classes/${classId}/cancel-schedule-lock?semester=${semester}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSaveSuccessMsg('Đã hủy lịch hẹn khóa bảng điểm thành công!');
+        fetchMatrix();
+      }
+    } catch (err) {
+      alert('Lỗi khi hủy lịch hẹn khóa bảng điểm');
+    }
+  };
 
   // Dialog xác nhận hành động chuẩn quân sự thay thế window.confirm
   const [confirmDialog, setConfirmDialog] = useState({
@@ -1076,33 +1149,99 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   return (
     <div className="space-y-4">
 
-      {/* Lock Banner */}
+      {/* Lock / Schedule Lock Banner */}
       {matrixData.isLocked ? (
         <div className="alert alert-error flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2 font-bold text-xs">
-            <Lock className="w-4 h-4 text-red-600" />
-            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA: Bảng điểm lớp đã được niêm phong. Chỉ Ban Giám Đốc/PĐT mới có quyền mở khóa.</span>
+            <Lock className="w-4 h-4 text-red-600 shrink-0" />
+            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA: Bảng điểm lớp đã được niêm phong. Chỉ Ban Giám Đốc / Phòng Đào Tạo mới có quyền mở khóa.</span>
           </div>
 
           {(currentUser?.role === 'ROLE_BGH' || currentUser?.role === 'ROLE_PDT') && (
-            <button onClick={handleUnlockMatrix} className="btn btn-danger btn-xs font-bold">
+            <button onClick={handleUnlockMatrix} className="btn btn-danger btn-xs font-bold cursor-pointer">
               <Unlock className="w-3.5 h-3.5" />
               Mở Khóa Bảng Điểm
             </button>
           )}
         </div>
+      ) : matrixData.lockDeadline ? (
+        <div className="alert alert-warning flex flex-wrap items-center justify-between gap-3 shadow-sm" style={{ backgroundColor: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
+          <div className="flex items-center gap-2 text-xs">
+            <Clock className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+            <div>
+              <strong className="text-amber-950 font-bold uppercase tracking-wider">⏰ Đã hẹn lịch khóa bảng điểm:</strong>{' '}
+              Tự động khóa vào lúc{' '}
+              <strong className="text-red-700 font-extrabold underline">
+                {new Date(matrixData.lockDeadline).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </strong>{' '}
+              <span className="text-slate-600 italic">({matrixData.autoLockReason || 'Hạn chót nhập điểm'})</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isPrivilegedUser && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleOpenScheduleModal}
+                  className="btn btn-xs font-bold"
+                  style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde047' }}
+                  title="Điều chỉnh thời gian hẹn lịch khóa"
+                >
+                  <Calendar className="w-3.5 h-3.5 mr-1" />
+                  Sửa Lịch
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelSchedule}
+                  className="btn btn-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 cursor-pointer"
+                  title="Hủy bỏ lịch hẹn tự động khóa"
+                >
+                  Hủy Hẹn
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLockMatrix}
+                  className="btn btn-danger btn-xs font-bold cursor-pointer"
+                  title="Khóa ngay lập tức không cần đợi đến hạn chót"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Khóa Ngay
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       ) : (
-        <div className="alert alert-success flex items-center justify-between shadow-sm">
+        <div className="alert alert-success flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2 font-semibold text-xs">
-            <Unlock className="w-4 h-4 text-emerald-600" />
-            <span>Trạng thái: Bảng điểm mở. Giáo viên/Cán bộ huấn luyện có thể nhập và chỉnh sửa điểm.</span>
+            <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Trạng thái: Bảng điểm mở. Giáo viên / Cán bộ huấn luyện có thể nhập và chỉnh sửa điểm.</span>
           </div>
 
           {isPrivilegedUser && (
-            <button onClick={handleLockMatrix} className="btn btn-secondary btn-xs font-bold" style={{ color: '#b45309', borderColor: '#fde047' }}>
-              <Lock className="w-3.5 h-3.5 text-amber-600" />
-              Xác nhận & Khóa Bảng Điểm
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenScheduleModal}
+                className="btn btn-secondary btn-xs font-bold cursor-pointer"
+                style={{ color: '#0369a1', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
+                title="Thiết lập hạn chót thời gian để hệ thống tự động khóa bảng điểm"
+              >
+                <Clock className="w-3.5 h-3.5 text-sky-600 mr-1" />
+                Hẹn Lịch Khóa
+              </button>
+              <button
+                type="button"
+                onClick={handleLockMatrix}
+                className="btn btn-secondary btn-xs font-bold cursor-pointer"
+                style={{ color: '#b45309', borderColor: '#fde047' }}
+                title="Khóa bảng điểm ngay lập tức"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-600 mr-1" />
+                Khóa Ngay
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -2589,6 +2728,82 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL HẸN LỊCH KHÓA BẢNG ĐIỂM */}
+      {isScheduleModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsScheduleModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '440px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2 text-sky-700">
+                <Clock className="w-5 h-5 text-sky-600" />
+                <h3 className="font-military text-base font-bold text-slate-900">Hẹn Lịch Tự Động Khóa Bảng Điểm</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScheduleModalOpen(false)}
+                className="btn btn-icon btn-secondary btn-xs cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              📌 Khi đến thời điểm đã hẹn, hệ thống sẽ <strong>tự động niêm phong bảng điểm</strong> của lớp này. Giáo viên sẽ không thể chỉnh sửa điểm sau thời hạn.
+            </p>
+
+            <form onSubmit={handleScheduleSubmit} className="space-y-4">
+              <div>
+                <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                  Thời Điểm Tự Động Khóa (Ngày & Giờ) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={scheduleDeadline}
+                  onChange={(e) => setScheduleDeadline(e.target.value)}
+                  className="form-input text-xs font-bold"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Ví dụ: 17:00 ngày kết thúc đợt kiểm tra / nộp điểm
+                </p>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                  Lý Do / Thông Báo Hạn Chót
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: Hạn chót nộp điểm học phần theo chỉ thị BGH..."
+                  value={scheduleReason}
+                  onChange={(e) => setScheduleReason(e.target.value)}
+                  className="form-input text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleModalOpen(false)}
+                  className="btn btn-secondary text-xs cursor-pointer"
+                  disabled={scheduling}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary text-xs cursor-pointer"
+                  style={{ backgroundColor: '#0284c7', borderColor: '#0369a1' }}
+                  disabled={scheduling}
+                >
+                  <Clock className="w-4 h-4 mr-1" />
+                  {scheduling ? 'Đang lưu lịch...' : 'Xác Nhận Lên Lịch Khóa'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
