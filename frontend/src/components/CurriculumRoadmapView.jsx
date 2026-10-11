@@ -496,7 +496,6 @@ export default function CurriculumRoadmapView() {
                 <th className="p-3 min-w-[220px]">Tên Môn học / Nội dung Kiểm tra, Thi</th>
                 <th className="p-3 text-center">Phân loại</th>
                 <th className="p-3 text-center">Tín chỉ / Tiết</th>
-                <th className="p-3 text-center">Học kỳ</th>
                 <th className="p-3">Hình thức Thi / Đánh giá</th>
                 <th className="p-3 text-center">Hệ số</th>
                 <th className="p-3">Khoa / Đơn vị Phụ trách</th>
@@ -505,7 +504,7 @@ export default function CurriculumRoadmapView() {
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredSubjects.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-500 text-xs italic">
+                  <td colSpan={8} className="p-8 text-center text-slate-500 text-xs italic">
                     Chưa có môn học nào trong lộ trình này. Hãy nhấn nút "Import Lộ Trình (Excel)" hoặc xuất file mẫu để khởi tạo.
                   </td>
                 </tr>
@@ -542,9 +541,6 @@ export default function CurriculumRoadmapView() {
                       </td>
                       <td className="p-3 text-center text-xs text-slate-700 font-mono">
                         <strong>{sub.credits} TC</strong> <span className="text-slate-500">({sub.hours || sub.credits * 15} tiết)</span>
-                      </td>
-                      <td className="p-3 text-center text-xs font-semibold text-slate-700">
-                        Học kỳ {sub.semester || 1}
                       </td>
                       <td className="p-3 text-xs text-slate-600">
                         {sub.examFormat || 'Lý thuyết & Thao trường'}

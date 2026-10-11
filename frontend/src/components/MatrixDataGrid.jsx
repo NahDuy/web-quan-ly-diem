@@ -26,7 +26,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [semester, setSemester] = useState(1);
   const [classList, setClassList] = useState([]);
   const [matrixData, setMatrixData] = useState(EMPTY_MATRIX);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   const [editedScores, setEditedScores] = useState({});
@@ -635,8 +635,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     setConfirmDialog({
       isOpen: true,
       title: 'Xác nhận Khóa Bảng Điểm',
-      message: 'Đồng chí có chắc chắn muốn tiến hành Khóa Bảng Điểm học kỳ này?',
-      itemName: `${matrixData?.className || 'Lớp hiện tại'} - Học kỳ ${semester}`,
+      message: 'Đồng chí có chắc chắn muốn tiến hành Khóa Bảng Điểm lớp này?',
+      itemName: `${matrixData?.className || 'Lớp hiện tại'}`,
       warningNote: 'Sau khi khóa, giáo viên bộ môn sẽ không thể tự ý sửa điểm, trừ khi có phê duyệt mở khóa từ Ban Giám hiệu hoặc PĐT.',
       confirmLabel: 'Khóa Bảng Điểm',
       type: 'warning',
@@ -673,7 +673,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       isOpen: true,
       title: 'Phê duyệt Mở Khóa Bảng Điểm',
       message: 'Đồng chí có chắc chắn phê duyệt Mở Khóa Bảng Điểm cho lớp học này?',
-      itemName: `${matrixData?.className || 'Lớp hiện tại'} - Học kỳ ${semester}`,
+      itemName: `${matrixData?.className || 'Lớp hiện tại'}`,
       warningNote: 'Bảng điểm sẽ được mở khóa cho phép giáo viên bộ môn và người phụ trách điều chỉnh điểm số.',
       confirmLabel: 'Mở Khóa Bảng Điểm',
       type: 'info',
@@ -773,7 +773,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     setSaving(true);
     setSaveSuccessMsg('');
 
-    const defaultReason = `Cập nhật điểm định kỳ - Lớp ${matrixData?.classCode || classId} (Học kỳ ${semester})`;
+    const defaultReason = `Cập nhật điểm định kỳ - Lớp ${matrixData?.classCode || classId}`;
 
     if (isDemoMode) {
       setTimeout(() => {
@@ -1124,7 +1124,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       
       {/* Control Bar - Cân đối, chuyên nghiệp chuẩn Quân sự */}
       <div className="glass-panel p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3">
-        {/* KHỐI 1: BỘ LỌC CHỌN LỚP & THÔNG TIN HỌC KỲ */}
+        {/* KHỐI 1: BỘ LỌC CHỌN LỚP ĐÀO TẠO */}
         <div className="flex items-center gap-2 flex-1 min-w-[280px]">
           <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 bg-slate-100 rounded-lg border border-slate-200">
             <BookOpen className="w-4 h-4 text-emerald-700" />
@@ -1418,13 +1418,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
       )}
 
-      {/* Empty Subject State Banner */}
-      {safeColumns.length === 0 && (
+      {/* Empty Subject State Banner - Chỉ hiển thị khi đã nạp xong (không loading) và thực sự chưa có môn */}
+      {!loading && safeColumns.length === 0 && (
         <div className="p-4 bg-amber-950/40 border border-amber-600/50 rounded-xl text-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
           <div>
             <h4 className="font-bold text-amber-300 text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
-              Lớp chưa có danh sách môn học cho Học kỳ {semester}
+              Lớp chưa có danh mục môn học đào tạo
             </h4>
             <p className="text-xs text-amber-200/80 mt-1">
               Lớp thuộc chuyên ngành <strong>{matrixData.majorName || 'Quân sự'}</strong>. Bạn có thể nhấn nút để hệ thống tự động liên kết các môn học từ <strong>Lộ trình Đào tạo</strong> của chuyên ngành này vào bảng điểm.
@@ -1456,9 +1456,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         </div>
       )}
 
-      {/* MATRIX TABLE WITHOUT SHHV & RANK, WITH GRAD EXAM SPLIT INTO 3 SUBJECTS */}
-      <div className="matrix-table-container">
-        <table className="matrix-table">
+      {/* KHU VỰC BẢNG ĐIỂM HOẶC TRẠNG THÁI TĨNH ĐANG TẢI */}
+      {loading ? (
+        <div className="glass-panel p-12 bg-white border border-slate-200 rounded-xl shadow-xs text-center flex flex-col items-center justify-center my-6 min-h-[360px]">
+          <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-3.5 shadow-inner">
+            <RefreshCw className="w-7 h-7 text-emerald-700 animate-spin" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 tracking-wide uppercase">
+            Đang tải dữ liệu Bảng điểm Quân sự...
+          </h3>
+          <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
+            Hệ thống đang đồng bộ danh sách học viên, nạp danh mục môn học đào tạo và cấu trúc điểm. Vui lòng đợi trong giây lát.
+          </p>
+        </div>
+      ) : (
+        /* MATRIX TABLE WITHOUT SHHV & RANK, WITH GRAD EXAM SPLIT INTO 3 SUBJECTS */
+        <div className="matrix-table-container">
+          <table className="matrix-table">
           <thead>
             {/* Header Row 1 */}
             <tr>
@@ -1819,6 +1833,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* MANDATORY AUDIT REASON MODAL (CHO TRƯỜNG HỢP SỬA ĐIỂM CẦN GHI NHẬN AUDIT LOG) */}
       {isReasonModalOpen && (
@@ -2073,7 +2088,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-900 space-y-1">
                   <p>
-                    📌 Môn học được chọn sẽ được gán làm cột bổ sung linh hoạt cho lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}).
+                    📌 Môn học được chọn sẽ được gán làm cột bổ sung linh hoạt cho lớp <strong>{matrixData?.classCode}</strong>.
                   </p>
                   <p className="text-slate-500">
                     Cán bộ huấn luyện có thể nhập điểm trực tiếp trên bảng ma trận hoặc qua file Excel sau khi thêm.
@@ -2149,7 +2164,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 </div>
 
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600">
-                  📌 Cột môn học mới này sẽ được tạo và lưu trực tiếp vào cơ sở dữ liệu cho lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}).
+                  📌 Cột môn học mới này sẽ được tạo và lưu trực tiếp vào cơ sở dữ liệu cho lớp <strong>{matrixData?.classCode}</strong>.
                 </div>
 
                 <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
@@ -2408,7 +2423,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     <span>Cảnh báo xóa cột môn học:</span>
                   </p>
                   <p>
-                    Cột môn này sẽ bị gỡ bỏ khỏi bảng điểm của lớp <strong>{matrixData?.classCode}</strong> (Học kỳ {semester}). Toàn bộ điểm số đã nhập cho môn này của lớp sẽ bị xóa.
+                    Cột môn này sẽ bị gỡ bỏ khỏi bảng điểm của lớp <strong>{matrixData?.classCode}</strong>. Toàn bộ điểm số đã nhập cho môn này của lớp sẽ bị xóa.
                   </p>
                   <p className="text-red-700 font-semibold">
                     Thao tác này chỉ xóa riêng trong lớp này, hoàn toàn không xóa môn học trong Lộ trình chung.

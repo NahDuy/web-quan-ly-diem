@@ -114,22 +114,22 @@ public class CurriculumService {
             }
 
             String tg = "SQDB";
-            String tgName = "Sĩ quan Dự bị";
+            String tgName = "Sĩ quan Dự bị (SQDB)";
             if (c.getName() != null) {
                 String cNameUpper = c.getName().toUpperCase();
                 String courseNameUpper = (c.getCourse() != null && c.getCourse().getName() != null) ? c.getCourse().getName().toUpperCase() : "";
                 if (cNameUpper.contains("KHẨU ĐỘI") || courseNameUpper.contains("KHẨU ĐỘI") || cNameUpper.contains("KDT")) {
                     tg = "KDT";
-                    tgName = "Khẩu đội trưởng";
-                } else if (cNameUpper.contains("TIỂU ĐỘI") || courseNameUpper.contains("TIỂU ĐỘI") || cNameUpper.contains("TDT")) {
+                    tgName = "Khẩu đội trưởng (KĐT)";
+                } else if (cNameUpper.contains("TIỂU ĐỘI") || courseNameUpper.contains("TIỂU ĐỘI") || cNameUpper.contains("TDT") || cNameUpper.contains("NẤU ĂN")) {
                     tg = "TDT";
-                    tgName = "Tiểu đội trưởng";
-                } else if (cNameUpper.contains("KỸ THUẬT") || courseNameUpper.contains("KỸ THUẬT") || cNameUpper.contains("NVKT") || cNameUpper.contains("QUÂN Y")) {
+                    tgName = "Tiểu đội trưởng (TĐT)";
+                } else if (cNameUpper.contains("KỸ THUẬT") || courseNameUpper.contains("KỸ THUẬT") || cNameUpper.contains("NVKT") || cNameUpper.contains("QUÂN Y") || cNameUpper.contains("BẢO QUẢN") || cNameUpper.contains("BÁO VỤ")) {
                     tg = "NVKT";
-                    tgName = "Nhân viên Kỹ thuật";
+                    tgName = "Nhân viên Kỹ thuật (NVKT)";
                 } else if (cNameUpper.contains("HẠ SĨ QUAN") || courseNameUpper.contains("HẠ SĨ QUAN") || cNameUpper.contains("HSQ")) {
                     tg = "HSQ";
-                    tgName = "Hạ sĩ quan Chỉ huy";
+                    tgName = "Hạ sĩ quan Chỉ huy (HSQ)";
                 }
             }
 

@@ -31,6 +31,10 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Scratch
+scratch/
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
