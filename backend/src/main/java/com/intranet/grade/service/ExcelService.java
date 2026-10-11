@@ -2484,12 +2484,12 @@ public class ExcelService {
             c0_0.setCellValue("QUÂN KHU 3");
             c0_0.setCellStyle(agencyTitleStyle);
 
-            Cell c0_4 = r0.createCell(4);
-            c0_4.setCellValue("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM");
-            c0_4.setCellStyle(agencyTitleStyle);
+            Cell c0_3 = r0.createCell(3);
+            c0_3.setCellValue("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM");
+            c0_3.setCellStyle(agencyTitleStyle);
 
             sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 4, 6));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 3, 5));
 
             // Row 1: Left (TRƯỜNG QUÂN SỰ) & Right (Độc lập - Tự do - Hạnh phúc)
             Row r1 = sheet.createRow(1);
@@ -2498,12 +2498,12 @@ public class ExcelService {
             c1_0.setCellValue("TRƯỜNG QUÂN SỰ");
             c1_0.setCellStyle(agencySubStyle);
 
-            Cell c1_4 = r1.createCell(4);
-            c1_4.setCellValue("Độc lập - Tự do - Hạnh phúc");
-            c1_4.setCellStyle(mottoStyle);
+            Cell c1_3 = r1.createCell(3);
+            c1_3.setCellValue("Độc lập - Tự do - Hạnh phúc");
+            c1_3.setCellStyle(mottoStyle);
 
             sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 4, 6));
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 3, 5));
 
             // Row 3: Main Title
             Row r3 = sheet.createRow(3);
@@ -2511,7 +2511,7 @@ public class ExcelService {
             Cell c3 = r3.createCell(0);
             c3.setCellValue("DANH MỤC CÁC CHUYÊN NGÀNH ĐÀO TẠO & QUY ƯỚC MÃ QUÂN SỰ");
             c3.setCellStyle(mainTitleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 6));
+            sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 5));
 
             // Row 4: Subtitle Note
             Font noteFont = workbook.createFont();
@@ -2526,7 +2526,7 @@ public class ExcelService {
             Cell c4 = r4.createCell(0);
             c4.setCellValue("(Phục vụ quản lý đào tạo, tự động hóa cấp Mã Lớp & Mã Học viên toàn trường)");
             c4.setCellStyle(noteStyle);
-            sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 6));
+            sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 5));
 
             // Row 5: Table Header
             Row r5 = sheet.createRow(5);
@@ -2535,7 +2535,6 @@ public class ExcelService {
                     "STT",
                     "Mã Quy Ước",
                     "Tên Chuyên Ngành Đào Tạo",
-                    "Khoa / Bộ Môn Phụ Trách",
                     "Số Lớp Trực Thuộc",
                     "Mẫu Mã Lớp Chuẩn (2026)",
                     "Mẫu Mã Học Viên (MSSV 2026)"
@@ -2554,7 +2553,6 @@ public class ExcelService {
                 row.setHeightInPoints(22);
 
                 long classCount = classRepository.countByMajorId(m.getId());
-                String deptName = m.getDepartment() != null ? m.getDepartment().getName() : "Bộ môn Binh chủng Hợp thành";
 
                 // STT
                 Cell cStt = row.createCell(0);
@@ -2571,23 +2569,18 @@ public class ExcelService {
                 cName.setCellValue(m.getName());
                 cName.setCellStyle(dataStyle);
 
-                // Khoa / Bộ môn
-                Cell cDept = row.createCell(3);
-                cDept.setCellValue(deptName);
-                cDept.setCellStyle(dataStyle);
-
                 // Số lớp
-                Cell cClassCount = row.createCell(4);
+                Cell cClassCount = row.createCell(3);
                 cClassCount.setCellValue(classCount);
                 cClassCount.setCellStyle(centerDataStyle);
 
                 // Mẫu mã lớp (2026)
-                Cell cClassPattern = row.createCell(5);
+                Cell cClassPattern = row.createCell(4);
                 cClassPattern.setCellValue("SQDB-XN-" + m.getCode() + "-01");
                 cClassPattern.setCellStyle(centerDataStyle);
 
                 // Mẫu mã HV (2026)
-                Cell cStudentPattern = row.createCell(6);
+                Cell cStudentPattern = row.createCell(5);
                 cStudentPattern.setCellValue("26XN-" + m.getCode() + "001");
                 cStudentPattern.setCellStyle(centerDataStyle);
             }
@@ -2595,11 +2588,10 @@ public class ExcelService {
             // Column widths
             sheet.setColumnWidth(0, 6 * 256);   // STT
             sheet.setColumnWidth(1, 14 * 256);  // Mã
-            sheet.setColumnWidth(2, 32 * 256);  // Tên
-            sheet.setColumnWidth(3, 30 * 256);  // Bộ môn
-            sheet.setColumnWidth(4, 12 * 256);  // Số lớp
-            sheet.setColumnWidth(5, 24 * 256);  // Mã lớp
-            sheet.setColumnWidth(6, 24 * 256);  // Mã HV
+            sheet.setColumnWidth(2, 38 * 256);  // Tên
+            sheet.setColumnWidth(3, 16 * 256);  // Số lớp
+            sheet.setColumnWidth(4, 26 * 256);  // Mã lớp
+            sheet.setColumnWidth(5, 26 * 256);  // Mã HV
 
             workbook.write(out);
             return out.toByteArray();
