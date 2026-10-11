@@ -3,6 +3,7 @@ import {
   BookmarkCheck, Plus, Edit2, Trash2, Search, 
   Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles, Shield, Download
 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 const DEFAULT_TARGET_GROUPS = [
   { code: 'SQDB(XN)', shortCode: 'XN', name: 'SQDB Xuất ngũ', desc: 'Hạ sĩ quan xuất ngũ', classPattern: 'SQDB-XN-[NGÀNH]-01', studentPattern: '26XN-[NGÀNH]001', isCustom: false },
@@ -20,6 +21,19 @@ export default function MajorManagementView() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [exporting, setExporting] = useState(false);
+
+  // Dialog xác nhận xóa thay thế window.confirm
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    itemName: '',
+    warningNote: '',
+    confirmLabel: 'Xác nhận xóa',
+    type: 'danger',
+    onConfirm: () => {},
+    loading: false
+  });
 
   // Target Groups State
   const [targetGroups, setTargetGroups] = useState(() => {
@@ -159,13 +173,24 @@ export default function MajorManagementView() {
   };
 
   const handleDeleteTargetGroup = (code, name) => {
-    if (!window.confirm(`XÁC NHẬN XÓA ĐỐI TƯỢNG ĐÀO TẠO?\n\nBạn có chắc muốn xóa "${name}" (${code})?`)) return;
-    const updated = targetGroups.filter(tg => tg.code !== code);
-    setTargetGroups(updated);
-    try {
-      localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
-    } catch (err) {}
-    showNotification(`Đã xóa đối tượng đào tạo "${name}"`);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận Xóa Đối tượng Đào tạo',
+      message: 'Bạn có chắc muốn xóa đối tượng đào tạo này khỏi danh mục quy ước?',
+      itemName: `${name} (${code})`,
+      warningNote: 'Quy ước sinh mã lớp và mã học viên liên quan sẽ không còn áp dụng tự động.',
+      confirmLabel: 'Xác nhận Xóa',
+      type: 'danger',
+      onConfirm: () => {
+        const updated = targetGroups.filter(tg => tg.code !== code);
+        setTargetGroups(updated);
+        try {
+          localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
+        } catch (err) {}
+        showNotification(`Đã xóa đối tượng đào tạo "${name}"`);
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleOpenAdd = () => {
@@ -228,28 +253,40 @@ export default function MajorManagementView() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`XÁC NHẬN XÓA CHUYÊN NGÀNH?\n\nBạn có chắc chắn muốn xóa chuyên ngành "${name}"?`)) return;
+  const handleDelete = (id, name) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận Xóa Chuyên ngành Đào tạo',
+      message: 'Bạn có chắc chắn muốn xóa chuyên ngành này khỏi danh mục đào tạo của trường?',
+      itemName: name,
+      warningNote: 'Toàn bộ liên kết chương trình khung sẽ bị ảnh hưởng nếu chuyên ngành đang có lớp học.',
+      confirmLabel: 'Xác nhận Xóa',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, loading: true }));
+        try {
+          const token = localStorage.getItem('jwt_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+          const res = await fetch(`/api/v1/majors/${id}`, {
+            method: 'DELETE',
+            headers
+          });
 
-      const res = await fetch(`/api/v1/majors/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-
-      const resData = await res.json();
-      if (res.ok) {
-        showNotification(`Đã xóa chuyên ngành "${name}" thành công`);
-        fetchMajors();
-      } else {
-        showNotification('', resData.message || 'Không thể xóa chuyên ngành');
+          const resData = await res.json();
+          if (res.ok) {
+            showNotification(`Đã xóa chuyên ngành "${name}" thành công`);
+            fetchMajors();
+          } else {
+            showNotification('', resData.message || 'Không thể xóa chuyên ngành');
+          }
+        } catch (err) {
+          showNotification('', 'Lỗi kết nối khi xóa chuyên ngành');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
       }
-    } catch (err) {
-      showNotification('', 'Lỗi kết nối khi xóa chuyên ngành');
-    }
+    });
   };
 
   const filteredMajors = majors.filter(m => 
@@ -731,6 +768,20 @@ export default function MajorManagementView() {
           </div>
         </div>
       )}
+
+      {/* Modern Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        itemName={confirmDialog.itemName}
+        warningNote={confirmDialog.warningNote}
+        confirmLabel={confirmDialog.confirmLabel}
+        type={confirmDialog.type}
+        loading={confirmDialog.loading}
+        onConfirm={confirmDialog.onConfirm}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
 
     </div>
   );

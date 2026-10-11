@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Upload, Download, Plus, Search, Shield, Edit, Trash2, ShieldCheck, Award, X, CheckCircle2, RefreshCw, Sparkles, FileSpreadsheet } from 'lucide-react';
 import AdmissionsImportModal from './AdmissionsImportModal';
+import ConfirmModal from './ConfirmModal';
 
 export default function StudentManagementView({ currentUser }) {
   // Quyền xóa lớp học: Chỉ dành riêng cho 2 role cao nhất (ROLE_BGH và ROLE_BOMON hoặc ROLE_ADMIN/ROLE_PDT)
@@ -327,29 +328,51 @@ export default function StudentManagementView({ currentUser }) {
     }
   };
 
-  const handleDeleteStudent = async (id, name) => {
-    if (!window.confirm(`Xác nhận xóa dữ liệu học viên ${name}?`)) return;
+  const [deleteConfirmState, setDeleteConfirmState] = useState({
+    isOpen: false,
+    studentId: null,
+    studentName: '',
+    studentCode: '',
+    loading: false
+  });
 
+  const handleRequestDeleteStudent = (id, name, code) => {
+    setDeleteConfirmState({
+      isOpen: true,
+      studentId: id,
+      studentName: name,
+      studentCode: code || '',
+      loading: false
+    });
+  };
+
+  const handleConfirmDeleteStudent = async () => {
+    const { studentId, studentName } = deleteConfirmState;
+    if (!studentId) return;
+
+    setDeleteConfirmState(prev => ({ ...prev, loading: true }));
     try {
       const token = localStorage.getItem('jwt_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/v1/students/${id}`, {
+      const res = await fetch(`/api/v1/students/${studentId}`, {
         method: 'DELETE',
         headers
       });
 
       if (res.ok) {
-        setStudents(prev => prev.filter(s => s.id !== id));
-        setMsg(`Đã xóa học viên ${name}`);
+        setStudents(prev => prev.filter(s => s.id !== studentId));
+        setMsg(`Đã xóa học viên ${studentName} thành công`);
         setTimeout(() => setMsg(''), 3000);
       } else {
         const errData = await res.json().catch(() => ({}));
-        setErrorMsg(errData.message || `Không thể xóa học viên ${name}`);
+        setErrorMsg(errData.message || `Không thể xóa học viên ${studentName}`);
         setTimeout(() => setErrorMsg(''), 4000);
       }
     } catch (err) {
       setErrorMsg(`Lỗi kết nối khi xóa học viên: ${err.message}`);
       setTimeout(() => setErrorMsg(''), 4000);
+    } finally {
+      setDeleteConfirmState({ isOpen: false, studentId: null, studentName: '', studentCode: '', loading: false });
     }
   };
 
@@ -559,8 +582,8 @@ export default function StudentManagementView({ currentUser }) {
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteStudent(student.id, student.fullName)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition"
+                      onClick={() => handleRequestDeleteStudent(student.id, student.fullName, student.studentCode)}
+                      className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
                       title="Xóa học viên"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -956,6 +979,21 @@ export default function StudentManagementView({ currentUser }) {
           fetchStudents();
           fetchClasses();
         }}
+      />
+
+      {/* Modern Confirmation Modal for Delete Student */}
+      <ConfirmModal
+        isOpen={deleteConfirmState.isOpen}
+        title="Xác nhận Xóa Hồ Sơ Học Viên"
+        message="Bạn có chắc chắn muốn xóa hồ sơ học viên này khỏi danh sách quản lý?"
+        itemName={deleteConfirmState.studentName ? `${deleteConfirmState.studentName} (${deleteConfirmState.studentCode})` : ''}
+        warningNote="Toàn bộ thông tin cá nhân và điểm số của học viên sẽ bị xóa khỏi cơ sở dữ liệu."
+        confirmLabel="Xác nhận Xóa"
+        cancelLabel="Hủy bỏ"
+        type="danger"
+        loading={deleteConfirmState.loading}
+        onConfirm={handleConfirmDeleteStudent}
+        onClose={() => setDeleteConfirmState({ isOpen: false, studentId: null, studentName: '', studentCode: '', loading: false })}
       />
 
     </div>

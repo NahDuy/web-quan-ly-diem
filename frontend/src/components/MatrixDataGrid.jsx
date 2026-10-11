@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2, ClipboardCheck, Edit } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 const EMPTY_MATRIX = {
   classId: null,
@@ -59,6 +60,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [editSubCredits, setEditSubCredits] = useState('3');
   const [editingSubject, setEditingSubject] = useState(false);
   const [deleteSubjectId, setDeleteSubjectId] = useState('');
+
+  // Dialog xác nhận hành động chuẩn quân sự thay thế window.confirm
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    itemName: '',
+    warningNote: '',
+    confirmLabel: 'Xác nhận',
+    type: 'danger',
+    onConfirm: null,
+    loading: false
+  });
 
   // State for Export Format Dropdown & Class Selection Modal
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -583,71 +597,112 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     }
   };
 
-  const handleRemoveSubjectFromClass = async (subjectId, subjectName) => {
-    if (!window.confirm(`XÁC NHẬN XÓA CỘT MÔN: "${subjectName}" khỏi bảng điểm của lớp này?\n(Thao tác này chỉ áp dụng riêng cho lớp này, hoàn toàn không ảnh hưởng đến chương trình đào tạo chung)`)) {
-      return;
-    }
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/v1/classes/${classId}/remove-subject/${subjectId}?semester=${semester}`, {
-        method: 'DELETE',
-        headers,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSaveSuccessMsg(data.message || 'Đã xóa cột môn khỏi lớp thành công!');
-        await fetchMatrix();
-      } else {
-        alert(data.message || 'Không thể xóa môn khỏi lớp');
+  const handleRemoveSubjectFromClass = (subjectId, subjectName) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận gỡ cột môn khỏi lớp',
+      message: 'Đồng chí có chắc chắn muốn xóa cột môn học này khỏi bảng điểm của lớp?',
+      itemName: subjectName,
+      warningNote: 'Thao tác này chỉ áp dụng riêng cho lớp này, hoàn toàn không ảnh hưởng đến chương trình đào tạo chung.',
+      confirmLabel: 'Xóa cột môn',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+          const res = await fetch(`/api/v1/classes/${classId}/remove-subject/${subjectId}?semester=${semester}`, {
+            method: 'DELETE',
+            headers,
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setSaveSuccessMsg(data.message || 'Đã xóa cột môn khỏi lớp thành công!');
+            await fetchMatrix();
+          } else {
+            alert(data.message || 'Không thể xóa môn khỏi lớp');
+          }
+        } catch (err) {
+          alert('Lỗi kết nối khi xóa môn khỏi lớp');
+        } finally {
+          setConfirmDialog({ isOpen: false, title: '', message: '', itemName: '', warningNote: '', confirmLabel: '', type: 'danger', onConfirm: null, loading: false });
+        }
       }
-    } catch (err) {
-      alert('Lỗi kết nối khi xóa môn khỏi lớp');
-    }
+    });
   };
 
-  const handleLockMatrix = async () => {
-    if (!window.confirm('XÁC NHẬN KHÓA BẢNG ĐIỂM? Sau khi khóa, giáo viên không thể tự ý sửa điểm.')) return;
-    
-    if (isDemoMode) {
-      setMatrixData(prev => ({ ...prev, isLocked: true }));
-      setSaveSuccessMsg('Đã KHÓA BẢNG ĐIỂM thành công.');
-      return;
-    }
+  const handleLockMatrix = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận Khóa Bảng Điểm',
+      message: 'Đồng chí có chắc chắn muốn tiến hành Khóa Bảng Điểm học kỳ này?',
+      itemName: `${matrixData?.className || 'Lớp hiện tại'} - Học kỳ ${semester}`,
+      warningNote: 'Sau khi khóa, giáo viên bộ môn sẽ không thể tự ý sửa điểm, trừ khi có phê duyệt mở khóa từ Ban Giám hiệu hoặc PĐT.',
+      confirmLabel: 'Khóa Bảng Điểm',
+      type: 'warning',
+      onConfirm: async () => {
+        if (isDemoMode) {
+          setMatrixData(prev => ({ ...prev, isLocked: true }));
+          setSaveSuccessMsg('Đã KHÓA BẢNG ĐIỂM thành công.');
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          return;
+        }
 
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const res = await fetch(`/api/v1/classes/${classId}/lock?semester=${semester}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setSaveSuccessMsg('Đã KHÓA bảng điểm thành công!');
-        fetchMatrix();
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const res = await fetch(`/api/v1/classes/${classId}/lock?semester=${semester}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            setSaveSuccessMsg('Đã KHÓA bảng điểm thành công!');
+            fetchMatrix();
+          }
+        } catch (e) {
+          alert('Lỗi khóa bảng điểm');
+        } finally {
+          setConfirmDialog({ isOpen: false, title: '', message: '', itemName: '', warningNote: '', confirmLabel: '', type: 'danger', onConfirm: null, loading: false });
+        }
       }
-    } catch (e) { alert('Lỗi khóa bảng điểm'); }
+    });
   };
 
-  const handleUnlockMatrix = async () => {
-    if (!window.confirm('Phê duyệt MỞ KHÓA BẢNG ĐIỂM cho phép điều chỉnh điểm?')) return;
+  const handleUnlockMatrix = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Phê duyệt Mở Khóa Bảng Điểm',
+      message: 'Đồng chí có chắc chắn phê duyệt Mở Khóa Bảng Điểm cho lớp học này?',
+      itemName: `${matrixData?.className || 'Lớp hiện tại'} - Học kỳ ${semester}`,
+      warningNote: 'Bảng điểm sẽ được mở khóa cho phép giáo viên bộ môn và người phụ trách điều chỉnh điểm số.',
+      confirmLabel: 'Mở Khóa Bảng Điểm',
+      type: 'info',
+      onConfirm: async () => {
+        if (isDemoMode) {
+          setMatrixData(prev => ({ ...prev, isLocked: false }));
+          setSaveSuccessMsg('Đã MỞ KHÓA BẢNG ĐIỂM.');
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          return;
+        }
 
-    if (isDemoMode) {
-      setMatrixData(prev => ({ ...prev, isLocked: false }));
-      setSaveSuccessMsg('Đã MỞ KHÓA BẢNG ĐIỂM.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const res = await fetch(`/api/v1/classes/${classId}/unlock?semester=${semester}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setSaveSuccessMsg('Đã MỞ KHÓA bảng điểm thành công!');
-        fetchMatrix();
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const res = await fetch(`/api/v1/classes/${classId}/unlock?semester=${semester}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            setSaveSuccessMsg('Đã MỞ KHÓA bảng điểm thành công!');
+            fetchMatrix();
+          }
+        } catch (e) {
+          alert('Lỗi mở khóa bảng điểm');
+        } finally {
+          setConfirmDialog({ isOpen: false, title: '', message: '', itemName: '', warningNote: '', confirmLabel: '', type: 'danger', onConfirm: null, loading: false });
+        }
       }
-    } catch (e) { alert('Lỗi mở khóa bảng điểm'); }
+    });
   };
 
   // Hàm điều phối lưu điểm thông minh & chống lỗ hổng bypass
@@ -2520,6 +2575,20 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </div>
         </div>
       )}
+
+      {/* Modal xác nhận thao tác chuẩn quân sự */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        itemName={confirmDialog.itemName}
+        warningNote={confirmDialog.warningNote}
+        confirmLabel={confirmDialog.confirmLabel}
+        type={confirmDialog.type}
+        loading={confirmDialog.loading}
+      />
 
     </div>
   );

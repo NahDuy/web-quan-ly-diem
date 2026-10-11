@@ -21,12 +21,26 @@ import {
   ChevronRight,
   School
 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 export default function DepartmentUnitManagementView({ currentUser, initialSubTab = 'departments' }) {
   const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'departments' | 'assignments' | 'users'
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Dialog xác nhận xóa thay thế window.confirm
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    itemName: '',
+    warningNote: '',
+    confirmLabel: 'Xác nhận xóa',
+    type: 'danger',
+    onConfirm: () => {},
+    loading: false
+  });
 
   useEffect(() => {
     if (initialSubTab) {
@@ -279,26 +293,37 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
     }
   };
 
-  const handleDeleteDepartment = async (dept) => {
-    if (!window.confirm(`XÁC NHẬN XÓA: "${dept.name}" (${dept.code})?\nCác môn học và giáo viên thuộc đơn vị này sẽ được hủy liên kết.`)) {
-      return;
-    }
-    try {
-      const headers = getAuthHeaders();
-      const res = await fetch(`/api/v1/departments/${dept.id}`, {
-        method: 'DELETE',
-        headers
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccessMsg(data.message || 'Đã xóa thành công!');
-        fetchData();
-      } else {
-        alert(data.message || 'Không thể xóa đơn vị.');
+  const handleDeleteDepartment = (dept) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận Xóa Khoa / Đơn vị',
+      message: 'Bạn có chắc chắn muốn xóa đơn vị này khỏi hệ thống cơ cấu nhà trường?',
+      itemName: `${dept.name} (${dept.code})`,
+      warningNote: 'Các môn học và cán bộ thuộc đơn vị này sẽ được hủy liên kết tự động.',
+      confirmLabel: 'Xác nhận Xóa',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, loading: true }));
+        try {
+          const headers = getAuthHeaders();
+          const res = await fetch(`/api/v1/departments/${dept.id}`, {
+            method: 'DELETE',
+            headers
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setSuccessMsg(data.message || 'Đã xóa thành công!');
+            fetchData();
+          } else {
+            setErrorMsg(data.message || 'Không thể xóa đơn vị.');
+          }
+        } catch (err) {
+          setErrorMsg('Lỗi kết nối khi xóa đơn vị.');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
       }
-    } catch (err) {
-      alert('Lỗi kết nối khi xóa đơn vị.');
-    }
+    });
   };
 
   // Assign Subject to Department
@@ -408,27 +433,38 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
     }
   };
 
-  const handleDeleteUser = async (user) => {
-    if (!window.confirm(`XÁC NHẬN XÓA TÀI KHOẢN: "${user.fullName}" (${user.username})?`)) {
-      return;
-    }
-    try {
-      const headers = getAuthHeaders();
-      const res = await fetch(`/api/v1/departments/users/${user.id}`, {
-        method: 'DELETE',
-        headers
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccessMsg(data.message || 'Đã xóa tài khoản thành công!');
-        fetchData();
-        if (selectedDeptId) fetchDeptDetails(selectedDeptId);
-      } else {
-        alert(data.message || 'Không thể xóa tài khoản.');
+  const handleDeleteUser = (user) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận Xóa Tài khoản Người dùng',
+      message: 'Bạn có chắc chắn muốn xóa tài khoản cán bộ này khỏi hệ thống?',
+      itemName: `${user.fullName} (${user.username}) - ${user.roleName || user.roleCode}`,
+      warningNote: 'Tài khoản sẽ bị vô hiệu hóa hoàn toàn và không thể đăng nhập vào hệ thống.',
+      confirmLabel: 'Xác nhận Xóa',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, loading: true }));
+        try {
+          const headers = getAuthHeaders();
+          const res = await fetch(`/api/v1/departments/users/${user.id}`, {
+            method: 'DELETE',
+            headers
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setSuccessMsg(data.message || 'Đã xóa tài khoản thành công!');
+            fetchData();
+            if (selectedDeptId) fetchDeptDetails(selectedDeptId);
+          } else {
+            setErrorMsg(data.message || 'Không thể xóa tài khoản.');
+          }
+        } catch (err) {
+          setErrorMsg('Lỗi kết nối khi xóa tài khoản.');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
       }
-    } catch (err) {
-      alert('Lỗi kết nối khi xóa tài khoản.');
-    }
+    });
   };
 
   // Helper role badge
@@ -1273,6 +1309,20 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
           </div>
         </div>
       )}
+
+      {/* Modern Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        itemName={confirmDialog.itemName}
+        warningNote={confirmDialog.warningNote}
+        confirmLabel={confirmDialog.confirmLabel}
+        type={confirmDialog.type}
+        loading={confirmDialog.loading}
+        onConfirm={confirmDialog.onConfirm}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

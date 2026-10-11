@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X, Plus, Trash2 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 const DEFAULT_TARGET_GROUPS = [
   { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', desc: 'Thời gian 03 - 04 tháng' },
@@ -37,6 +38,13 @@ export default function CurriculumRoadmapView() {
   const [newTargetName, setNewTargetName] = useState('');
   const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
   const [addTargetError, setAddTargetError] = useState('');
+
+  // Dialog xác nhận xóa đối tượng đào tạo thay thế window.confirm
+  const [deleteConfirmState, setDeleteConfirmState] = useState({
+    isOpen: false,
+    code: '',
+    name: ''
+  });
 
   const [selectedCourse, setSelectedCourse] = useState('SQDB2026');
   const courseOptions = [
@@ -186,20 +194,28 @@ export default function CurriculumRoadmapView() {
     setAddTargetError('');
   };
 
-  const handleDeleteTargetGroup = (e, codeToDelete) => {
+  const handleDeleteTargetGroup = (e, codeToDelete, name) => {
     e.stopPropagation();
-    if (window.confirm(`Bạn có chắc chắn muốn xóa đối tượng đào tạo "${codeToDelete}"?`)) {
-      const updated = targetGroups.filter(g => g.code !== codeToDelete);
-      setTargetGroups(updated);
-      try {
-        localStorage.setItem('military_target_groups', JSON.stringify(updated));
-      } catch (err) {
-        console.error(err);
-      }
-      if (targetGroup === codeToDelete) {
-        setTargetGroup(updated.length > 0 ? updated[0].code : 'SQDB');
-      }
+    setDeleteConfirmState({
+      isOpen: true,
+      code: codeToDelete,
+      name: name || codeToDelete
+    });
+  };
+
+  const handleConfirmDeleteTarget = () => {
+    const codeToDelete = deleteConfirmState.code;
+    const updated = targetGroups.filter(g => g.code !== codeToDelete);
+    setTargetGroups(updated);
+    try {
+      localStorage.setItem('military_target_groups', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
     }
+    if (targetGroup === codeToDelete) {
+      setTargetGroup(updated.length > 0 ? updated[0].code : 'SQDB');
+    }
+    setDeleteConfirmState({ isOpen: false, code: '', name: '' });
   };
 
   return (
@@ -311,7 +327,7 @@ export default function CurriculumRoadmapView() {
                     {!isDefault && (
                       <button
                         type="button"
-                        onClick={(e) => handleDeleteTargetGroup(e, tg.code)}
+                        onClick={(e) => handleDeleteTargetGroup(e, tg.code, tg.name)}
                         className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition"
                         title="Xóa đối tượng đào tạo này"
                       >
@@ -719,6 +735,19 @@ export default function CurriculumRoadmapView() {
           </div>
         </div>
       )}
+
+      {/* Modal xác nhận xóa đối tượng đào tạo chuẩn quân sự */}
+      <ConfirmModal
+        isOpen={deleteConfirmState.isOpen}
+        onClose={() => setDeleteConfirmState({ isOpen: false, code: '', name: '' })}
+        onConfirm={handleConfirmDeleteTarget}
+        title="Xác nhận xóa Đối tượng Đào tạo"
+        message="Đồng chí có chắc chắn muốn xóa đối tượng đào tạo này khỏi danh mục?"
+        itemName={deleteConfirmState.name}
+        warningNote="Thao tác này sẽ gỡ bỏ phân loại đối tượng này khỏi cấu hình danh mục lộ trình đào tạo hiện tại."
+        confirmLabel="Xác nhận xóa"
+        type="danger"
+      />
 
     </div>
   );
