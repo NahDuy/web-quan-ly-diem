@@ -17,7 +17,6 @@ import {
 const NAV_TABS = [
   { id: 'dashboard',    label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard },
   { id: 'departments',  label: 'Quản lý Khoa & Đơn vị',        icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
-  { id: 'users',        label: 'Quản lý Tài khoản & Phân quyền', icon: Shield, roles: ['ROLE_BGH', 'ROLE_PDT'] },
   { id: 'students',     label: 'Quản lý Học viên',             icon: Users },
   { id: 'matrix',       label: 'Bảng Quản lý Điểm',            icon: Table },
   { id: 'roadmap',      label: 'Lộ trình Đào tạo',             icon: Compass },

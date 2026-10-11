@@ -14,7 +14,6 @@ import { User, LogIn, LogOut } from 'lucide-react';
 const TAB_NAMES = {
   dashboard:      'Dashboard Chỉ Huy',
   departments:    'Quản lý Khoa & Đơn vị',
-  users:          'Quản lý Tài khoản & Phân quyền',
   students:       'Quản lý Học viên',
   matrix:         'Bảng Quản lý Điểm',
   roadmap:        'Lộ trình Đào tạo',
@@ -50,14 +49,7 @@ export default function App() {
         console.error('Error fetching auth/me:', e);
       }
     }
-    // Default initial state or demo officer
-    setCurrentUser({
-      username: 'giangvien_a',
-      fullName: 'Thượng úy Nguyễn Văn Giảng',
-      role: 'ROLE_GIANGVIEN',
-      departmentId: 2,
-      departmentName: 'Bộ môn Binh chủng Hợp thành'
-    });
+    setCurrentUser(null);
   };
 
   useEffect(() => {
@@ -206,11 +198,7 @@ export default function App() {
           )}
 
           {activeTab === 'departments' && (
-            <DepartmentUnitManagementView currentUser={currentUser} initialSubTab="departments" />
-          )}
-
-          {activeTab === 'users' && (
-            <DepartmentUnitManagementView currentUser={currentUser} initialSubTab="users" />
+            <DepartmentUnitManagementView currentUser={currentUser} />
           )}
 
           {activeTab === 'students' && (

@@ -2,6 +2,7 @@ package com.intranet.grade.service;
 
 import com.intranet.grade.entity.Student;
 import com.intranet.grade.entity.StudentEvaluation;
+import com.intranet.grade.repository.MajorRepository;
 import com.intranet.grade.repository.StudentEvaluationRepository;
 import com.intranet.grade.repository.StudentRepository;
 import lombok.AllArgsConstructor;
@@ -12,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,19 @@ public class DashboardService {
 
     private final StudentRepository studentRepository;
     private final StudentEvaluationRepository evaluationRepository;
+    private final MajorRepository majorRepository;
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class MajorBreakdownDTO {
+        private String code;
+        private String name;
+        private long total;
+        private double passRate;
+        private double avgScore;
+    }
 
     @Data
     @Builder
@@ -32,11 +46,13 @@ public class DashboardService {
         private long ineligibleStudentsCount;
         private double passRatePercentage;
         private Map<String, Long> classificationCounts;
+        private List<MajorBreakdownDTO> majorBreakdown;
     }
 
     @Transactional(readOnly = true)
     public DashboardSummaryDTO getDashboardSummary() {
-        long totalStudents = studentRepository.count();
+        List<Student> allStudents = studentRepository.findAll();
+        long totalStudents = allStudents.size();
         List<StudentEvaluation> evaluations = evaluationRepository.findAll();
 
         long eligibleCount = evaluations.stream()
@@ -52,6 +68,43 @@ public class DashboardService {
         long trungBinh = evaluations.stream().filter(e -> "TRUNG_BINH".equalsIgnoreCase(e.getGraduationClassification())).count();
         long khongDat = evaluations.stream().filter(e -> "KHONG_DAT".equalsIgnoreCase(e.getGraduationClassification())).count();
 
+        Map<Integer, List<Student>> studentsByMajor = allStudents.stream()
+                .filter(s -> s.getClazz() != null && s.getClazz().getMajor() != null)
+                .collect(Collectors.groupingBy(s -> s.getClazz().getMajor().getId()));
+
+        Map<Long, StudentEvaluation> evalByStudent = evaluations.stream()
+                .filter(e -> e.getStudent() != null)
+                .collect(Collectors.toMap(e -> e.getStudent().getId(), e -> e, (a, b) -> a));
+
+        List<MajorBreakdownDTO> breakdowns = majorRepository.findAll().stream()
+                .map(m -> {
+                    List<Student> mStudents = studentsByMajor.getOrDefault(m.getId(), Collections.emptyList());
+                    long total = mStudents.size();
+                    if (total == 0) return null;
+                    long passed = mStudents.stream()
+                            .map(s -> evalByStudent.get(s.getId()))
+                            .filter(e -> e != null && e.getFinalGraduationScore() != null && e.getFinalGraduationScore().doubleValue() >= 5.0)
+                            .count();
+                    double mPassRate = Math.round((double) passed / total * 1000.0) / 10.0;
+                    double avgScore = mStudents.stream()
+                            .map(s -> evalByStudent.get(s.getId()))
+                            .filter(e -> e != null && e.getFinalGraduationScore() != null)
+                            .mapToDouble(e -> e.getFinalGraduationScore().doubleValue())
+                            .average().orElse(0.0);
+                    avgScore = Math.round(avgScore * 100.0) / 100.0;
+
+                    return MajorBreakdownDTO.builder()
+                            .code(m.getCode())
+                            .name(m.getName())
+                            .total(total)
+                            .passRate(mPassRate)
+                            .avgScore(avgScore)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .sorted((a, b) -> Long.compare(b.getTotal(), a.getTotal()))
+                .collect(Collectors.toList());
+
         return DashboardSummaryDTO.builder()
                 .totalStudents(totalStudents)
                 .eligibleStudentsCount(eligibleCount)
@@ -64,6 +117,7 @@ public class DashboardService {
                         "TRUNG_BINH", trungBinh,
                         "KHONG_DAT", khongDat
                 ))
+                .majorBreakdown(breakdowns)
                 .build();
     }
 }

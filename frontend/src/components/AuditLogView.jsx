@@ -1,81 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { History, Shield, RefreshCw, TrendingUp, TrendingDown, Minus, Search, Calendar, Filter, X, Clock, UserCheck } from 'lucide-react';
 
-const MOCK_LOGS = [
-  {
-    id: 1,
-    modifiedAt: new Date().toISOString(),
-    studentName: 'Nguyễn Văn An',
-    studentCode: '26TSBB001',
-    subjectName: 'Chiến thuật Bộ binh',
-    subjectCode: 'CTBB01',
-    oldValue: 7.5,
-    newValue: 8.5,
-    reason: 'Chấm phúc khảo bài thi kết thúc môn theo quyết định số 102/QĐ-ĐTT',
-    modifiedByUsername: 'khoa_bo_binh',
-    modifiedByRole: 'ROLE_GIANGVIEN',
-    ipAddress: '192.168.1.50'
-  },
-  {
-    id: 2,
-    modifiedAt: new Date(Date.now() - 3600000).toISOString(),
-    studentName: 'Trần Thị Bình',
-    studentCode: '26TSBB002',
-    subjectName: 'Bắn súng AK bài 1 ban ngày',
-    subjectCode: 'BSAK01',
-    oldValue: 6.0,
-    newValue: 7.0,
-    reason: 'Cập nhật bổ sung điểm bắn đợt kiểm tra bổ sung',
-    modifiedByUsername: 'khoa_ban_sung',
-    modifiedByRole: 'ROLE_BOMON',
-    ipAddress: '192.168.1.25'
-  },
-  {
-    id: 3,
-    modifiedAt: new Date(Date.now() - 86400000).toISOString(),
-    studentName: 'Lê Hoàng Nam',
-    studentCode: '26COI005',
-    subjectName: 'Tính toán phần tử bắn Súng Cối 82mm',
-    subjectCode: 'COI82_02',
-    oldValue: 8.0,
-    newValue: 8.0,
-    reason: 'Kiểm tra đối chiếu điểm danh và sổ điểm giảng viên',
-    modifiedByUsername: 'pdt',
-    modifiedByRole: 'ROLE_PDT',
-    ipAddress: '192.168.1.10'
-  },
-  {
-    id: 4,
-    modifiedAt: new Date(Date.now() - 172800000).toISOString(),
-    studentName: 'Phạm Minh Đức',
-    studentCode: '26PK127_012',
-    subjectName: 'Bắn mục tiêu bay thấp súng 12,7mm',
-    subjectCode: 'PK127_03',
-    oldValue: 5.5,
-    newValue: 6.5,
-    reason: 'Hội đồng khoa phê duyệt điểm kiểm tra lại',
-    modifiedByUsername: 'khoa_phong_khong',
-    modifiedByRole: 'ROLE_GIANGVIEN',
-    ipAddress: '192.168.1.72'
-  },
-  {
-    id: 5,
-    modifiedAt: new Date(Date.now() - 259200000).toISOString(),
-    studentName: 'Vũ Quốc Huy',
-    studentCode: '26DKZ008',
-    subjectName: 'Kỹ thuật bắn ĐKZ 82-K65',
-    subjectCode: 'DKZ_01',
-    oldValue: 7.0,
-    newValue: 6.5,
-    reason: 'Điều chỉnh điểm sau thanh tra hồ sơ đào tạo học kỳ I',
-    modifiedByUsername: 'ban_khao_thi',
-    modifiedByRole: 'ROLE_KHAOTHI',
-    ipAddress: '192.168.1.15'
-  }
-];
-
 export default function AuditLogView() {
-  const [logs, setLogs] = useState(MOCK_LOGS);
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Filters
@@ -92,10 +19,12 @@ export default function AuditLogView() {
       const res = await fetch(`/api/v1/audit-logs/grades?page=0&size=50`, { headers });
       if (res.ok) {
         const data = await res.json();
-        setLogs(data.content && data.content.length > 0 ? data.content : MOCK_LOGS);
+        setLogs(Array.isArray(data.content) ? data.content : []);
+      } else {
+        setLogs([]);
       }
     } catch (err) {
-      setLogs(MOCK_LOGS);
+      setLogs([]);
     } finally {
       setLoading(false);
     }

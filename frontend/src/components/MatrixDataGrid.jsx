@@ -1,151 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Download, Upload, Save, Filter, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, Lock, Unlock, Star, Award, Plus, X, ChevronDown, FileSpreadsheet, Layers, BookOpen, ArrowLeftRight, Trash2, ClipboardCheck, Edit } from 'lucide-react';
 
-const INITIAL_MILITARY_MOCK_MATRIX = {
-  classId: 1,
-  classCode: 'SQDB2026-HT1',
-  className: 'Lớp SQDB2026 - Binh chủng Hợp thành 1',
-  majorName: 'Binh chủng Hợp thành',
-  courseName: 'Khóa Sĩ quan Dự bị 2026 (SQDB2026)',
+const EMPTY_MATRIX = {
+  classId: null,
+  classCode: '',
+  className: '',
+  majorName: '',
+  courseName: '',
   semester: 1,
   isLocked: false,
   lockedAt: null,
   lockedByUsername: null,
-  columns: [
-    { subjectId: 1, subjectCode: 'INT1001', subjectName: 'Kiến trúc cơ sở TT HTD', credits: 3, isExtra: false },
-    { subjectId: 2, subjectCode: 'INT1002', subjectName: 'Lập trình C/C++ Nâng cao', credits: 3, isExtra: false },
-    { subjectId: 3, subjectCode: 'INT1003', subjectName: 'Cấu trúc dữ liệu & Giải thuật', credits: 4, isExtra: false },
-    { subjectId: 4, subjectCode: 'INT1004', subjectName: 'Cơ sở dữ liệu PostgreSQL', credits: 3, isExtra: false }
-  ],
+  columns: [],
   gradExamSubjects: [
     { id: 101, code: 'TN01', name: 'Thi Chính trị' },
     { id: 102, code: 'TN02', name: 'Thi Quân sự chung' },
     { id: 103, code: 'TN03', name: 'Thi Chuyên ngành' }
   ],
-  rows: [
-    {
-      stt: 1,
-      studentId: 1,
-      fullName: 'Nguyễn Văn An',
-      dob: '15/05/2002',
-      pob: 'Hà Nội',
-      grades: {
-        1: { score: 8.5 },
-        2: { score: 8.0 },
-        3: { score: 7.5 },
-        4: { score: 8.5 }
-      },
-      tbcScore: 8.08,
-      conductGrade: 'TOT',
-      gradExamScores: {
-        101: 8.5,
-        102: 8.0,
-        103: 9.0
-      },
-      tbcGradExam: 8.5,
-      finalGraduationScore: 8.36,
-      graduationClassification: 'GIỎI'
-    },
-    {
-      stt: 2,
-      studentId: 2,
-      fullName: 'Trần Thị Bình',
-      dob: '20/08/2002',
-      pob: 'Hải Phòng',
-      grades: {
-        1: { score: 6.5 },
-        2: { score: 7.0 },
-        3: { score: 6.0 },
-        4: { score: 6.5 }
-      },
-      tbcScore: 6.46,
-      conductGrade: 'KHA',
-      gradExamScores: {
-        101: 6.5,
-        102: 6.0,
-        103: 7.0
-      },
-      tbcGradExam: 6.5,
-      finalGraduationScore: 6.49,
-      graduationClassification: 'TRUNG BÌNH'
-    },
-    {
-      stt: 3,
-      studentId: 3,
-      fullName: 'Lê Hoàng Cường',
-      dob: '10/11/2002',
-      pob: 'Nam Định',
-      grades: {
-        1: { score: 9.0 },
-        2: { score: 9.5 },
-        3: { score: 8.5 },
-        4: { score: 9.0 }
-      },
-      tbcScore: 8.96,
-      conductGrade: 'XUAT_SAC',
-      gradExamScores: {
-        101: 9.0,
-        102: 9.5,
-        103: 8.5
-      },
-      tbcGradExam: 9.0,
-      finalGraduationScore: 8.99,
-      graduationClassification: 'GIỎI'
-    },
-    {
-      stt: 4,
-      studentId: 4,
-      fullName: 'Phạm Minh Đức',
-      dob: '25/03/2002',
-      pob: 'Thái Bình',
-      grades: {
-        1: { score: 5.0 },
-        2: { score: 5.5 },
-        3: { score: 4.5 },
-        4: { score: 5.0 }
-      },
-      tbcScore: 4.96,
-      conductGrade: 'TRUNG_BINH',
-      gradExamScores: {
-        101: 5.0,
-        102: 4.5,
-        103: 5.5
-      },
-      tbcGradExam: 5.0,
-      finalGraduationScore: 4.99,
-      graduationClassification: 'KHÔNG ĐẠT'
-    },
-    {
-      stt: 5,
-      studentId: 5,
-      fullName: 'Vũ Thị Hoa',
-      dob: '05/12/2002',
-      pob: 'Quảng Ninh',
-      grades: {
-        1: { score: 7.0 },
-        2: { score: 7.5 },
-        3: { score: 8.0 },
-        4: { score: 7.5 }
-      },
-      tbcScore: 7.54,
-      conductGrade: 'KHA',
-      gradExamScores: {
-        101: 7.5,
-        102: 7.5,
-        103: 7.5
-      },
-      tbcGradExam: 7.5,
-      finalGraduationScore: 7.51,
-      graduationClassification: 'KHÁ'
-    }
-  ]
+  rows: []
 };
 
 export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [classId, setClassId] = useState(1);
   const [semester, setSemester] = useState(1);
   const [classList, setClassList] = useState([]);
-  const [matrixData, setMatrixData] = useState(INITIAL_MILITARY_MOCK_MATRIX);
+  const [matrixData, setMatrixData] = useState(EMPTY_MATRIX);
   const [loading, setLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -266,12 +145,12 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         setMatrixData(data);
         setIsDemoMode(false);
       } else {
-        setMatrixData(INITIAL_MILITARY_MOCK_MATRIX);
-        setIsDemoMode(true);
+        setMatrixData(EMPTY_MATRIX);
+        setIsDemoMode(false);
       }
     } catch (err) {
-      setMatrixData(INITIAL_MILITARY_MOCK_MATRIX);
-      setIsDemoMode(true);
+      setMatrixData(EMPTY_MATRIX);
+      setIsDemoMode(false);
     } finally {
       setLoading(false);
       setEditedScores({});
@@ -1623,7 +1502,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </thead>
 
           <tbody>
-            {safeRows.map((row, rowIdx) => {
+            {safeRows.length === 0 ? (
+              <tr>
+                <td colSpan={15 + (matrixData?.columns?.length || 0)} className="py-16 text-center text-slate-400 font-medium bg-slate-50/50">
+                  {loading ? 'Đang tải bảng điểm học viên...' : 'Lớp học hiện chưa có dữ liệu học viên trong hệ thống. Vui lòng thêm học viên hoặc import danh sách.'}
+                </td>
+              </tr>
+            ) : (
+              safeRows.map((row, rowIdx) => {
               const currentConduct = editedConducts[row.studentId] !== undefined ? editedConducts[row.studentId] : row.conductGrade;
 
               // Calculate TBC for 3 Graduation Exam Subjects
@@ -1798,7 +1684,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   <td className="text-xs text-slate-600">{row.pob || 'Hà Nội'}</td>
                 </tr>
               );
-            })}
+            })
+          )}
           </tbody>
         </table>
       </div>

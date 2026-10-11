@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, CheckCircle2, XCircle, TrendingUp, Medal, BarChart3, PieChart, ShieldCheck, Award, Target, Flame, ChevronRight } from 'lucide-react';
 
-const MOCK_MILITARY_DASHBOARD = {
-  totalStudents: 150,
-  eligibleStudentsCount: 125,
-  ineligibleStudentsCount: 25,
-  passRatePercentage: 83.3,
+const EMPTY_DASHBOARD = {
+  totalStudents: 0,
+  eligibleStudentsCount: 0,
+  ineligibleStudentsCount: 0,
+  passRatePercentage: 0,
   classificationCounts: {
-    XUAT_SAC: 20,
-    GIOL: 55,
-    KHA: 50,
-    TRUNG_BINH: 15,
-    KHONG_DAT: 10
-  }
+    XUAT_SAC: 0,
+    GIOL: 0,
+    KHA: 0,
+    TRUNG_BINH: 0,
+    KHONG_DAT: 0
+  },
+  majorBreakdown: []
 };
 
 const CLASSIFICATIONS = [
@@ -21,14 +22,6 @@ const CLASSIFICATIONS = [
   { key: 'KHA',      label: 'Khá',        desc: '6.5 ≤ TN < 8.0', bg: '#f0fdf4', color: '#166534', barColor: '#22c55e', border: '#bbf7d0' },
   { key: 'TRUNG_BINH', label: 'Trung bình', desc: '5.0 ≤ TN < 6.5', bg: '#f1f5f9', color: '#475569', barColor: '#64748b', border: '#cbd5e1' },
   { key: 'KHONG_DAT', label: 'Không đạt', desc: 'TN < 5.0',       bg: '#fee2e2', color: '#dc2626', barColor: '#ef4444', border: '#fca5a5' },
-];
-
-const MAJOR_BREAKDOWN = [
-  { code: 'TSBB', name: 'Trinh sát Bộ binh', total: 42, passRate: 88.1, avgScore: 7.85 },
-  { code: 'COI',  name: 'Súng Cối 82mm',      total: 35, passRate: 85.7, avgScore: 7.62 },
-  { code: 'DKZ',  name: 'Súng ĐKZ (82-K65)',  total: 30, passRate: 80.0, avgScore: 7.40 },
-  { code: 'PK127',name: 'Phòng không 12,7mm', total: 28, passRate: 78.5, avgScore: 7.35 },
-  { code: 'BB',   name: 'Binh chủng Hợp thành', total: 15, passRate: 86.6, avgScore: 7.70 },
 ];
 
 function KpiCard({ icon: Icon, iconColor, label, value, unit, sub, barValue, badge }) {
@@ -62,10 +55,12 @@ function KpiCard({ icon: Icon, iconColor, label, value, unit, sub, barValue, bad
 }
 
 export default function DashboardView() {
-  const [data, setData] = useState(MOCK_MILITARY_DASHBOARD);
+  const [data, setData] = useState(EMPTY_DASHBOARD);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSummary = async () => {
+      setLoading(true);
       try {
         const token = localStorage.getItem('jwt_token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -73,9 +68,13 @@ export default function DashboardView() {
         if (res.ok) {
           const resData = await res.json();
           setData(resData);
+        } else {
+          setData(EMPTY_DASHBOARD);
         }
       } catch (e) {
-        setData(MOCK_MILITARY_DASHBOARD);
+        setData(EMPTY_DASHBOARD);
+      } finally {
+        setLoading(false);
       }
     };
     fetchSummary();
@@ -291,37 +290,43 @@ export default function DashboardView() {
             </h3>
           </div>
           <span className="text-[11px] text-slate-500 font-semibold">
-            5 Chuyên ngành trọng điểm
+            {data.majorBreakdown?.length || 0} Chuyên ngành đào tạo trong CSDL
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {MAJOR_BREAKDOWN.map((m) => (
-            <div key={m.code} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-mono text-xs font-black text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                  {m.code}
-                </span>
-                <span className="text-xs font-bold text-emerald-700">
-                  {m.passRate}%
-                </span>
+        {data.majorBreakdown && data.majorBreakdown.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {data.majorBreakdown.map((m) => (
+              <div key={m.code} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-mono text-xs font-black text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                    {m.code}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700">
+                    {m.passRate}%
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-900 truncate" title={m.name}>
+                  {m.name}
+                </h4>
+                <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                  <span>Quân số: <b>{m.total}</b></span>
+                  <span>ĐTB: <b className="text-slate-800">{m.avgScore}</b></span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-600 rounded-full"
+                    style={{ width: `${m.passRate}%` }}
+                  />
+                </div>
               </div>
-              <h4 className="text-xs font-bold text-slate-900 truncate" title={m.name}>
-                {m.name}
-              </h4>
-              <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span>Quân số: <b>{m.total}</b></span>
-                <span>ĐTB: <b className="text-slate-800">{m.avgScore}</b></span>
-              </div>
-              <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-600 rounded-full"
-                  style={{ width: `${m.passRate}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-slate-400 text-xs italic">
+            Chưa có số liệu học viên theo chuyên ngành trong cơ sở dữ liệu.
+          </div>
+        )}
       </div>
 
       {/* Military Honors Breakdown Cards */}
