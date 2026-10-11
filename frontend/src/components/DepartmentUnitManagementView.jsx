@@ -100,9 +100,12 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
         const dData = await deptRes.json();
         setDepartments(dData);
         if (dData.length > 0 && !selectedDeptId) {
+          const khoaList = dData.filter(d => d.type === 'KHOA');
           // If Trưởng Khoa has departmentId, preselect it
           if (currentUser?.departmentId && dData.some(d => d.id === currentUser.departmentId)) {
             setSelectedDeptId(currentUser.departmentId);
+          } else if (khoaList.length > 0) {
+            setSelectedDeptId(khoaList[0].id);
           } else {
             setSelectedDeptId(dData[0].id);
           }
@@ -484,7 +487,7 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
 
   // Calculate statistics
   const totalKhoa = departments.filter(d => d.type === 'KHOA').length;
-  const totalDonVi = departments.filter(d => d.type === 'DONVI').length;
+  const totalDonVi = departments.filter(d => d.type === 'DONVI' || d.type === 'DON_VI').length;
   const totalUsers = allUsers.length;
   const totalSubjects = allSubjects.length;
 
@@ -678,9 +681,13 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           KHOA ĐÀO TẠO
                         </span>
-                      ) : (
+                      ) : (dept.type === 'DON_VI' || dept.type === 'DONVI') ? (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
                           ĐƠN VỊ HỌC VIÊN
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                          CƠ QUAN CHỈ HUY
                         </span>
                       )}
                     </td>
@@ -741,10 +748,11 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                 className="form-input text-xs font-bold text-slate-900 bg-white border-slate-300 rounded-lg px-3 py-1.5 min-w-[260px]"
               >
                 {departments
+                  .filter(d => d.type === 'KHOA')
                   .filter(d => isPrivileged || (isTruongKhoa && currentUser?.departmentId ? d.id === currentUser.departmentId : true))
                   .map(d => (
                     <option key={d.id} value={d.id}>
-                      [{d.code}] {d.name} ({d.type === 'KHOA' ? 'Khoa' : 'Đơn vị'})
+                      [{d.code}] {d.name}
                     </option>
                   ))}
               </select>
@@ -1064,9 +1072,9 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                   onChange={(e) => setDeptType(e.target.value)}
                   className="form-input w-full font-bold"
                 >
-                  <option value="KHOA">Khoa đào tạo / Bộ môn giảng dạy</option>
-                  <option value="DONVI">Đơn vị quản lý học viên (Tiểu đoàn / Đại đội)</option>
-                  <option value="PHONG">Phòng ban chỉ huy (BGH / PĐT)</option>
+                  <option value="KHOA">Khoa đào tạo chuyên môn</option>
+                  <option value="DON_VI">Đơn vị quản lý học viên (Tiểu đoàn / Đại đội)</option>
+                  <option value="PHONG_BAN">Cơ quan chỉ huy (BGH / PĐT)</option>
                 </select>
               </div>
 

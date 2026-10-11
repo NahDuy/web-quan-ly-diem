@@ -7,17 +7,21 @@ INSERT INTO roles (id, code, name) VALUES
 
 -- 2. Insert Departments
 INSERT INTO departments (id, code, name, type) VALUES
-(1, 'PDT', 'Phòng Đào Tạo', 'PHONG_DAO_TAO'),
-(2, 'BM_HT', 'Bộ môn Binh chủng Hợp thành', 'BO_MON'),
-(3, 'BM_PB', 'Bộ môn Binh chủng Pháo binh', 'BO_MON'),
-(4, 'BM_TT', 'Bộ môn Thông tin Kỹ thuật', 'BO_MON');
+(1, 'PDT', 'Phòng Đào Tạo', 'PHONG_BAN'),
+(5, 'BGH', 'Ban Giám Hiệu', 'PHONG_BAN'),
+(6, 'KHOA_BC', 'Khoa Binh chủng Hợp thành', 'KHOA'),
+(7, 'KHOA_QS', 'Khoa Quân sự chung', 'KHOA'),
+(8, 'KHOA_CT', 'Khoa CTĐ - CTCT (Chính trị)', 'KHOA'),
+(9, 'D1', 'Tiểu đoàn 1 - Quản lý Học viên', 'DON_VI'),
+(10, 'D2', 'Tiểu đoàn 2 - Quản lý Học viên', 'DON_VI'),
+(11, 'C1', 'Đại đội 1 - Quản lý Học viên', 'DON_VI');
 
 -- 3. Insert Test Users (Password for all is 'password123': $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO)
 INSERT INTO users (id, username, password_hash, full_name, email, role_id, department_id, is_active) VALUES
-(1, 'admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Ban Giám Hiệu', 'bgh@intranet.edu.vn', 1, 1, TRUE),
-(2, 'bomon_ht', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Trưởng Bộ Môn Hợp thành', 'bomon.ht@intranet.edu.vn', 2, 2, TRUE),
-(3, 'giangvien_a', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'ThS. Nguyễn Văn Giảng', 'giang.nv@intranet.edu.vn', 3, 2, TRUE),
-(4, 'sv001', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Nguyễn Văn An', 'an.nv@student.edu.vn', 4, 2, TRUE);
+(1, 'admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Ban Giám Hiệu', 'bgh@intranet.edu.vn', 1, 5, TRUE),
+(2, 'bomon_ht', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Trưởng Bộ Môn Hợp thành', 'bomon.ht@intranet.edu.vn', 2, 6, TRUE),
+(3, 'giangvien_a', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'ThS. Nguyễn Văn Giảng', 'giang.nv@intranet.edu.vn', 3, 6, TRUE),
+(4, 'sv001', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.85nJ3q0/5E2f7Yg3.ZpKO', 'Nguyễn Văn An', 'an.nv@student.edu.vn', 4, 9, TRUE);
 
 -- 4. Insert Courses (Khóa Đào tạo SQDB theo năm)
 INSERT INTO courses (id, code, name, start_year, end_year) VALUES
@@ -27,9 +31,9 @@ INSERT INTO courses (id, code, name, start_year, end_year) VALUES
 
 -- 5. Insert Majors (Chuyên ngành / Khóa Đào tạo)
 INSERT INTO majors (id, code, name, department_id) VALUES
-(1, 'HT', 'Binh chủng Hợp thành', 2),
-(2, 'PB', 'Binh chủng Pháo binh', 3),
-(3, 'TT', 'Thông tin Kỹ thuật', 4);
+(1, 'HT', 'Binh chủng Hợp thành', NULL),
+(2, 'PB', 'Binh chủng Pháo binh', NULL),
+(3, 'TT', 'Thông tin Kỹ thuật', NULL);
 
 -- 6. Insert Classes (Lớp học theo Khóa SQDB)
 INSERT INTO classes (id, code, name, major_id, course_id, advisor_id) VALUES
@@ -41,10 +45,10 @@ INSERT INTO classes (id, code, name, major_id, course_id, advisor_id) VALUES
 
 -- 7. Insert Subjects
 INSERT INTO subjects (id, code, name, credits, department_id) VALUES
-(1, 'INT1001', 'Kiến trúc cơ sở TT HTD', 3, 2),
-(2, 'INT1002', 'Lập trình C/C++ Nâng cao', 3, 2),
-(3, 'INT1003', 'Cấu trúc dữ liệu & Giải thuật', 4, 2),
-(4, 'INT1004', 'Cơ sở dữ liệu PostgreSQL', 3, 2);
+(1, 'INT1001', 'Kiến trúc cơ sở TT HTD', 3, 6),
+(2, 'INT1002', 'Lập trình C/C++ Nâng cao', 3, 6),
+(3, 'INT1003', 'Cấu trúc dữ liệu & Giải thuật', 4, 6),
+(4, 'INT1004', 'Cơ sở dữ liệu PostgreSQL', 3, 6);
 
 -- 8. Insert Curriculum
 INSERT INTO curriculums (id, major_id, course_id, name, total_credits) VALUES
