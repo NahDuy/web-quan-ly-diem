@@ -32,6 +32,8 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("Checking & Initializing default security users, roles, and departments...");
 
+        Role roleAdmin = roleRepository.findByCode("ROLE_ADMIN")
+                .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_ADMIN").name("Quản trị viên Hệ thống").build()));
         Role roleBgh = roleRepository.findByCode("ROLE_BGH")
                 .orElseGet(() -> roleRepository.save(Role.builder().code("ROLE_BGH").name("Ban Giám Hiệu").build()));
         Role rolePdt = roleRepository.findByCode("ROLE_PDT")
@@ -62,15 +64,17 @@ public class DataInitializer implements CommandLineRunner {
         Department donviD2 = departmentRepository.findByCode("D2")
                 .orElseGet(() -> departmentRepository.save(Department.builder().code("D2").name("Tiểu đoàn 2 - Quản lý Học viên").type("DON_VI").build()));
 
-        // Khởi tạo 5 tài khoản test tương ứng với 5 role: username = password
+        // 1. Tài khoản Quản trị viên tối cao duy nhất
+        createOrUpdateUser("admin", passwordEncoder.encode("admin"), "Quản trị viên Hệ thống (System Admin)", "admin@intranet.edu.vn", roleAdmin, bghDept);
+
+        // 2. Khởi tạo 5 tài khoản test tương ứng với 5 role nghiệp vụ: username = password
         createOrUpdateUser("bgh", passwordEncoder.encode("bgh"), "Thiếu tướng Trần Quốc Tuấn (Ban Giám Hiệu)", "bgh@intranet.edu.vn", roleBgh, bghDept);
         createOrUpdateUser("pdt", passwordEncoder.encode("pdt"), "Đại tá Nguyễn Đức Phòng (Trưởng Phòng Đào Tạo)", "pdt@intranet.edu.vn", rolePdt, pdtDept);
         createOrUpdateUser("truongkhoa", passwordEncoder.encode("truongkhoa"), "Thượng tá Lê Đình Khoa (Trưởng Khoa Binh chủng Hợp thành)", "truongkhoa@intranet.edu.vn", roleTruongKhoa, khoaBc);
         createOrUpdateUser("giaovien", passwordEncoder.encode("giaovien"), "Đại úy Hoàng Văn Giáo (Giáo viên Bộ môn)", "giaovien@intranet.edu.vn", roleGiangVien, khoaBc);
         createOrUpdateUser("donvi", passwordEncoder.encode("donvi"), "Trung tá Đặng Văn Đơn (Chỉ huy Đơn vị QLHV Tiểu đoàn 1)", "donvi@intranet.edu.vn", roleDonVi, donviD1);
 
-        // Giữ tài khoản quản trị cũ
-        createOrUpdateUser("admin", passwordEncoder.encode("password123"), "Đại tá Trần Văn Thủ (Ban Giám Hiệu)", "admin@intranet.edu.vn", roleBgh, pdtDept);
+        // Giữ tài khoản phụ cũ
         createOrUpdateUser("bomon_ht", passwordEncoder.encode("password123"), "Thượng tá Lê Văn Bộ (Chủ nhiệm Bộ môn)", "bomon.ht@intranet.edu.vn", roleBomon, khoaBc);
         createOrUpdateUser("giangvien_a", passwordEncoder.encode("password123"), "Thượng úy Nguyễn Văn Giảng (Giáo viên)", "giang.nv@intranet.edu.vn", roleGiangVien, khoaBc);
         createOrUpdateUser("sv001", passwordEncoder.encode("password123"), "Thượng sĩ Nguyễn Văn An (Học viên)", "an.nv@student.edu.vn", roleSinhVien, donviD1);

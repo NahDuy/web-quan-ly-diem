@@ -68,6 +68,7 @@ public class SecurityConfig {
                 .requestMatchers("/v1/classes/*/matrix/bulk-update", "/api/v1/classes/*/matrix/bulk-update").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_ADMIN", "ROLE_TRUONGKHOA", "ROLE_BOMON", "ROLE_GIANGVIEN")
                 .requestMatchers("/v1/classes/*/import-excel", "/api/v1/classes/*/import-excel").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_ADMIN")
                 .requestMatchers("/v1/audit-logs/**", "/api/v1/audit-logs/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_ADMIN", "ROLE_TRUONGKHOA", "ROLE_BOMON")
+                .requestMatchers("/v1/admin/**", "/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
                 .anyRequest().permitAll()
             );
 

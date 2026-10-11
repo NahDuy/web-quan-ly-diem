@@ -7,6 +7,7 @@ import {
   BookmarkCheck,
   History,
   Building2,
+  Wrench,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -15,13 +16,14 @@ import {
 } from 'lucide-react';
 
 const NAV_TABS = [
-  { id: 'dashboard',   label: 'Dashboard Chỉ Huy',        icon: LayoutDashboard },
-  { id: 'departments', label: 'Quản lý Khoa & Đơn vị',    icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
-  { id: 'students',    label: 'Quản lý Học viên',         icon: Users },
-  { id: 'matrix',      label: 'Bảng Quản lý Điểm',        icon: Table },
-  { id: 'roadmap',     label: 'Lộ trình Đào tạo',         icon: Compass },
-  { id: 'majors',      label: 'Chuyên ngành & Quy ước',   icon: BookmarkCheck },
-  { id: 'audit',       label: 'Nhật ký Audit Log',        icon: History, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN'] },
+  { id: 'dashboard',    label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard },
+  { id: 'admin-center', label: 'Quản trị Hệ thống & Cứu hộ',  icon: Wrench, roles: ['ROLE_ADMIN'] },
+  { id: 'departments',  label: 'Quản lý Khoa & Đơn vị',        icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+  { id: 'students',     label: 'Quản lý Học viên',             icon: Users },
+  { id: 'matrix',       label: 'Bảng Quản lý Điểm',            icon: Table },
+  { id: 'roadmap',      label: 'Lộ trình Đào tạo',             icon: Compass },
+  { id: 'majors',       label: 'Chuyên ngành & Quy ước',       icon: BookmarkCheck },
+  { id: 'audit',        label: 'Nhật ký Audit Log',            icon: History, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_ADMIN'] },
 ];
 
 export default function Navbar({
@@ -35,6 +37,8 @@ export default function Navbar({
 }) {
   const getRoleBadge = (role) => {
     switch (role) {
+      case 'ROLE_ADMIN':
+        return { label: 'Quản trị viên Tối cao', bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' };
       case 'ROLE_BGH':
         return { label: 'Ban Giám Hiệu', bg: '#fef3c7', color: '#b45309', border: '#fde047' };
       case 'ROLE_PDT':

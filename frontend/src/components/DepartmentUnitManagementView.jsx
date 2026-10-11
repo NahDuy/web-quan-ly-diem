@@ -606,7 +606,7 @@ export default function DepartmentUnitManagementView({ currentUser }) {
           <span>2. Môn học theo Khoa & Phân công Giảng dạy</span>
         </button>
 
-        {isPrivileged && (
+        {currentUser?.role === 'ROLE_ADMIN' && (
           <button
             onClick={() => setActiveSubTab('users')}
             className={`pb-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition cursor-pointer ${
@@ -911,8 +911,8 @@ export default function DepartmentUnitManagementView({ currentUser }) {
         </div>
       )}
 
-      {/* SUB-TAB 3: USERS & ROLE MANAGEMENT */}
-      {activeSubTab === 'users' && isPrivileged && (
+      {/* SUB-TAB 3: USERS & ROLE MANAGEMENT (CHỈ DÀNH CHO ADMIN) */}
+      {activeSubTab === 'users' && currentUser?.role === 'ROLE_ADMIN' && (
         <div className="bg-white p-6 rounded-b-xl border border-slate-200 shadow-xs space-y-4 -mt-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>

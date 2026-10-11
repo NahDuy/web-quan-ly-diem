@@ -73,12 +73,6 @@ public class GradeMatrixService {
         boolean isTeacherView = isGiangVien;
         String deptFilterName = (isGiangVien || isTruongKhoa) && currentUser != null ? currentUser.getDepartmentName() : null;
 
-        if (isTeacherView) {
-            subjects = subjects.stream()
-                    .filter(s -> s.getDepartment() != null && s.getDepartment().getId().equals(currentUser.getDepartmentId()))
-                    .collect(Collectors.toList());
-        }
-
         List<SubjectColumnDTO> columns = subjects.stream().map(s -> SubjectColumnDTO.builder()
                 .subjectId(s.getId())
                 .subjectCode(s.getCode())
