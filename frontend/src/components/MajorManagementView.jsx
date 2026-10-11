@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BookmarkCheck, Plus, Edit2, Trash2, Search, Building2, 
+  BookmarkCheck, Plus, Edit2, Trash2, Search, 
   Layers, CheckCircle2, AlertTriangle, X, Hash, BookOpen, Sparkles, Shield, Download
 } from 'lucide-react';
 
@@ -254,8 +254,7 @@ export default function MajorManagementView() {
 
   const filteredMajors = majors.filter(m => 
     m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.departmentName?.toLowerCase().includes(searchTerm.toLowerCase())
+    m.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -336,7 +335,7 @@ export default function MajorManagementView() {
       )}
 
       {/* Quick Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="glass-panel p-4 bg-slate-50 border border-slate-200 rounded-xl">
           <p className="text-xs text-slate-500 font-bold uppercase">Tổng số Chuyên ngành</p>
           <p className="text-2xl font-extrabold text-amber-700 mt-1">{majors.length}</p>
@@ -348,11 +347,6 @@ export default function MajorManagementView() {
             {majors.filter(m => m.classCount > 0).length}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">Có ít nhất 1 lớp học trực thuộc</p>
-        </div>
-        <div className="glass-panel p-4 bg-slate-50 border border-slate-200 rounded-xl">
-          <p className="text-xs text-slate-500 font-bold uppercase">Khoa / Bộ môn Phụ trách</p>
-          <p className="text-2xl font-extrabold text-blue-700 mt-1">{departments.length}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Đơn vị quản lý chương trình khung</p>
         </div>
       </div>
 
@@ -427,7 +421,7 @@ export default function MajorManagementView() {
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm theo mã ngành, tên chuyên ngành, bộ môn..."
+              placeholder="Tìm theo mã ngành, tên chuyên ngành..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
@@ -445,7 +439,6 @@ export default function MajorManagementView() {
                 <th className="p-3 w-12 text-center">STT</th>
                 <th className="p-3 w-28 text-center">Mã Quy Ước</th>
                 <th className="p-3">Tên Chuyên ngành</th>
-                <th className="p-3">Khoa / Bộ môn Quản lý</th>
                 <th className="p-3 text-center w-24">Số Lớp</th>
                 <th className="p-3 text-emerald-800">Mẫu Mã Lớp (2026)</th>
                 <th className="p-3 text-amber-800">Mẫu Mã Học viên (2026)</th>
@@ -455,13 +448,13 @@ export default function MajorManagementView() {
             <tbody className="divide-y divide-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
+                  <td colSpan="7" className="p-8 text-center text-slate-500">
                     Đang tải danh sách chuyên ngành...
                   </td>
                 </tr>
               ) : filteredMajors.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
+                  <td colSpan="7" className="p-8 text-center text-slate-500">
                     Không tìm thấy chuyên ngành nào phù hợp
                   </td>
                 </tr>
@@ -476,10 +469,6 @@ export default function MajorManagementView() {
                     </td>
                     <td className="p-3 font-bold text-slate-900 text-sm">
                       {major.name}
-                    </td>
-                    <td className="p-3 text-slate-700 flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                      {major.departmentName || 'Chưa phân khoa'}
                     </td>
                     <td className="p-3 text-center font-bold">
                       {major.classCount > 0 ? (
@@ -577,24 +566,6 @@ export default function MajorManagementView() {
                   onChange={(e) => setFormName(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Khoa / Bộ môn Quản lý
-                </label>
-                <select
-                  value={formDeptId}
-                  onChange={(e) => setFormDeptId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 cursor-pointer"
-                >
-                  <option value="">-- Chưa gán khoa bộ môn --</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.code})
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {/* Dynamic Preview Box */}

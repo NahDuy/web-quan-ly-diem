@@ -1063,33 +1063,9 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           </div>
         )}
 
-        {/* KHỐI 3: TIỆN ÍCH EXCEL (XUẤT MẪU NHẬP ĐIỂM / IMPORT ĐIỂM / XUẤT BÁO CÁO) */}
+        {/* KHỐI 3: XUẤT BÁO CÁO KẾT QUẢ CHÍNH THỨC */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-lg">
-          {/* Nút A: TẢI FILE MẪU EXCEL ĐỂ NHẬP ĐIỂM */}
-          <a
-            href={`/api/v1/classes/${classId}/export-excel?semester=${semester}`}
-            download
-            className="btn btn-sm h-8 px-2.5 text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer rounded-md transition"
-            style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}
-            title="Tải file Excel mẫu chứa danh sách học viên và cột môn của lớp để nhập điểm offline"
-          >
-            <Download className="w-3.5 h-3.5 text-amber-700" />
-            <span>Xuất Mẫu Nhập Điểm</span>
-          </a>
-
-          {/* Nút B: IMPORT EXCEL ĐIỂM (Ẩn với Đơn vị vì chỉ có quyền tra cứu) */}
-          {!isDonVi && (
-            <button
-              onClick={() => onOpenImportModal && onOpenImportModal(classId, semester, matrixData?.classCode)}
-              className="btn btn-secondary btn-sm h-8 px-2.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
-              title="Nhập điểm hàng loạt từ file Excel"
-            >
-              <Upload className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Import Điểm</span>
-            </button>
-          )}
-
-          {/* Nút C: DROPDOWN XUẤT BÁO CÁO KẾT QUẢ */}
+          {/* NÚT DROPDOWN XUẤT BÁO CÁO KẾT QUẢ */}
           <div className="relative">
             <button
               onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
@@ -1108,32 +1084,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   onClick={() => setExportDropdownOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
-                  {/* PHẦN 1: FILE MẪU NHẬP ĐIỂM */}
-                  <div className="px-3.5 py-1 text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>Mẫu nhập điểm offline</span>
-                  </div>
-                  <a
-                    href={`/api/v1/classes/${classId}/export-excel?semester=${semester}`}
-                    download
-                    onClick={() => setExportDropdownOpen(false)}
-                    className="w-full px-3.5 py-2 text-left hover:bg-amber-50/80 flex items-start gap-3 transition cursor-pointer"
-                  >
-                    <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg border border-amber-300 shrink-0 mt-0.5">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-amber-950">
-                        Mẫu Excel nhập điểm ({matrixData?.classCode || `Lớp #${classId}`})
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Chứa danh sách học viên và các cột môn đã tạo để điền điểm rồi nạp qua Import Excel
-                      </div>
-                    </div>
-                  </a>
-
-                  <div className="h-px bg-slate-200 my-1.5 mx-3"></div>
-
-                  {/* PHẦN 2: XUẤT LỚP HIỆN TẠI */}
+                  {/* BÁO CÁO LỚP HIỆN TẠI */}
                   <div className="px-3.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                     <span>Báo cáo lớp đang chọn</span>
                     <span className="text-emerald-700 font-mono font-bold">
