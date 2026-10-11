@@ -14,9 +14,9 @@ const EMPTY_MATRIX = {
   lockedByUsername: null,
   columns: [],
   gradExamSubjects: [
-    { id: 101, code: 'TN01', name: 'Thi Chính trị' },
-    { id: 102, code: 'TN02', name: 'Thi Quân sự chung' },
-    { id: 103, code: 'TN03', name: 'Thi Chuyên ngành' }
+    { id: 101, code: 'TN01', name: 'Giáo dục Chính trị' },
+    { id: 102, code: 'TN02', name: 'Quân sự chung' },
+    { id: 103, code: 'TN03', name: 'Chuyên ngành' }
   ],
   rows: []
 };

@@ -10,6 +10,22 @@ const DEFAULT_TARGET_GROUPS = [
   { code: 'HSQ', name: 'Hạ sĩ quan Chỉ huy (HSQ)', desc: 'Thời gian 06 tháng' },
 ];
 
+const TARGET_GROUP_DEFAULT_MAJORS = {
+  SQDB: 'BB',
+  TDT: 'VTD',
+  KDT: 'DL',
+  NVKT: 'NVQY',
+  HSQ: 'BB',
+};
+
+const TARGET_GROUP_MAJORS = {
+  SQDB: ['BB', 'BCHT', 'TSBB', 'COI', 'DKZ', 'PK127', 'PB', 'TT'],
+  TDT: ['VTD', 'HTD', 'KTPB', 'CB', 'NA', 'TSBB'],
+  KDT: ['DL', 'C60', 'COI', 'C100', 'SPG9', 'AGS17', 'DKZ', 'PXK', 'PK37', 'PK57', 'PK127'],
+  NVKT: ['NVQY', 'NVBQVK', 'NVBQD', 'BVU'],
+  HSQ: ['BB', 'BCHT'],
+};
+
 export default function CurriculumRoadmapView() {
   const [targetGroups, setTargetGroups] = useState(() => {
     try {
@@ -25,7 +41,7 @@ export default function CurriculumRoadmapView() {
   });
 
   const [targetGroup, setTargetGroup] = useState('SQDB');
-  const [selectedMajor, setSelectedMajor] = useState('TSBB');
+  const [selectedMajor, setSelectedMajor] = useState('BB');
   const [filterType, setFilterType] = useState('ALL'); // ALL, MON_HOC_PHAN, MON_THI_TOT_NGHIEP
   
   const [curriculums, setCurriculums] = useState([]);
@@ -46,11 +62,12 @@ export default function CurriculumRoadmapView() {
     name: ''
   });
 
-  const [selectedCourse, setSelectedCourse] = useState('SQDB2026');
+  const [selectedCourse, setSelectedCourse] = useState('2026');
   const courseOptions = [
-    { code: 'SQDB2026', name: 'Khóa SQDB 2026 (Năm 2026)', year: 2026 },
-    { code: 'SQDB2025', name: 'Khóa SQDB 2025 (Năm 2025)', year: 2025 },
-    { code: 'SQDB2024', name: 'Khóa SQDB 2024 (Năm 2024)', year: 2024 },
+    { code: '2026', name: 'Năm huấn luyện 2026 (Khung hiện hành)' },
+    { code: '2025', name: 'Năm huấn luyện 2025' },
+    { code: '2024', name: 'Năm huấn luyện 2024' },
+    { code: 'ALL', name: 'Tất cả các năm áp dụng' },
   ];
 
   // Import Modal State
@@ -99,8 +116,25 @@ export default function CurriculumRoadmapView() {
     }
   }, [selectedMajor, targetGroup, selectedCourse]);
 
+  const handleSelectTargetGroup = (code) => {
+    setTargetGroup(code);
+    const defaultMajor = TARGET_GROUP_DEFAULT_MAJORS[code];
+    if (defaultMajor && majors.some(m => m.code === defaultMajor)) {
+      setSelectedMajor(defaultMajor);
+    } else if (TARGET_GROUP_MAJORS[code] && TARGET_GROUP_MAJORS[code].length > 0) {
+      const firstAvailable = majors.find(m => TARGET_GROUP_MAJORS[code].includes(m.code));
+      if (firstAvailable) {
+        setSelectedMajor(firstAvailable.code);
+      }
+    }
+  };
+
   const activeCurriculum = curriculums.length > 0 ? curriculums[0] : null;
   const allSubjects = activeCurriculum?.subjects || [];
+
+  const relevantMajorCodes = TARGET_GROUP_MAJORS[targetGroup] || [];
+  const relevantMajors = majors.filter(m => relevantMajorCodes.includes(m.code));
+  const otherMajors = majors.filter(m => !relevantMajorCodes.includes(m.code));
 
   const filteredSubjects = allSubjects.filter(sub => {
     if (filterType === 'ALL') return true;
@@ -309,7 +343,7 @@ export default function CurriculumRoadmapView() {
               return (
                 <div
                   key={tg.code}
-                  onClick={() => setTargetGroup(tg.code)}
+                  onClick={() => handleSelectTargetGroup(tg.code)}
                   className={`relative group p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                     active
                       ? 'bg-amber-50 border-amber-400 shadow-sm ring-1 ring-amber-300'
@@ -341,38 +375,39 @@ export default function CurriculumRoadmapView() {
           </div>
         </div>
 
-        {/* Row 2: Major & Filter Controls */}
+        {/* Row 2: Major, Course Year & Filter Controls */}
         <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <div>
               <label className="form-label text-[11px] mb-1">
-                2. Chọn Khóa / Năm đào tạo
-              </label>
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="form-input text-xs font-bold text-slate-900 min-w-[210px]"
-                style={{ cursor: 'pointer' }}
-              >
-                {courseOptions.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label text-[11px] mb-1">
-                3. Chọn Chuyên ngành đào tạo
+                2. Chọn Chuyên ngành đào tạo
               </label>
               <select
                 value={selectedMajor}
                 onChange={(e) => setSelectedMajor(e.target.value)}
-                className="form-input text-xs font-bold text-slate-900 min-w-[260px]"
+                className="form-input text-xs font-bold text-slate-900 min-w-[280px]"
                 style={{ cursor: 'pointer' }}
               >
-                {majors.length > 0 ? (
+                {relevantMajors.length > 0 ? (
+                  <>
+                    <optgroup label={`Chuyên ngành thuộc đối tượng ${targetGroup}`}>
+                      {relevantMajors.map((m) => (
+                        <option key={m.code} value={m.code}>
+                          {m.code} - {m.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {otherMajors.length > 0 && (
+                      <optgroup label="Tất cả chuyên ngành khác">
+                        {otherMajors.map((m) => (
+                          <option key={m.code} value={m.code}>
+                            {m.code} - {m.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                ) : majors.length > 0 ? (
                   majors.map((m) => (
                     <option key={m.code} value={m.code}>
                       {m.code} - {m.name}
@@ -389,6 +424,24 @@ export default function CurriculumRoadmapView() {
                     <option value="TT">TT - Thông tin Kỹ thuật</option>
                   </>
                 )}
+              </select>
+            </div>
+
+            <div>
+              <label className="form-label text-[11px] mb-1">
+                3. Năm huấn luyện áp dụng
+              </label>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="form-input text-xs font-bold text-slate-900 min-w-[240px]"
+                style={{ cursor: 'pointer' }}
+              >
+                {courseOptions.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -483,7 +536,7 @@ export default function CurriculumRoadmapView() {
             Chi tiết Khung Chương trình Môn học & Nội dung Thi ({filteredSubjects.length} mục)
           </h3>
           <span className="text-xs text-slate-600 font-semibold">
-            Khóa áp dụng: <strong className="text-amber-700">{activeCurriculum?.courseName || 'SQDB 2026'}</strong>
+            Khóa áp dụng: <strong className="text-amber-700">{activeCurriculum?.courseName || (selectedCourse === 'ALL' ? 'Tất cả các năm áp dụng' : `Khung huấn luyện năm ${selectedCourse}`)}</strong>
           </span>
         </div>
 

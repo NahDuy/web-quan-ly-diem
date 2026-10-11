@@ -107,8 +107,12 @@ public class CurriculumService {
                 }
             }
 
-            if (courseCode != null && !courseCode.isBlank() && c.getCourse() != null) {
-                if (!courseCode.equalsIgnoreCase(c.getCourse().getCode())) {
+            if (courseCode != null && !courseCode.isBlank() && !"ALL".equalsIgnoreCase(courseCode) && c.getCourse() != null) {
+                String cCourseCode = c.getCourse().getCode();
+                boolean courseMatch = courseCode.equalsIgnoreCase(cCourseCode)
+                        || cCourseCode.contains(courseCode)
+                        || courseCode.contains(cCourseCode);
+                if (!courseMatch) {
                     continue;
                 }
             }
