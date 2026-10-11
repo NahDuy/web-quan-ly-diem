@@ -379,133 +379,214 @@ export default function StudentManagementView({ currentUser }) {
   return (
     <div className="space-y-4">
       
-      {/* Header & Controls */}
-      <div className="glass-panel p-5 flex flex-wrap items-center justify-between gap-4">
-        
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-gradient-to-br from-amber-600 to-yellow-600 text-white rounded-xl shadow-md">
-            <Users className="w-6 h-6" />
+      {/* 1. Header & Primary Action Bar */}
+      <div className="glass-panel p-5 bg-white border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Left: Title & Overview KPI */}
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 bg-gradient-to-br from-amber-600 to-yellow-600 text-white rounded-xl shadow-md">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="font-military text-lg font-bold text-slate-900">
+                  QUẢN LÝ QUÂN SỐ HỌC VIÊN QUÂN SỰ
+                </h2>
+                <span className="badge badge-neutral text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5">
+                  Tổng quân số: <strong className="text-emerald-700 ml-1">{students.length}</strong>
+                </span>
+              </div>
+              <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                Quản lý số hiệu học viên, cấp bậc, chức vụ, phân lớp và hồ sơ đào tạo toàn trường
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-military text-lg font-bold text-slate-900">QUẢN LÝ QUÂN SỐ HỌC VIÊN QUÂN SỰ</h2>
-            <p className="text-xs text-emerald-700 font-semibold">Import danh sách từ Excel, quản lý số hiệu học viên, cấp bậc, chức vụ và đơn vị huấn luyện</p>
+
+          {/* Right: Primary Action Buttons */}
+          <div className="flex items-center flex-wrap gap-2.5">
+            {/* Thêm mới học viên */}
+            <button
+              onClick={handleOpenAddModal}
+              className="btn btn-primary btn-sm"
+              title="Thêm một học viên quân sự mới vào hệ thống"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              <span>+ Thêm Học Viên</span>
+            </button>
+
+            {/* Nhập DS đầu vào từ Excel */}
+            <button 
+              onClick={() => setIsAdmissionsModalOpen(true)}
+              className="btn btn-sm"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#b45309',
+                border: '1px solid #fde047',
+                fontWeight: 700
+              }}
+              title="Nhập danh sách học viên đầu vào từ file Excel (.xls / .xlsx)"
+            >
+              <Sparkles className="w-4 h-4 text-amber-600 mr-1" />
+              <span>Nhập DS Đầu Vào (.xls)</span>
+            </button>
+
+            {/* Xuất file Excel */}
+            <button
+              onClick={handleExportStudents}
+              className="btn btn-secondary btn-sm"
+              title="Xuất danh sách học viên quân sự ra file Excel"
+            >
+              <Download className="w-4 h-4 text-amber-600 mr-1" />
+              <span>Xuất Excel</span>
+            </button>
+
+            {/* Cụm Dọn sạch lớp (Chỉ BGH / Bộ Môn) */}
+            {canDeleteClasses && (
+              <button
+                onClick={() => setIsDeleteAllModalOpen(true)}
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#fef2f2',
+                  color: '#b91c1c',
+                  border: '1px solid #fca5a5',
+                  fontWeight: 600
+                }}
+                title="Dọn sạch toàn bộ lớp học và học viên để chuẩn bị nạp lại dữ liệu mới từ Excel (Quyền Chỉ huy / Bộ môn)"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600 mr-1" />
+                <span>Dọn Sạch Lớp</span>
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Filter by Academic Year */}
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1">
-            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Khóa:</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => {
-                setSelectedYear(e.target.value);
-                setSelectedClassId('');
-              }}
-              className="bg-transparent text-xs text-slate-800 focus:outline-none font-semibold cursor-pointer"
-            >
-              <option value="" className="bg-white text-slate-800">Tất cả năm</option>
-              {displayYears.map(yr => (
-                <option key={yr} value={yr} className="bg-white text-slate-800">Khóa {yr}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter by Class */}
-          <select
-            value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold max-w-xs truncate"
-          >
-            <option value="">Tất cả các lớp {selectedYear ? `(Khóa ${selectedYear})` : ''} ({students.length} học viên)</option>
-            {filteredClasses.length > 0 ? (
-              filteredClasses.map(c => (
-                <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
-              ))
-            ) : (
-              <option value="" disabled>Không có lớp nào trong năm {selectedYear}</option>
-            )}
-          </select>
-
-          {/* Filter by Status (Đang huấn luyện / Đã tốt nghiệp) */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold cursor-pointer"
-            title="Lọc học viên theo trạng thái"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="DANG_HUAN_LUYEN">🟢 Đang huấn luyện</option>
-            <option value="DA_TOT_NGHIEP">🔵 Đã tốt nghiệp</option>
-          </select>
-
-          {/* Delete Single Selected Class (Chỉ hiển thị cho 2 vai trò cao nhất: BGH / Bộ Môn) */}
-          {canDeleteClasses && selectedClassId && (
-            <button
-              onClick={() => setIsDeleteClassModalOpen(true)}
-              className="btn btn-danger btn-xs"
-              title="Xóa lớp học đang chọn và các học viên thuộc lớp (Chỉ huy / Bộ môn)"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Xóa lớp này
-            </button>
-          )}
-
-          {/* Delete All Classes (Chỉ hiển thị cho 2 vai trò cao nhất: BGH / Bộ Môn) */}
-          {canDeleteClasses && (
-            <button
-              onClick={() => setIsDeleteAllModalOpen(true)}
-              className="btn btn-danger btn-xs"
-              title="Xóa toàn bộ các lớp học và học viên hiện có để chuẩn bị nạp lại từ Excel (Chỉ huy / Bộ môn)"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Xóa toàn bộ lớp
-            </button>
-          )}
-
-          <div className="relative">
+      {/* 2. Search & Filter Toolbar */}
+      <div className="glass-panel p-4 bg-white border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          
+          {/* Search box */}
+          <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Tìm tên hoặc Số hiệu (SHHV)..."
+              placeholder="Tìm theo họ tên hoặc Số hiệu học viên (SHHV)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 w-52"
+              className="form-input text-xs pl-9 pr-8 py-2 w-full bg-slate-50 border-slate-300 focus:bg-white"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                title="Xóa tìm kiếm"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          <button onClick={() => { fetchStudents(); fetchClasses(); }} className="btn btn-secondary btn-sm" title="Làm mới">
-            <RefreshCw className={`w-4 h-4 text-emerald-600 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          {/* Filters & Refresh */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Lọc Khóa */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5">
+              <span className="text-[11px] font-bold text-slate-600 uppercase">Khóa:</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => {
+                  setSelectedYear(e.target.value);
+                  setSelectedClassId('');
+                }}
+                className="bg-transparent text-xs text-slate-800 font-semibold focus:outline-none cursor-pointer"
+              >
+                <option value="">Tất cả năm</option>
+                {displayYears.map(yr => (
+                  <option key={yr} value={yr}>Khóa {yr}</option>
+                ))}
+              </select>
+            </div>
 
-          <button 
-            onClick={() => setIsAdmissionsModalOpen(true)}
-            className="btn btn-primary btn-sm"
-            style={{ background: 'linear-gradient(135deg, #d97706, #ca8a04)', border: '1px solid #b45309' }}
-            title="Nhập danh sách học viên đầu vào từ file Excel (.xls / .xlsx)"
-          >
-            <Sparkles className="w-4 h-4 text-slate-950" />
-            Nhập DS Đầu Vào (.xls)
-          </button>
+            {/* Lọc Lớp */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5">
+              <span className="text-[11px] font-bold text-slate-600 uppercase">Lớp:</span>
+              <select
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                className="bg-transparent text-xs text-slate-800 font-semibold focus:outline-none cursor-pointer max-w-[200px] truncate"
+              >
+                <option value="">Tất cả lớp {selectedYear ? `(Khóa ${selectedYear})` : ''}</option>
+                {filteredClasses.length > 0 ? (
+                  filteredClasses.map(c => (
+                    <option key={c.id} value={c.id}>{c.code} ({c.name})</option>
+                  ))
+                ) : (
+                  <option value="" disabled>Không có lớp</option>
+                )}
+              </select>
+            </div>
 
-          <button
-            onClick={handleExportStudents}
-            className="btn btn-secondary btn-sm"
-            title="Xuất danh sách học viên quân sự ra file Excel"
-          >
-            <Download className="w-4 h-4 text-amber-600" />
-            <span>Xuất Excel</span>
-          </button>
+            {/* Lọc Trạng thái */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input text-xs font-semibold py-1.5 cursor-pointer bg-slate-50"
+              title="Lọc học viên theo trạng thái đào tạo"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="DANG_HUAN_LUYEN">🟢 Đang huấn luyện</option>
+              <option value="DA_TOT_NGHIEP">🔵 Đã tốt nghiệp</option>
+            </select>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="btn btn-primary btn-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Học viên</span>
-          </button>
+            {/* Nút Xóa lớp đang chọn (khi đã chọn 1 lớp cụ thể) */}
+            {canDeleteClasses && selectedClassId && (
+              <button
+                onClick={() => setIsDeleteClassModalOpen(true)}
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#fee2e2',
+                  color: '#dc2626',
+                  border: '1px solid #f87171',
+                  fontWeight: 600
+                }}
+                title="Xóa lớp học đang chọn và toàn bộ học viên trong lớp"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                <span>Xóa Lớp Này</span>
+              </button>
+            )}
+
+            {/* Nút Làm mới */}
+            <button
+              onClick={() => { fetchStudents(); fetchClasses(); }}
+              className="btn btn-secondary btn-sm"
+              title="Tải lại danh sách học viên"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Làm mới</span>
+            </button>
+          </div>
+
         </div>
 
+        {/* Status sub-indicator if filtering */}
+        {(searchTerm || selectedYear || selectedClassId || statusFilter) && (
+          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Bộ lọc đang áp dụng: Tìm thấy <strong className="text-amber-800">{filteredStudents.length}</strong> học viên phù hợp
+            </span>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedYear('');
+                setSelectedClassId('');
+                setStatusFilter('');
+              }}
+              className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer"
+            >
+              Đặt lại tất cả bộ lọc
+            </button>
+          </div>
+        )}
       </div>
 
       {msg && (

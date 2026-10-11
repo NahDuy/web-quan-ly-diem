@@ -14,14 +14,29 @@ import {
   LogOut,
 } from 'lucide-react';
 
-const NAV_TABS = [
-  { id: 'dashboard',    label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard },
-  { id: 'departments',  label: 'Quản lý Khoa & Đơn vị',        icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
-  { id: 'students',     label: 'Quản lý Học viên',             icon: Users },
-  { id: 'matrix',       label: 'Bảng Quản lý Điểm',            icon: Table },
-  { id: 'roadmap',      label: 'Lộ trình Đào tạo',             icon: Compass },
-  { id: 'majors',       label: 'Chuyên ngành & Quy ước',       icon: BookmarkCheck },
-  { id: 'audit',        label: 'Nhật ký Audit Log',            icon: History, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+const NAV_SECTIONS = [
+  {
+    title: 'Chỉ Huy & Điều Hành',
+    items: [
+      { id: 'dashboard',   label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: 'Đào Tạo & Huấn Luyện',
+    items: [
+      { id: 'students',    label: 'Quản lý Học viên',             icon: Users },
+      { id: 'matrix',      label: 'Bảng Quản lý Điểm',            icon: Table },
+      { id: 'roadmap',     label: 'Lộ trình Đào tạo',             icon: Compass },
+      { id: 'majors',      label: 'Chuyên ngành & Quy ước',       icon: BookmarkCheck },
+    ],
+  },
+  {
+    title: 'Tổ Chức & Hệ Thống',
+    items: [
+      { id: 'departments', label: 'Quản lý Khoa & Đơn vị',        icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+      { id: 'audit',       label: 'Nhật ký Audit Log',            icon: History,   roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+    ],
+  },
 ];
 
 export default function Navbar({
@@ -153,77 +168,98 @@ export default function Navbar({
       <nav
         style={{
           flex: 1,
-          padding: collapsed ? '12px 6px' : '16px 10px',
+          padding: collapsed ? '12px 6px' : '14px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px',
+          gap: '4px',
           overflowY: 'auto',
         }}
       >
-        {!collapsed && (
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              color: '#94a3b8',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              paddingLeft: '8px',
-              marginBottom: '4px',
-            }}
-          >
-            Danh mục điều hành
-          </p>
-        )}
+        {NAV_SECTIONS.map((section, sIdx) => {
+          const visibleItems = section.items.filter(
+            tab => !tab.roles || !currentUser?.role || tab.roles.includes(currentUser.role)
+          );
 
-        {NAV_TABS
-          .filter(tab => !tab.roles || !currentUser?.role || tab.roles.includes(currentUser.role))
-          .map(({ id, label, icon: Icon }) => {
-          const isActive = activeTab === id;
+          if (visibleItems.length === 0) return null;
+
           return (
-            <button
-              key={id}
-              id={`nav-tab-${id}`}
-              onClick={() => setActiveTab(id)}
-              title={collapsed ? label : undefined}
-              className="btn"
-              style={{
-                width: '100%',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                padding: collapsed ? '12px 0' : '10px 12px',
-                background: isActive
-                  ? 'linear-gradient(135deg, #15803d, #166534)'
-                  : '#f8fafc',
-                color: isActive ? '#ffffff' : '#334155',
-                border: isActive
-                  ? '1px solid #15803d'
-                  : '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontWeight: isActive ? 700 : 600,
-                fontSize: '0.825rem',
-                boxShadow: isActive ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Icon
-                size={18}
-                style={{
-                  color: isActive ? '#fef08a' : '#64748b',
-                  flexShrink: 0,
-                }}
-              />
-              {!collapsed && (
-                <span
+            <div key={section.title || sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: sIdx > 0 ? '10px' : '0' }}>
+              {sIdx > 0 && (
+                <div
                   style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    height: '1px',
+                    background: '#e2e8f0',
+                    margin: collapsed ? '4px 6px 8px 6px' : '4px 4px 8px 4px',
+                  }}
+                />
+              )}
+
+              {!collapsed && (
+                <p
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    color: '#64748b',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    paddingLeft: '8px',
+                    marginBottom: '2px',
                   }}
                 >
-                  {label}
-                </span>
+                  {section.title}
+                </p>
               )}
-            </button>
+
+              {visibleItems.map(({ id, label, icon: Icon }) => {
+                const isActive = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    id={`nav-tab-${id}`}
+                    onClick={() => setActiveTab(id)}
+                    title={collapsed ? label : undefined}
+                    className="btn"
+                    style={{
+                      width: '100%',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      padding: collapsed ? '12px 0' : '9px 12px',
+                      background: isActive
+                        ? 'linear-gradient(135deg, #15803d, #166534)'
+                        : '#f8fafc',
+                      color: isActive ? '#ffffff' : '#334155',
+                      border: isActive
+                        ? '1px solid #15803d'
+                        : '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontWeight: isActive ? 700 : 600,
+                      fontSize: '0.825rem',
+                      boxShadow: isActive ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Icon
+                      size={18}
+                      style={{
+                        color: isActive ? '#fef08a' : '#64748b',
+                        flexShrink: 0,
+                      }}
+                    />
+                    {!collapsed && (
+                      <span
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {label}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </nav>
