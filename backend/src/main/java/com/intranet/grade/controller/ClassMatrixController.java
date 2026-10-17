@@ -126,6 +126,8 @@ public class ClassMatrixController {
         ));
     }
 
+    private static final java.time.ZoneId VIETNAM_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+
     @PostMapping("/{classId}/schedule-lock")
     public ResponseEntity<Map<String, Object>> scheduleLockGradeMatrix(
             @PathVariable Integer classId,
@@ -135,9 +137,17 @@ public class ClassMatrixController {
 
         java.time.ZonedDateTime zdt;
         try {
-            zdt = java.time.ZonedDateTime.parse(deadline);
-        } catch (Exception e) {
-            zdt = java.time.LocalDateTime.parse(deadline).atZone(java.time.ZoneId.systemDefault());
+            zdt = java.time.ZonedDateTime.parse(deadline).withZoneSameInstant(VIETNAM_ZONE);
+        } catch (Exception e1) {
+            try {
+                zdt = java.time.Instant.parse(deadline).atZone(VIETNAM_ZONE);
+            } catch (Exception e2) {
+                try {
+                    zdt = java.time.OffsetDateTime.parse(deadline).atZoneSameInstant(VIETNAM_ZONE);
+                } catch (Exception e3) {
+                    zdt = java.time.LocalDateTime.parse(deadline).atZone(VIETNAM_ZONE);
+                }
+            }
         }
 
         gradeMatrixService.scheduleLockMatrix(classId, semester, zdt, reason);

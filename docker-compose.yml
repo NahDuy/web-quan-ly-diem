@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: grade_management
       POSTGRES_USER: app_user
       POSTGRES_PASSWORD: SecurePassword123!
+      TZ: Asia/Ho_Chi_Minh
     ports:
       - "5432:5432"
     volumes:
@@ -25,6 +26,7 @@ services:
     container_name: intranet_backend
     restart: always
     environment:
+      TZ: Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/grade_management
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: SecurePassword123!

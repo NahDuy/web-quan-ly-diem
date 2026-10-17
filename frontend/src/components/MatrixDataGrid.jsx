@@ -67,24 +67,27 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [scheduleReason, setScheduleReason] = useState('Hạn chót hoàn thành nhập điểm học phần');
   const [scheduling, setScheduling] = useState(false);
 
+  const toLocalInputString = (dateInput) => {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const handleOpenScheduleModal = () => {
     if (matrixData?.lockDeadline) {
-      try {
-        const d = new Date(matrixData.lockDeadline);
-        const tzOffset = d.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
-        setScheduleDeadline(localISOTime);
-        setScheduleReason(matrixData.autoLockReason || 'Hạn chót hoàn thành nhập điểm học phần');
-      } catch (e) {
-        // fallback
-      }
+      setScheduleDeadline(toLocalInputString(matrixData.lockDeadline));
+      setScheduleReason(matrixData.autoLockReason || 'Hạn chót hoàn thành nhập điểm học phần');
     } else {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(17, 0, 0, 0);
-      const tzOffset = tomorrow.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(tomorrow.getTime() - tzOffset)).toISOString().slice(0, 16);
-      setScheduleDeadline(localISOTime);
+      setScheduleDeadline(toLocalInputString(tomorrow));
       setScheduleReason('Hạn chót hoàn thành nhập điểm học phần');
     }
     setIsScheduleModalOpen(true);
@@ -99,7 +102,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     setScheduling(true);
     try {
       const token = localStorage.getItem('jwt_token');
-      const res = await fetch(`/api/v1/classes/${classId}/schedule-lock?semester=${semester}&deadline=${encodeURIComponent(scheduleDeadline)}&reason=${encodeURIComponent(scheduleReason)}`, {
+      let deadlineParam = scheduleDeadline;
+      try {
+        const clientDate = new Date(scheduleDeadline);
+        if (!isNaN(clientDate.getTime())) {
+          deadlineParam = clientDate.toISOString();
+        }
+      } catch (err) {
+        deadlineParam = scheduleDeadline;
+      }
+
+      const res = await fetch(`/api/v1/classes/${classId}/schedule-lock?semester=${semester}&deadline=${encodeURIComponent(deadlineParam)}&reason=${encodeURIComponent(scheduleReason)}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
