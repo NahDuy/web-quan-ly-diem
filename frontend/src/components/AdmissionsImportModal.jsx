@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Upload, Download, FileSpreadsheet, CheckCircle2, AlertTriangle, X, 
+  Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, 
   Sparkles, Layers, Users, ChevronDown, ChevronUp, ArrowRight, Shield
 } from 'lucide-react';
 
@@ -116,27 +116,6 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
       setErrorMsg('Lỗi kết nối máy chủ khi thực thi import');
     } finally {
       setImporting(false);
-    }
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch('/api/v1/admissions/export-template', { headers });
-      if (!res.ok) throw new Error('Không thể tải file mẫu');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'Mau_DanhSach_HocVien_DauVao.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      window.location.href = '/api/v1/admissions/export-template';
     }
   };
 
@@ -275,23 +254,6 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Template Download Prompt */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-slate-300">
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Chưa có file mẫu chuẩn hoặc cần định dạng lại danh sách học viên theo quy chuẩn?</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleDownloadTemplate}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg transition shadow-sm text-xs cursor-pointer"
-              title="Tải về file Excel mẫu đã chuẩn hóa sẵn bảng mã Unicode và các khối lớp mẫu"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Tải File Excel Mẫu Chuẩn</span>
-            </button>
           </div>
 
           {/* Preview Section */}

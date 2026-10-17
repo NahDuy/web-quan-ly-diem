@@ -45,27 +45,6 @@ export default function StudentManagementView({ currentUser }) {
     window.location.href = url;
   };
 
-  const handleDownloadAdmissionsTemplate = async () => {
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch('/api/v1/admissions/export-template', { headers });
-      if (!res.ok) throw new Error('Không thể tải file mẫu');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'Mau_DanhSach_HocVien_DauVao.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      window.location.href = '/api/v1/admissions/export-template';
-    }
-  };
-
   // Form State for Adding Student
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
@@ -461,17 +440,6 @@ export default function StudentManagementView({ currentUser }) {
             >
               <Download className="w-4 h-4 text-amber-600 mr-1" />
               <span>Xuất Excel</span>
-            </button>
-
-            {/* Tải file mẫu danh sách đầu vào */}
-            <button
-              type="button"
-              onClick={handleDownloadAdmissionsTemplate}
-              className="btn btn-secondary btn-sm"
-              title="Tải về file Excel mẫu chuẩn hóa danh sách học viên đầu vào"
-            >
-              <Download className="w-4 h-4 text-emerald-600 mr-1" />
-              <span>Tải File Mẫu (.xlsx)</span>
             </button>
 
             {/* Cụm Dọn sạch lớp (Chỉ BGH / Bộ Môn) */}
