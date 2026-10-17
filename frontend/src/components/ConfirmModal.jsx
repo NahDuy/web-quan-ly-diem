@@ -32,6 +32,7 @@ export default function ConfirmModal({
 }) {
   if (!isOpen) return null;
 
+  const isLocked = type === 'locked';
   const isDanger = type === 'danger';
   const isWarning = type === 'warning';
 
@@ -43,12 +44,26 @@ export default function ConfirmModal({
       >
         {/* Header với dải màu tương ứng */}
         <div className={`p-4 sm:p-5 flex items-start gap-3.5 border-b ${
-          isDanger ? 'bg-rose-50/70 border-rose-100' : isWarning ? 'bg-amber-50/70 border-amber-100' : 'bg-blue-50/70 border-blue-100'
+          isLocked
+            ? 'bg-red-50/90 border-red-200'
+            : isDanger
+            ? 'bg-rose-50/70 border-rose-100'
+            : isWarning
+            ? 'bg-amber-50/70 border-amber-100'
+            : 'bg-blue-50/70 border-blue-100'
         }`}>
           <div className={`p-2.5 rounded-xl shrink-0 ${
-            isDanger ? 'bg-rose-100 text-rose-600' : isWarning ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+            isLocked
+              ? 'bg-red-100 text-red-700 ring-4 ring-red-50'
+              : isDanger
+              ? 'bg-rose-100 text-rose-600'
+              : isWarning
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-blue-100 text-blue-700'
           }`}>
-            {isDanger ? (
+            {isLocked ? (
+              <Lock className="w-5 h-5 text-red-700" />
+            ) : isDanger ? (
               <Trash2 className="w-5 h-5" />
             ) : isWarning ? (
               <AlertTriangle className="w-5 h-5" />
@@ -59,7 +74,7 @@ export default function ConfirmModal({
 
           <div className="flex-1 min-w-0">
             <h3 className={`text-base font-bold font-military leading-snug ${
-              isDanger ? 'text-rose-950' : isWarning ? 'text-amber-950' : 'text-slate-900'
+              isLocked ? 'text-red-950 font-black tracking-wide' : isDanger ? 'text-rose-950' : isWarning ? 'text-amber-950' : 'text-slate-900'
             }`}>
               {title}
             </h3>
@@ -81,51 +96,56 @@ export default function ConfirmModal({
         {/* Thân Modal: Chi tiết đối tượng cần thao tác */}
         <div className="p-4 sm:p-5 space-y-3">
           {itemName && (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className={`p-3 rounded-xl border ${isLocked ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
               <span className="text-[11px] font-bold text-slate-500 uppercase block tracking-wider mb-0.5">
-                Đối tượng được chọn:
+                {isLocked ? 'Lớp đào tạo áp dụng:' : 'Đối tượng được chọn:'}
               </span>
-              <span className="text-sm font-bold text-slate-900 font-mono break-words">
+              <span className={`text-sm font-bold font-mono break-words ${isLocked ? 'text-red-900 font-extrabold' : 'text-slate-900'}`}>
                 {itemName}
               </span>
             </div>
           )}
 
           {warningNote ? (
-            <p className="text-[11px] text-rose-600 font-medium flex items-center gap-1.5">
+            <p className={`text-[11px] font-medium flex items-center gap-1.5 ${isLocked ? 'text-red-700 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200' : 'text-rose-600'}`}>
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               <span>{warningNote}</span>
             </p>
-          ) : (
+          ) : !isLocked ? (
             <p className="text-[11px] text-slate-400 italic">
               * Lưu ý: Thao tác này sẽ cập nhật trực tiếp vào cơ sở dữ liệu và ghi nhận nhật ký hệ thống.
             </p>
-          )}
+          ) : null}
         </div>
 
-        {/* Footer: Cặp nút hành động */}
+        {/* Footer: Cặp nút hành động hoặc nút Đóng duy nhất */}
         <div className="p-4 sm:p-5 pt-0 flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
-          >
-            {cancelLabel}
-          </button>
+          {cancelLabel && (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
+            >
+              {cancelLabel}
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={onConfirm || onClose}
             disabled={loading}
             className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition shadow-sm cursor-pointer flex items-center gap-1.5 ${
-              isDanger
+              isLocked
+                ? 'bg-red-700 hover:bg-red-800 active:bg-red-900 shadow-md'
+                : isDanger
                 ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800'
                 : isWarning
                 ? 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
                 : 'bg-emerald-700 hover:bg-emerald-800'
             }`}
           >
+            {isLocked && <Lock className="w-3.5 h-3.5" />}
             {isDanger && <Trash2 className="w-3.5 h-3.5" />}
             {loading ? 'Đang xử lý...' : confirmLabel}
           </button>

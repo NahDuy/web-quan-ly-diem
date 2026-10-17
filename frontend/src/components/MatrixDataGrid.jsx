@@ -147,7 +147,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     }
   };
 
-  // Dialog xác nhận hành động chuẩn quân sự thay thế window.confirm
+  // Dialog xác nhận hành động chuẩn quân sự thay thế window.confirm / window.alert
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: '',
@@ -155,10 +155,42 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     itemName: '',
     warningNote: '',
     confirmLabel: 'Xác nhận',
+    cancelLabel: 'Hủy bỏ',
     type: 'danger',
     onConfirm: null,
     loading: false
   });
+
+  const showAlert = (title, message, type = 'warning', note = '') => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      itemName: `${matrixData?.className || matrixData?.classCode || 'Lớp học'} (Học kỳ ${semester})`,
+      warningNote: note,
+      confirmLabel: 'Đã hiểu & Đóng',
+      cancelLabel: null,
+      type,
+      onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+      loading: false
+    });
+  };
+
+  const showLockAlert = (message, deadlineStr) => {
+    const timeText = deadlineStr ? ` lúc ${deadlineStr}` : '';
+    setConfirmDialog({
+      isOpen: true,
+      title: 'BẢNG ĐIỂM ĐÃ BỊ KHÓA / NIÊM PHONG',
+      message: message || `Thời hạn nhập điểm cho lớp học đã kết thúc${timeText}. Hệ thống đã tự động niêm phong bảng điểm theo quy định!`,
+      itemName: `${matrixData?.className || matrixData?.classCode || 'Lớp học'} (Học kỳ ${semester})`,
+      warningNote: 'Giáo viên không thể chỉnh sửa hoặc lưu điểm sau thời hạn. Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền phê duyệt mở khóa.',
+      confirmLabel: 'Đã hiểu & Đóng',
+      cancelLabel: null,
+      type: 'locked',
+      onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+      loading: false
+    });
+  };
 
   // State for Export Format Dropdown & Class Selection Modal
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -272,13 +304,20 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       const now = Date.now();
       if (now >= deadline) {
         setMatrixData(prev => ({ ...prev, isLocked: true }));
+        if (!isPrivilegedUser) {
+          const timeStr = new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          showLockAlert(
+            `Đã đến hạn chót hẹn lịch khóa bảng điểm (${timeStr}). Hệ thống đã tự động niêm phong bảng điểm lớp học!`,
+            timeStr
+          );
+        }
       }
     };
 
     checkLockStatus();
     const interval = setInterval(checkLockStatus, 1000);
     return () => clearInterval(interval);
-  }, [matrixData?.lockDeadline, matrixData?.isLocked]);
+  }, [matrixData?.lockDeadline, matrixData?.isLocked, isPrivilegedUser, matrixData?.className, matrixData?.classCode, semester]);
 
   const userRole = currentUser?.role || matrixData?.userRole || '';
   const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
@@ -329,7 +368,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const handleScoreChange = (studentId, subjectId, value) => {
     if (matrixData.isLocked && !isPrivilegedUser) {
-      alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
+      showLockAlert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
 
@@ -338,7 +377,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       const studentRow = matrixData?.rows?.find((r) => r.studentId === studentId);
       const existingGrade = studentRow?.grades?.[subjectId];
       if (existingGrade && existingGrade.score !== null && existingGrade.score !== undefined) {
-        alert('Giáo viên chỉ được nhập điểm 1 lần. Điểm đã lưu trong hệ thống chỉ có Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền chỉnh sửa!');
+        showAlert(
+          'Không thể chỉnh sửa điểm',
+          'Giáo viên chỉ được nhập điểm 1 lần. Điểm đã lưu trong hệ thống chỉ có Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền chỉnh sửa!',
+          'warning'
+        );
         return;
       }
     }
@@ -368,7 +411,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     if (val !== '' && val !== '.') {
       const num = parseFloat(val);
       if (num > 10) {
-        alert('Điểm số chỉ được phép nhập trong phạm vi từ 0 đến 10!');
+        showAlert('Điểm số không hợp lệ', 'Điểm số chỉ được phép nhập trong phạm vi từ 0 đến 10!', 'warning');
         return;
       }
     }
@@ -386,11 +429,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const handleConductChange = (studentId, value) => {
     if (!isPrivilegedUser) {
-      alert('Giáo viên không có quyền chỉnh sửa xếp loại rèn luyện.');
+      showAlert('Từ chối truy cập', 'Giáo viên không có quyền chỉnh sửa xếp loại rèn luyện.', 'warning');
       return;
     }
     if (matrixData.isLocked && !isPrivilegedUser) {
-      alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
+      showLockAlert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
     setEditedConducts((prev) => ({ ...prev, [studentId]: value }));
@@ -398,11 +441,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const handleGradExamScoreChange = (studentId, gradSubId, value) => {
     if (!isPrivilegedUser) {
-      alert('Giáo viên không có quyền chỉnh sửa điểm thi tốt nghiệp.');
+      showAlert('Từ chối truy cập', 'Giáo viên không có quyền chỉnh sửa điểm thi tốt nghiệp.', 'warning');
       return;
     }
     if (matrixData.isLocked && !isPrivilegedUser) {
-      alert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
+      showLockAlert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
     }
     const key = `${studentId}_${gradSubId}`;
@@ -858,7 +901,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       if (score !== '' && score !== null && score !== undefined) {
         const num = parseFloat(score);
         if (isNaN(num) || num < 0 || num > 10) {
-          alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          showAlert('Điểm môn học không hợp lệ', `Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`, 'danger');
           return;
         }
       }
@@ -867,15 +910,16 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       if (score !== '' && score !== null && score !== undefined) {
         const num = parseFloat(score);
         if (isNaN(num) || num < 0 || num > 10) {
-          alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          showAlert('Điểm thi tốt nghiệp không hợp lệ', `Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`, 'danger');
           return;
         }
       }
     }
 
     if (!isPrivilegedUser && (matrixData.isLocked || (matrixData.lockDeadline && Date.now() >= new Date(matrixData.lockDeadline).getTime()))) {
-      alert(`BẢNG ĐIỂM ĐÃ BỊ KHÓA! Đã quá thời hạn cho phép nhập điểm (${matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}). Không thể lưu điểm!`);
+      const timeStr = matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
       setMatrixData(prev => ({ ...prev, isLocked: true }));
+      showLockAlert(`Đã quá thời hạn cho phép nhập điểm (${timeStr}). Không thể lưu điểm!`, timeStr);
       return;
     }
 
@@ -958,10 +1002,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         fetchMatrix();
       } else {
         const resData = await res.json();
-        alert(resData.message || 'Lưu thất bại');
+        if (resData.message && resData.message.includes('BẢNG ĐIỂM ĐÃ BỊ KHÓA')) {
+          setMatrixData(prev => ({ ...prev, isLocked: true }));
+          showLockAlert(resData.message);
+        } else {
+          showAlert('Lưu điểm thất bại', resData.message || 'Lưu điểm thất bại. Vui lòng kiểm tra lại!', 'danger');
+        }
       }
     } catch (err) {
-      alert('Lỗi kết nối khi lưu điểm');
+      showAlert('Lỗi kết nối', 'Không thể kết nối đến máy chủ khi lưu điểm.', 'danger');
     } finally {
       setSaving(false);
     }
@@ -969,7 +1018,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const handleSaveBatch = async () => {
     if (!auditReason.trim()) {
-      alert('Vui lòng ghi rõ lý do/quyết định sửa điểm để lưu Audit Log');
+      showAlert('Thiếu lý do sửa điểm', 'Vui lòng ghi rõ lý do/quyết định sửa điểm để lưu Audit Log theo quy định quân sự.', 'warning');
       return;
     }
 
@@ -978,7 +1027,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       if (score !== '' && score !== null && score !== undefined) {
         const num = parseFloat(score);
         if (isNaN(num) || num < 0 || num > 10) {
-          alert(`Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          showAlert('Điểm môn học không hợp lệ', `Điểm môn học không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`, 'danger');
           return;
         }
       }
@@ -987,16 +1036,17 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       if (score !== '' && score !== null && score !== undefined) {
         const num = parseFloat(score);
         if (isNaN(num) || num < 0 || num > 10) {
-          alert(`Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`);
+          showAlert('Điểm thi tốt nghiệp không hợp lệ', `Điểm thi tốt nghiệp không hợp lệ (${score}). Điểm số bắt buộc phải nằm trong phạm vi từ 0 đến 10!`, 'danger');
           return;
         }
       }
     }
 
     if (!isPrivilegedUser && (matrixData.isLocked || (matrixData.lockDeadline && Date.now() >= new Date(matrixData.lockDeadline).getTime()))) {
-      alert(`BẢNG ĐIỂM ĐÃ BỊ KHÓA! Đã quá thời hạn cho phép nhập điểm (${matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}). Không thể lưu điểm!`);
+      const timeStr = matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
       setMatrixData(prev => ({ ...prev, isLocked: true }));
       setIsReasonModalOpen(false);
+      showLockAlert(`Đã quá thời hạn cho phép nhập điểm (${timeStr}). Không thể lưu điểm!`, timeStr);
       return;
     }
 
@@ -1080,10 +1130,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         fetchMatrix();
       } else {
         const resData = await res.json();
-        alert(resData.message || 'Lưu thất bại');
+        if (resData.message && resData.message.includes('BẢNG ĐIỂM ĐÃ BỊ KHÓA')) {
+          setMatrixData(prev => ({ ...prev, isLocked: true }));
+          showLockAlert(resData.message);
+        } else {
+          showAlert('Lưu điểm thất bại', resData.message || 'Lưu điểm thất bại. Vui lòng kiểm tra lại!', 'danger');
+        }
       }
     } catch (err) {
-      alert('Lỗi kết nối khi lưu điểm');
+      showAlert('Lỗi kết nối', 'Không thể kết nối đến máy chủ khi lưu điểm.', 'danger');
     } finally {
       setSaving(false);
     }
@@ -2889,6 +2944,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         itemName={confirmDialog.itemName}
         warningNote={confirmDialog.warningNote}
         confirmLabel={confirmDialog.confirmLabel}
+        cancelLabel={confirmDialog.cancelLabel}
         type={confirmDialog.type}
         loading={confirmDialog.loading}
       />
