@@ -38,7 +38,7 @@ export default function MajorManagementView() {
   // Target Groups State
   const [targetGroups, setTargetGroups] = useState(() => {
     try {
-      const saved = localStorage.getItem('military_target_groups_major');
+      const saved = localStorage.getItem('military_target_groups_major') || localStorage.getItem('military_target_groups');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -51,6 +51,7 @@ export default function MajorManagementView() {
 
   // Modal State for Target Group
   const [isAddTargetModalOpen, setIsAddTargetModalOpen] = useState(false);
+  const [editingTargetGroup, setEditingTargetGroup] = useState(null);
   const [newTargetCode, setNewTargetCode] = useState('');
   const [newTargetName, setNewTargetName] = useState('');
   const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
@@ -135,6 +136,24 @@ export default function MajorManagementView() {
     }
   };
 
+  const handleOpenAddTarget = () => {
+    setEditingTargetGroup(null);
+    setNewTargetCode('');
+    setNewTargetName('');
+    setNewTargetDesc('Thời gian 06 tháng');
+    setAddTargetError('');
+    setIsAddTargetModalOpen(true);
+  };
+
+  const handleEditTargetGroup = (tg) => {
+    setEditingTargetGroup(tg);
+    setNewTargetCode(tg.code);
+    setNewTargetName(tg.name);
+    setNewTargetDesc(tg.desc || 'Thời gian 06 tháng');
+    setAddTargetError('');
+    setIsAddTargetModalOpen(true);
+  };
+
   const handleSaveTargetGroup = (e) => {
     e.preventDefault();
     if (!newTargetCode.trim() || !newTargetName.trim()) {
@@ -142,34 +161,64 @@ export default function MajorManagementView() {
       return;
     }
     const cleanCode = newTargetCode.trim().toUpperCase();
-    if (targetGroups.some(tg => tg.code.toUpperCase() === cleanCode)) {
+    
+    // Kiểm tra trùng mã nếu tạo mới hoặc sửa thành mã đã tồn tại ở đối tượng khác
+    if (!editingTargetGroup && targetGroups.some(tg => tg.code.toUpperCase() === cleanCode)) {
+      setAddTargetError(`Mã đối tượng "${cleanCode}" đã tồn tại trong danh mục!`);
+      return;
+    }
+    if (editingTargetGroup && editingTargetGroup.code.toUpperCase() !== cleanCode && targetGroups.some(tg => tg.code.toUpperCase() === cleanCode)) {
       setAddTargetError(`Mã đối tượng "${cleanCode}" đã tồn tại trong danh mục!`);
       return;
     }
 
     const cleanShort = cleanCode.replace(/[^A-Za-z0-9]/g, '');
-    const newTarget = {
-      code: cleanCode,
-      shortCode: cleanCode,
-      name: newTargetName.trim(),
-      desc: newTargetDesc.trim() || 'Thời gian 06 tháng',
-      classPattern: `${cleanCode}-[NGÀNH]-01`,
-      studentPattern: `26${cleanShort}-[NGÀNH]001`,
-      isCustom: true
-    };
+    let updated;
+    if (editingTargetGroup) {
+      updated = targetGroups.map(tg => {
+        if (tg.code === editingTargetGroup.code) {
+          return {
+            ...tg,
+            code: cleanCode,
+            shortCode: cleanCode,
+            name: newTargetName.trim(),
+            desc: newTargetDesc.trim() || 'Thời gian 06 tháng',
+            classPattern: `${cleanCode}-[NGÀNH]-01`,
+            studentPattern: `26${cleanShort}-[NGÀNH]001`
+          };
+        }
+        return tg;
+      });
+    } else {
+      const newTarget = {
+        code: cleanCode,
+        shortCode: cleanCode,
+        name: newTargetName.trim(),
+        desc: newTargetDesc.trim() || 'Thời gian 06 tháng',
+        classPattern: `${cleanCode}-[NGÀNH]-01`,
+        studentPattern: `26${cleanShort}-[NGÀNH]001`,
+        isCustom: true
+      };
+      updated = [...targetGroups, newTarget];
+    }
 
-    const updated = [...targetGroups, newTarget];
     setTargetGroups(updated);
     try {
       localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
+      localStorage.setItem('military_target_groups', JSON.stringify(updated));
     } catch (err) {}
 
     setIsAddTargetModalOpen(false);
+    setEditingTargetGroup(null);
     setNewTargetCode('');
     setNewTargetName('');
     setNewTargetDesc('Thời gian 06 tháng');
     setAddTargetError('');
-    showNotification(`Đã thêm đối tượng đào tạo "${newTarget.name}" (${newTarget.code}) thành công!`);
+    showNotification(
+      editingTargetGroup
+        ? `Đã cập nhật đối tượng đào tạo "${newTargetName.trim()}" (${cleanCode}) thành công!`
+        : `Đã thêm đối tượng đào tạo "${newTargetName.trim()}" (${cleanCode}) thành công!`
+    );
   };
 
   const handleDeleteTargetGroup = (code, name) => {
@@ -186,6 +235,7 @@ export default function MajorManagementView() {
         setTargetGroups(updated);
         try {
           localStorage.setItem('military_target_groups_major', JSON.stringify(updated));
+          localStorage.setItem('military_target_groups', JSON.stringify(updated));
         } catch (err) {}
         showNotification(`Đã xóa đối tượng đào tạo "${name}"`);
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -317,28 +367,6 @@ export default function MajorManagementView() {
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={() => {
-                setNewTargetCode('');
-                setNewTargetName('');
-                setNewTargetDesc('Thời gian 06 tháng');
-                setAddTargetError('');
-                setIsAddTargetModalOpen(true);
-              }}
-              className="btn btn-sm flex items-center gap-1.5 shadow-sm font-bold"
-              style={{
-                backgroundColor: '#fef3c7',
-                color: '#b45309',
-                border: '1px solid #fde047',
-                fontWeight: 700
-              }}
-              title="Thêm đối tượng đào tạo mới vào hệ thống"
-            >
-              <Plus className="w-4 h-4 text-amber-600" />
-              <span>+ Thêm Đối Tượng</span>
-            </button>
-
-            <button
-              type="button"
               onClick={handleExportExcel}
               disabled={exporting}
               className="btn btn-secondary btn-sm flex items-center gap-2 shadow-sm text-slate-700 bg-white hover:bg-slate-50 border-slate-300 font-bold"
@@ -405,13 +433,7 @@ export default function MajorManagementView() {
               Tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
             </span>
             <button
-              onClick={() => {
-                setNewTargetCode('');
-                setNewTargetName('');
-                setNewTargetDesc('Thời gian 06 tháng');
-                setAddTargetError('');
-                setIsAddTargetModalOpen(true);
-              }}
+              onClick={handleOpenAddTarget}
               className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 text-amber-600" />
@@ -426,21 +448,31 @@ export default function MajorManagementView() {
               key={tg.code} 
               className="relative group p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition flex flex-col justify-between"
             >
-              {tg.isCustom && (
+              <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition">
                 <button
                   type="button"
-                  onClick={() => handleDeleteTargetGroup(tg.code, tg.name)}
-                  title="Xóa đối tượng này"
-                  className="absolute top-1.5 right-1.5 text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                  onClick={() => handleEditTargetGroup(tg)}
+                  title="Chỉnh sửa đối tượng này"
+                  className="text-slate-400 hover:text-amber-700 p-1 rounded hover:bg-amber-100 transition cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </button>
-              )}
+                {tg.isCustom && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTargetGroup(tg.code, tg.name)}
+                    title="Xóa đối tượng này"
+                    className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <div>
                 <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
                   {tg.code}
                 </span>
-                <p className="text-xs font-bold text-slate-900 leading-snug line-clamp-1" title={tg.name}>
+                <p className="text-xs font-bold text-slate-900 leading-snug line-clamp-1 pr-12" title={tg.name}>
                   {tg.name}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">
@@ -665,10 +697,10 @@ export default function MajorManagementView() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 font-military-title">
-                    Thêm Đối Tượng Đào Tạo Mới
+                    {editingTargetGroup ? 'Chỉnh Sửa Đối Tượng Đào Tạo' : 'Thêm Đối Tượng Đào Tạo Mới'}
                   </h3>
                   <p className="text-[11px] text-amber-900">
-                    Khai báo quy ước mã lớp và mã học viên chuẩn
+                    {editingTargetGroup ? `Cập nhật thông tin và mã quy ước cho ${editingTargetGroup.code}` : 'Khai báo quy ước mã lớp và mã học viên chuẩn'}
                   </p>
                 </div>
               </div>
@@ -765,7 +797,7 @@ export default function MajorManagementView() {
                   type="submit"
                   className="btn btn-primary px-5 py-2 text-xs font-bold cursor-pointer"
                 >
-                  Lưu Đối Tượng Đào Tạo
+                  {editingTargetGroup ? 'Cập Nhật Đối Tượng' : 'Lưu Đối Tượng Đào Tạo'}
                 </button>
               </div>
             </form>
