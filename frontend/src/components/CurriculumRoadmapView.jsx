@@ -101,6 +101,15 @@ export default function CurriculumRoadmapView({ currentUser }) {
   const [departments, setDepartments] = useState([]);
   const [availableSubjects, setAvailableSubjects] = useState([]);
 
+  // Danh sách chỉ gồm các Khoa / Bộ môn giảng dạy (loại bỏ cơ quan Ban Giám Hiệu, Phòng Đào Tạo và đơn vị quản lý học viên như Tiểu đoàn, Đại đội)
+  const facultyDepartments = departments.filter(d => {
+    const typeUpper = (d.type || '').toUpperCase();
+    const nameLower = (d.name || '').toLowerCase();
+    if (typeUpper === 'DON_VI' || typeUpper === 'PHONG_BAN') return false;
+    if (nameLower.includes('tiểu đoàn') || nameLower.includes('đại đội') || nameLower.includes('phòng đào tạo') || nameLower.includes('ban giám hiệu')) return false;
+    return typeUpper === 'KHOA' || typeUpper === 'BO_MON' || nameLower.includes('khoa') || nameLower.includes('bộ môn');
+  });
+
   // Edit Subject Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
@@ -207,8 +216,8 @@ export default function CurriculumRoadmapView({ currentUser }) {
 
   const handleOpenEditModal = (sub) => {
     let deptId = sub.departmentId;
-    if (!deptId && sub.departmentName && departments.length > 0) {
-      const matchedDept = departments.find(d => d.name === sub.departmentName);
+    if (!deptId && sub.departmentName && facultyDepartments.length > 0) {
+      const matchedDept = facultyDepartments.find(d => d.name === sub.departmentName);
       if (matchedDept) deptId = matchedDept.id;
     }
     setEditingSubject({
@@ -218,7 +227,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
       subjectName: sub.subjectName || '',
       credits: sub.credits || 3,
       semester: sub.semester || 1,
-      departmentId: deptId || (departments.length > 0 ? departments[0].id : ''),
+      departmentId: deptId || (facultyDepartments.length > 0 ? facultyDepartments[0].id : ''),
       type: sub.type || (sub.subjectCode?.startsWith('TN') ? 'MON_THI_TOT_NGHIEP' : 'MON_HOC_PHAN'),
       isCompulsory: sub.isCompulsory !== undefined ? sub.isCompulsory : true
     });
@@ -250,7 +259,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
           subjectCode: editingSubject.subjectCode.trim().toUpperCase(),
           subjectName: editingSubject.subjectName.trim(),
           credits: parseInt(editingSubject.credits, 10) || 3,
-          semester: parseInt(editingSubject.semester, 10) || 1,
+          semester: 1,
           departmentId: editingSubject.departmentId ? parseInt(editingSubject.departmentId, 10) : null,
           type: editingSubject.type,
           isCompulsory: editingSubject.isCompulsory
@@ -279,7 +288,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
       subjectName: '',
       credits: 3,
       semester: 1,
-      departmentId: departments[0]?.id || '',
+      departmentId: facultyDepartments[0]?.id || '',
       type: 'MON_HOC_PHAN',
       isCompulsory: true
     });
@@ -768,7 +777,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
                 <th className="p-3 text-center">Tín chỉ / Tiết</th>
                 <th className="p-3">Hình thức Thi / Đánh giá</th>
                 <th className="p-3 text-center">Hệ số</th>
-                <th className="p-3">Khoa / Đơn vị Phụ trách</th>
+                <th className="p-3">Khoa Phụ trách</th>
                 {isPrivileged && (
                   <th className="p-3 text-center w-28">Thao tác</th>
                 )}
@@ -1001,7 +1010,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="form-label text-xs font-bold text-slate-700 mb-1">
                     Số tín chỉ
@@ -1022,39 +1031,23 @@ export default function CurriculumRoadmapView({ currentUser }) {
 
                 <div>
                   <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                    Học kỳ
+                    Tính chất môn
                   </label>
-                  <select
-                    value={editingSubject.semester}
-                    onChange={(e) => setEditingSubject({ ...editingSubject, semester: parseInt(e.target.value, 10) || 1 })}
-                    className="form-input text-xs font-semibold w-full cursor-pointer"
-                  >
-                    <option value={1}>Học kỳ 1</option>
-                    <option value={2}>Học kỳ 2</option>
-                    <option value={3}>Học kỳ 3</option>
-                    <option value={4}>Học kỳ 4</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                    Tính chất
-                  </label>
-                  <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
+                  <label className="flex items-center gap-2 mt-2.5 cursor-pointer text-xs font-semibold text-slate-800">
                     <input
                       type="checkbox"
                       checked={editingSubject.isCompulsory}
                       onChange={(e) => setEditingSubject({ ...editingSubject, isCompulsory: e.target.checked })}
                       className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
                     />
-                    <span>Bắt buộc</span>
+                    <span>Môn bắt buộc</span>
                   </label>
                 </div>
               </div>
 
               <div>
                 <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                  Khoa / Đơn vị phụ trách giảng dạy
+                  Khoa phụ trách giảng dạy
                 </label>
                 <select
                   value={editingSubject.departmentId || ''}
@@ -1062,7 +1055,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
                   className="form-input text-xs font-semibold w-full cursor-pointer"
                 >
                   <option value="">-- Mặc định theo Chuyên ngành --</option>
-                  {departments.map((d) => (
+                  {facultyDepartments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name} ({d.code})
                     </option>
@@ -1195,7 +1188,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label className="form-label text-xs font-bold text-slate-700 mb-1">
                         Số tín chỉ
@@ -1216,39 +1209,23 @@ export default function CurriculumRoadmapView({ currentUser }) {
 
                     <div>
                       <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                        Học kỳ áp dụng
+                        Tính chất môn
                       </label>
-                      <select
-                        value={newSubjectData.semester}
-                        onChange={(e) => setNewSubjectData({ ...newSubjectData, semester: parseInt(e.target.value, 10) || 1 })}
-                        className="form-input text-xs font-semibold w-full cursor-pointer"
-                      >
-                        <option value={1}>Học kỳ 1</option>
-                        <option value={2}>Học kỳ 2</option>
-                        <option value={3}>Học kỳ 3</option>
-                        <option value={4}>Học kỳ 4</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                        Tính chất
-                      </label>
-                      <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
+                      <label className="flex items-center gap-2 mt-2.5 cursor-pointer text-xs font-semibold text-slate-800">
                         <input
                           type="checkbox"
                           checked={newSubjectData.isCompulsory}
                           onChange={(e) => setNewSubjectData({ ...newSubjectData, isCompulsory: e.target.checked })}
                           className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
                         />
-                        <span>Bắt buộc</span>
+                        <span>Môn bắt buộc</span>
                       </label>
                     </div>
                   </div>
 
                   <div>
                     <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                      Khoa / Đơn vị phụ trách
+                      Khoa phụ trách giảng dạy
                     </label>
                     <select
                       value={newSubjectData.departmentId || ''}
@@ -1256,7 +1233,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
                       className="form-input text-xs font-semibold w-full cursor-pointer"
                     >
                       <option value="">-- Chọn khoa/bộ môn phụ trách --</option>
-                      {departments.map((d) => (
+                      {facultyDepartments.map((d) => (
                         <option key={d.id} value={d.id}>
                           {d.name} ({d.code})
                         </option>
@@ -1323,37 +1300,16 @@ export default function CurriculumRoadmapView({ currentUser }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                        Học kỳ áp dụng
-                      </label>
-                      <select
-                        value={newSubjectData.semester}
-                        onChange={(e) => setNewSubjectData({ ...newSubjectData, semester: parseInt(e.target.value, 10) || 1 })}
-                        className="form-input text-xs font-semibold w-full cursor-pointer"
-                      >
-                        <option value={1}>Học kỳ 1</option>
-                        <option value={2}>Học kỳ 2</option>
-                        <option value={3}>Học kỳ 3</option>
-                        <option value={4}>Học kỳ 4</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
-                        Tính chất
-                      </label>
-                      <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={newSubjectData.isCompulsory}
-                          onChange={(e) => setNewSubjectData({ ...newSubjectData, isCompulsory: e.target.checked })}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                        />
-                        <span>Bắt buộc</span>
-                      </label>
-                    </div>
+                  <div className="pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={newSubjectData.isCompulsory}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, isCompulsory: e.target.checked })}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <span>Môn bắt buộc</span>
+                    </label>
                   </div>
                 </>
               )}
