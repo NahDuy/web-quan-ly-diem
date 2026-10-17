@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X, Plus, Trash2 } from 'lucide-react';
-import ConfirmModal from './ConfirmModal';
+import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X } from 'lucide-react';
 
 const DEFAULT_TARGET_GROUPS = [
   { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', desc: 'Thời gian 03 - 04 tháng' },
@@ -48,19 +47,20 @@ export default function CurriculumRoadmapView() {
   const [majors, setMajors] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // New Target Group Modal State
-  const [isAddTargetModalOpen, setIsAddTargetModalOpen] = useState(false);
-  const [newTargetCode, setNewTargetCode] = useState('');
-  const [newTargetName, setNewTargetName] = useState('');
-  const [newTargetDesc, setNewTargetDesc] = useState('Thời gian 06 tháng');
-  const [addTargetError, setAddTargetError] = useState('');
-
-  // Dialog xác nhận xóa đối tượng đào tạo thay thế window.confirm
-  const [deleteConfirmState, setDeleteConfirmState] = useState({
-    isOpen: false,
-    code: '',
-    name: ''
-  });
+  // Đồng bộ danh mục đối tượng đào tạo từ cấu hình chung
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('military_target_groups');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTargetGroups(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error reloading target groups', e);
+    }
+  }, []);
 
   const [selectedCourse, setSelectedCourse] = useState('2026');
   const courseOptions = [
@@ -196,61 +196,7 @@ export default function CurriculumRoadmapView() {
     }
   };
 
-  const handleAddTargetGroup = (e) => {
-    e.preventDefault();
-    const code = newTargetCode.trim().toUpperCase();
-    const name = newTargetName.trim();
-    const desc = newTargetDesc.trim() || 'Thời gian 06 tháng';
 
-    if (!code || !name) {
-      setAddTargetError('Vui lòng nhập đầy đủ Mã quy ước và Tên đối tượng');
-      return;
-    }
-
-    if (targetGroups.some(g => g.code === code)) {
-      setAddTargetError(`Mã đối tượng "${code}" đã tồn tại!`);
-      return;
-    }
-
-    const updated = [...targetGroups, { code, name, desc, custom: true }];
-    setTargetGroups(updated);
-    try {
-      localStorage.setItem('military_target_groups', JSON.stringify(updated));
-    } catch (err) {
-      console.error(err);
-    }
-
-    setTargetGroup(code);
-    setIsAddTargetModalOpen(false);
-    setNewTargetCode('');
-    setNewTargetName('');
-    setNewTargetDesc('Thời gian 06 tháng');
-    setAddTargetError('');
-  };
-
-  const handleDeleteTargetGroup = (e, codeToDelete, name) => {
-    e.stopPropagation();
-    setDeleteConfirmState({
-      isOpen: true,
-      code: codeToDelete,
-      name: name || codeToDelete
-    });
-  };
-
-  const handleConfirmDeleteTarget = () => {
-    const codeToDelete = deleteConfirmState.code;
-    const updated = targetGroups.filter(g => g.code !== codeToDelete);
-    setTargetGroups(updated);
-    try {
-      localStorage.setItem('military_target_groups', JSON.stringify(updated));
-    } catch (err) {
-      console.error(err);
-    }
-    if (targetGroup === codeToDelete) {
-      setTargetGroup(updated.length > 0 ? updated[0].code : 'SQDB');
-    }
-    setDeleteConfirmState({ isOpen: false, code: '', name: '' });
-  };
 
   return (
     <div className="space-y-6">
@@ -274,25 +220,6 @@ export default function CurriculumRoadmapView() {
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                setAddTargetError('');
-                setIsAddTargetModalOpen(true);
-              }}
-              className="btn btn-sm flex items-center gap-1.5 shadow-sm font-bold"
-              style={{
-                backgroundColor: '#fef3c7',
-                color: '#b45309',
-                border: '1px solid #fde047',
-                fontWeight: 700
-              }}
-              title="Thêm đối tượng đào tạo mới vào hệ thống (SQDB, NVKT, HSQ...)"
-            >
-              <Plus className="w-4 h-4 text-amber-600" />
-              <span>+ Thêm Đối Tượng Đào Tạo</span>
-            </button>
-
             <a
               href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`}
               download
@@ -318,29 +245,16 @@ export default function CurriculumRoadmapView() {
 
       {/* Target Group & Major Selection Bar */}
       <div className="glass-panel p-5 bg-white border border-slate-200 space-y-4">
-        {/* Row 1: Target Groups with Add Target Button */}
+        {/* Row 1: Target Groups */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
             <label className="form-label text-xs font-bold text-slate-800 mb-0">
               1. Chọn Đối tượng đào tạo ({targetGroups.length} đối tượng)
             </label>
-            <button
-              type="button"
-              onClick={() => {
-                setAddTargetError('');
-                setIsAddTargetModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-400 rounded-lg transition shadow-xs cursor-pointer"
-              title="Thêm đối tượng đào tạo mới vào hệ thống"
-            >
-              <Plus className="w-4 h-4 text-amber-700" />
-              <span>+ Thêm Đối tượng Mới</span>
-            </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {targetGroups.map((tg) => {
               const active = targetGroup === tg.code;
-              const isDefault = DEFAULT_TARGET_GROUPS.some(d => d.code === tg.code);
               return (
                 <div
                   key={tg.code}
@@ -359,16 +273,6 @@ export default function CurriculumRoadmapView() {
                   </div>
                   <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
                     <p className="text-[10px] text-slate-500">{tg.desc}</p>
-                    {!isDefault && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteTargetGroup(e, tg.code, tg.name)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition"
-                        title="Xóa đối tượng đào tạo này"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -694,110 +598,6 @@ export default function CurriculumRoadmapView() {
           </div>
         </div>
       )}
-
-      {/* MODAL THÊM ĐỐI TƯỢNG ĐÀO TẠO MỚI */}
-      {isAddTargetModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsAddTargetModalOpen(false)}>
-          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
-              <div className="flex items-center space-x-2 text-amber-700">
-                <Shield className="w-5 h-5" />
-                <h3 className="font-military text-base font-bold text-slate-900">Thêm Đối Tượng Đào Tạo Mới</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddTargetModalOpen(false)}
-                className="btn btn-icon btn-secondary btn-xs"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {addTargetError && (
-              <div className="alert alert-error mb-4 text-xs font-semibold">
-                <AlertCircle className="w-4 h-4" />
-                <span>{addTargetError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleAddTargetGroup} className="space-y-4">
-              <div>
-                <label className="form-label text-xs mb-1">
-                  Mã Quy Ước Đối Tượng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: NVKT, HSQ, BOMON, SQCH..."
-                  value={newTargetCode}
-                  onChange={(e) => setNewTargetCode(e.target.value.toUpperCase())}
-                  className="form-input text-xs font-mono font-bold uppercase"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Mã viết tắt chuẩn hóa (hệ thống sẽ tự động viết hoa)
-                </p>
-              </div>
-
-              <div>
-                <label className="form-label text-xs mb-1">
-                  Tên Đầy Đủ Đối Tượng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nhân viên Chuyên môn Kỹ thuật, Sĩ quan Chỉ huy..."
-                  value={newTargetName}
-                  onChange={(e) => setNewTargetName(e.target.value)}
-                  className="form-input text-xs font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="form-label text-xs mb-1">
-                  Thời Gian / Mô Tả Khóa Học
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Thời gian 06 tháng, Thời gian 03 tháng..."
-                  value={newTargetDesc}
-                  onChange={(e) => setNewTargetDesc(e.target.value)}
-                  className="form-input text-xs"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setIsAddTargetModalOpen(false)}
-                  className="btn btn-secondary text-xs"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary text-xs"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Lưu & Áp Dụng
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal xác nhận xóa đối tượng đào tạo chuẩn quân sự */}
-      <ConfirmModal
-        isOpen={deleteConfirmState.isOpen}
-        onClose={() => setDeleteConfirmState({ isOpen: false, code: '', name: '' })}
-        onConfirm={handleConfirmDeleteTarget}
-        title="Xác nhận xóa Đối tượng Đào tạo"
-        message="Đồng chí có chắc chắn muốn xóa đối tượng đào tạo này khỏi danh mục?"
-        itemName={deleteConfirmState.name}
-        warningNote="Thao tác này sẽ gỡ bỏ phân loại đối tượng này khỏi cấu hình danh mục lộ trình đào tạo hiện tại."
-        confirmLabel="Xác nhận xóa"
-        type="danger"
-      />
 
     </div>
   );
