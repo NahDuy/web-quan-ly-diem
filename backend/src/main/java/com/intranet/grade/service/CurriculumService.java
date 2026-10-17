@@ -21,6 +21,8 @@ public class CurriculumService {
     private final StudentRepository studentRepository;
     private final MajorRepository majorRepository;
     private final SubjectRepository subjectRepository;
+    private final DepartmentRepository departmentRepository;
+    private final CourseRepository courseRepository;
 
     @Transactional(readOnly = true)
     public CurriculumProgressDTO getClassCurriculumProgress(Integer classId) {
@@ -181,6 +183,7 @@ public class CurriculumService {
 
                 subDTOs.add(com.intranet.grade.dto.CurriculumSubjectDTO.builder()
                         .id(cs.getId())
+                        .subjectId(s.getId())
                         .subjectCode(s.getCode())
                         .subjectName(s.getName())
                         .credits(credits)
@@ -189,6 +192,7 @@ public class CurriculumService {
                         .type(isGradExam ? "MON_THI_TOT_NGHIEP" : "MON_HOC_PHAN")
                         .examFormat(examFormat)
                         .weight(weight)
+                        .departmentId(s.getDepartment() != null ? s.getDepartment().getId() : null)
                         .departmentName(s.getDepartment() != null ? s.getDepartment().getName() : "Khoa Binh chủng")
                         .isCompulsory(cs.getIsCompulsory())
                         .build());
@@ -285,6 +289,7 @@ public class CurriculumService {
                         boolean isGradExam = s.getCode() != null && s.getCode().startsWith("TN");
                         subDTOs.add(com.intranet.grade.dto.CurriculumSubjectDTO.builder()
                                 .id(s.getId())
+                                .subjectId(s.getId())
                                 .subjectCode(s.getCode())
                                 .subjectName(s.getName())
                                 .credits(credits)
@@ -293,6 +298,7 @@ public class CurriculumService {
                                 .type(isGradExam ? "MON_THI_TOT_NGHIEP" : "MON_HOC_PHAN")
                                 .examFormat(isGradExam ? "Vấn đáp / Thao trường" : "Lý thuyết & Thao trường")
                                 .weight(isGradExam ? 2.0 : 1.0)
+                                .departmentId(s.getDepartment() != null ? s.getDepartment().getId() : (m.getDepartment() != null ? m.getDepartment().getId() : null))
                                 .departmentName(s.getDepartment() != null ? s.getDepartment().getName() : (m.getDepartment() != null ? m.getDepartment().getName() : "Khoa Binh chủng"))
                                 .isCompulsory(true)
                                 .build());
@@ -317,5 +323,259 @@ public class CurriculumService {
         }
 
         return dtos;
+    }
+
+    public Curriculum getOrCreateCurriculum(Integer curriculumId, String majorCode, String courseCode, String targetGroup) {
+        if (curriculumId != null) {
+            Optional<Curriculum> opt = curriculumRepository.findById(curriculumId);
+            if (opt.isPresent()) {
+                return opt.get();
+            }
+        }
+
+        Major major = null;
+        if (majorCode != null && !majorCode.isBlank()) {
+            major = majorRepository.findByCode(majorCode).orElse(null);
+        }
+        if (major == null) {
+            major = majorRepository.findAll().stream().findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên ngành phù hợp trong hệ thống"));
+        }
+
+        Course course = null;
+        if (courseCode != null && !courseCode.isBlank() && !"ALL".equalsIgnoreCase(courseCode)) {
+            course = courseRepository.findByCode(courseCode).orElse(null);
+            if (course == null) {
+                String cleanCourse = courseCode;
+                course = courseRepository.findAll().stream()
+                        .filter(c -> c.getCode().equalsIgnoreCase(cleanCourse) || c.getCode().contains(cleanCourse) || cleanCourse.contains(c.getCode()))
+                        .findFirst().orElse(null);
+            }
+        }
+        if (course == null) {
+            course = courseRepository.findByCode("SQDB2026").orElseGet(() ->
+                    courseRepository.findAll().stream().findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khóa đào tạo phù hợp trong hệ thống")));
+        }
+
+        final Major finalMajor = major;
+        final Course finalCourse = course;
+        return curriculumRepository.findByMajorIdAndCourseId(finalMajor.getId(), finalCourse.getId())
+                .orElseGet(() -> {
+                    Curriculum c = curriculumRepository.save(Curriculum.builder()
+                            .major(finalMajor)
+                            .course(finalCourse)
+                            .name("Lộ trình Đào tạo & Thi TN " + finalMajor.getName() + " (" + finalCourse.getName() + ")")
+                            .totalCredits(0)
+                            .build());
+
+                    List<Subject> allSubjects = subjectRepository.findAll();
+                    List<Subject> relevantSubjects = allSubjects.stream()
+                            .filter(s -> (finalMajor.getDepartment() != null && s.getDepartment() != null && finalMajor.getDepartment().getId().equals(s.getDepartment().getId()))
+                                    || (s.getCode() != null && s.getCode().startsWith(finalMajor.getCode()))
+                                    || (s.getCode() != null && (s.getCode().startsWith("QS") || s.getCode().startsWith("TN"))))
+                            .collect(Collectors.toList());
+
+                    int sumCredits = 0;
+                    for (Subject s : relevantSubjects) {
+                        curriculumSubjectRepository.save(CurriculumSubject.builder()
+                                .curriculum(c)
+                                .subject(s)
+                                .semester(1)
+                                .isCompulsory(true)
+                                .build());
+                        sumCredits += (s.getCredits() != null ? s.getCredits() : 3);
+                    }
+                    c.setTotalCredits(sumCredits);
+                    return curriculumRepository.save(c);
+                });
+    }
+
+    @Transactional
+    public Map<String, Object> addSubjectToCurriculum(com.intranet.grade.dto.CurriculumSubjectRequest req) {
+        Curriculum curriculum = getOrCreateCurriculum(req.getCurriculumId(), req.getMajorCode(), req.getCourseCode(), req.getTargetGroup());
+
+        Subject subject = null;
+        if (req.getSubjectId() != null) {
+            subject = subjectRepository.findById(req.getSubjectId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học ID: " + req.getSubjectId()));
+        } else {
+            if (req.getSubjectCode() == null || req.getSubjectCode().isBlank() || req.getSubjectName() == null || req.getSubjectName().isBlank()) {
+                throw new IllegalArgumentException("Vui lòng nhập đầy đủ Mã môn học và Tên môn học!");
+            }
+            String code = req.getSubjectCode().trim().toUpperCase();
+            Optional<Subject> existingOpt = subjectRepository.findByCode(code);
+            if (existingOpt.isPresent()) {
+                subject = existingOpt.get();
+                if (req.getSubjectName() != null && !req.getSubjectName().isBlank()) {
+                    subject.setName(req.getSubjectName().trim());
+                }
+                if (req.getCredits() != null && req.getCredits() > 0) {
+                    subject.setCredits(req.getCredits());
+                }
+            } else {
+                Department dept = null;
+                if (req.getDepartmentId() != null) {
+                    dept = departmentRepository.findById(req.getDepartmentId()).orElse(null);
+                }
+                if (dept == null && curriculum.getMajor() != null) {
+                    dept = curriculum.getMajor().getDepartment();
+                }
+                if (dept == null) {
+                    dept = departmentRepository.findAll().stream().findFirst().orElse(null);
+                }
+                subject = Subject.builder()
+                        .code(code)
+                        .name(req.getSubjectName().trim())
+                        .credits(req.getCredits() != null && req.getCredits() > 0 ? req.getCredits() : 3)
+                        .department(dept)
+                        .build();
+            }
+            subject = subjectRepository.save(subject);
+        }
+
+        // Kiểm tra xem môn học đã có trong khung chưa
+        Optional<CurriculumSubject> existingCs = curriculumSubjectRepository.findByCurriculumIdAndSubjectId(curriculum.getId(), subject.getId());
+        if (existingCs.isPresent()) {
+            CurriculumSubject cs = existingCs.get();
+            if (req.getSemester() != null && req.getSemester() > 0) cs.setSemester(req.getSemester());
+            if (req.getIsCompulsory() != null) cs.setIsCompulsory(req.getIsCompulsory());
+            curriculumSubjectRepository.save(cs);
+        } else {
+            CurriculumSubject cs = CurriculumSubject.builder()
+                    .curriculum(curriculum)
+                    .subject(subject)
+                    .semester(req.getSemester() != null && req.getSemester() > 0 ? req.getSemester() : 1)
+                    .isCompulsory(req.getIsCompulsory() != null ? req.getIsCompulsory() : true)
+                    .build();
+            curriculumSubjectRepository.save(cs);
+        }
+
+        // Tính lại tổng số tín chỉ
+        int totalCredits = curriculumSubjectRepository.findByCurriculumIdOrderBySemesterAsc(curriculum.getId()).stream()
+                .mapToInt(item -> item.getSubject().getCredits() != null ? item.getSubject().getCredits() : 3)
+                .sum();
+        curriculum.setTotalCredits(totalCredits);
+        curriculumRepository.save(curriculum);
+
+        return Map.of(
+                "success", true,
+                "message", "Đã thêm môn học \"" + subject.getName() + "\" (" + subject.getCode() + ") vào khung chương trình thành công!",
+                "curriculumId", curriculum.getId(),
+                "subjectId", subject.getId(),
+                "totalCredits", totalCredits
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> updateSubjectInCurriculum(Integer curriculumSubjectId, com.intranet.grade.dto.CurriculumSubjectRequest req) {
+        CurriculumSubject cs = null;
+        if (curriculumSubjectId != null) {
+            cs = curriculumSubjectRepository.findById(curriculumSubjectId).orElse(null);
+        }
+
+        if (cs == null) {
+            Curriculum c = getOrCreateCurriculum(req.getCurriculumId(), req.getMajorCode(), req.getCourseCode(), req.getTargetGroup());
+            if (req.getSubjectId() != null) {
+                cs = curriculumSubjectRepository.findByCurriculumIdAndSubjectId(c.getId(), req.getSubjectId()).orElse(null);
+            }
+            if (cs == null && req.getSubjectCode() != null && !req.getSubjectCode().isBlank()) {
+                Subject s = subjectRepository.findByCode(req.getSubjectCode().trim().toUpperCase()).orElse(null);
+                if (s != null) {
+                    cs = curriculumSubjectRepository.findByCurriculumIdAndSubjectId(c.getId(), s.getId()).orElse(null);
+                }
+            }
+        }
+
+        if (cs == null) {
+            return addSubjectToCurriculum(req);
+        }
+
+        Subject s = cs.getSubject();
+        if (req.getSubjectName() != null && !req.getSubjectName().isBlank()) {
+            s.setName(req.getSubjectName().trim());
+        }
+        if (req.getCredits() != null && req.getCredits() > 0) {
+            s.setCredits(req.getCredits());
+        }
+        if (req.getSubjectCode() != null && !req.getSubjectCode().isBlank()) {
+            String newCode = req.getSubjectCode().trim().toUpperCase();
+            if (!newCode.equalsIgnoreCase(s.getCode())) {
+                Optional<Subject> existingWithCode = subjectRepository.findByCode(newCode);
+                if (existingWithCode.isPresent() && !existingWithCode.get().getId().equals(s.getId())) {
+                    cs.setSubject(existingWithCode.get());
+                    s = existingWithCode.get();
+                } else {
+                    s.setCode(newCode);
+                }
+            }
+        }
+        if (req.getDepartmentId() != null) {
+            departmentRepository.findById(req.getDepartmentId()).ifPresent(s::setDepartment);
+        }
+        subjectRepository.save(s);
+
+        if (req.getSemester() != null && req.getSemester() > 0) {
+            cs.setSemester(req.getSemester());
+        }
+        if (req.getIsCompulsory() != null) {
+            cs.setIsCompulsory(req.getIsCompulsory());
+        }
+        curriculumSubjectRepository.save(cs);
+
+        Curriculum curr = cs.getCurriculum();
+        int totalCredits = curriculumSubjectRepository.findByCurriculumIdOrderBySemesterAsc(curr.getId()).stream()
+                .mapToInt(item -> item.getSubject().getCredits() != null ? item.getSubject().getCredits() : 3)
+                .sum();
+        curr.setTotalCredits(totalCredits);
+        curriculumRepository.save(curr);
+
+        return Map.of(
+                "success", true,
+                "message", "Đã cập nhật môn học \"" + s.getName() + "\" (" + s.getCode() + ") thành công!",
+                "curriculumId", curr.getId(),
+                "curriculumSubjectId", cs.getId(),
+                "totalCredits", totalCredits
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> removeSubjectFromCurriculum(Integer curriculumSubjectId, Integer curriculumId, String majorCode, String courseCode, Integer subjectId) {
+        CurriculumSubject cs = null;
+        if (curriculumSubjectId != null) {
+            cs = curriculumSubjectRepository.findById(curriculumSubjectId).orElse(null);
+        }
+
+        if (cs == null && curriculumId != null && subjectId != null) {
+            cs = curriculumSubjectRepository.findByCurriculumIdAndSubjectId(curriculumId, subjectId).orElse(null);
+        }
+
+        if (cs == null && majorCode != null && subjectId != null) {
+            Curriculum c = getOrCreateCurriculum(curriculumId, majorCode, courseCode, null);
+            cs = curriculumSubjectRepository.findByCurriculumIdAndSubjectId(c.getId(), subjectId).orElse(null);
+        }
+
+        if (cs == null) {
+            throw new IllegalArgumentException("Không tìm thấy môn học tương ứng trong khung chương trình!");
+        }
+
+        Curriculum curr = cs.getCurriculum();
+        String removedSubjectName = cs.getSubject().getName();
+        String removedSubjectCode = cs.getSubject().getCode();
+
+        curriculumSubjectRepository.delete(cs);
+
+        int totalCredits = curriculumSubjectRepository.findByCurriculumIdOrderBySemesterAsc(curr.getId()).stream()
+                .mapToInt(item -> item.getSubject().getCredits() != null ? item.getSubject().getCredits() : 3)
+                .sum();
+        curr.setTotalCredits(totalCredits);
+        curriculumRepository.save(curr);
+
+        return Map.of(
+                "success", true,
+                "message", "Đã xóa môn học \"" + removedSubjectName + "\" (" + removedSubjectCode + ") khỏi khung chương trình thành công!",
+                "curriculumId", curr.getId(),
+                "totalCredits", totalCredits
+        );
     }
 }

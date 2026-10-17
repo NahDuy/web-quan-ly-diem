@@ -22,6 +22,29 @@ public class CurriculumController {
         return ResponseEntity.ok(curriculumService.getAllCurriculums(majorCode, targetGroup, courseCode));
     }
 
+    @PostMapping("/subjects")
+    public ResponseEntity<java.util.Map<String, Object>> addSubjectToCurriculum(
+            @RequestBody com.intranet.grade.dto.CurriculumSubjectRequest req) {
+        return ResponseEntity.ok(curriculumService.addSubjectToCurriculum(req));
+    }
+
+    @PutMapping("/subjects/{curriculumSubjectId}")
+    public ResponseEntity<java.util.Map<String, Object>> updateSubjectInCurriculum(
+            @PathVariable Integer curriculumSubjectId,
+            @RequestBody com.intranet.grade.dto.CurriculumSubjectRequest req) {
+        return ResponseEntity.ok(curriculumService.updateSubjectInCurriculum(curriculumSubjectId, req));
+    }
+
+    @DeleteMapping("/subjects/{curriculumSubjectId}")
+    public ResponseEntity<java.util.Map<String, Object>> removeSubjectFromCurriculum(
+            @PathVariable Integer curriculumSubjectId,
+            @RequestParam(required = false) Integer curriculumId,
+            @RequestParam(required = false) String majorCode,
+            @RequestParam(required = false) String courseCode,
+            @RequestParam(required = false) Integer subjectId) {
+        return ResponseEntity.ok(curriculumService.removeSubjectFromCurriculum(curriculumSubjectId, curriculumId, majorCode, courseCode, subjectId));
+    }
+
     @GetMapping("/export-template")
     public ResponseEntity<byte[]> exportCurriculumTemplate(
             @RequestParam(required = false, defaultValue = "TSBB") String majorCode,

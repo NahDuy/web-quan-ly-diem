@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { Compass, Upload, Download, CheckCircle2, FileSpreadsheet, Shield, Award, BookOpen, AlertCircle, RefreshCw, X, Plus, Pencil, Trash2, Search, Check, AlertTriangle } from 'lucide-react';
 
 const DEFAULT_TARGET_GROUPS = [
   { code: 'SQDB', name: 'Sĩ quan Dự bị (SQDB)', desc: 'Thời gian 03 - 04 tháng' },
@@ -97,6 +97,69 @@ export default function CurriculumRoadmapView({ currentUser }) {
   const [uploading, setUploading] = useState(false);
   const [importStatus, setImportStatus] = useState({ type: '', text: '' });
 
+  // Departments & Available Subjects for Curriculum Editing
+  const [departments, setDepartments] = useState([]);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+
+  // Edit Subject Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Add Subject Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addTab, setAddTab] = useState('new'); // 'new' | 'existing'
+  const [addSaving, setAddSaving] = useState(false);
+  const [selectedExistingSubjectId, setSelectedExistingSubjectId] = useState('');
+  const [existingSubjectSearch, setExistingSubjectSearch] = useState('');
+  const [newSubjectData, setNewSubjectData] = useState({
+    subjectCode: '',
+    subjectName: '',
+    credits: 3,
+    semester: 1,
+    departmentId: '',
+    type: 'MON_HOC_PHAN',
+    isCompulsory: true
+  });
+
+  // Delete Confirm Dialog State
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState({
+    isOpen: false,
+    subject: null,
+    loading: false
+  });
+
+  // Feedback Notification Banner
+  const [feedbackMsg, setFeedbackMsg] = useState({ type: '', text: '' });
+
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/departments', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setDepartments(data);
+      }
+    } catch (e) {
+      console.error('Error fetching departments:', e);
+    }
+  };
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/classes/available-subjects', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableSubjects(data);
+      }
+    } catch (e) {
+      console.error('Error fetching available subjects:', e);
+    }
+  };
+
   const fetchMajors = async () => {
     try {
       const token = localStorage.getItem('jwt_token');
@@ -133,6 +196,7 @@ export default function CurriculumRoadmapView({ currentUser }) {
 
   useEffect(() => {
     fetchMajors();
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
@@ -140,6 +204,195 @@ export default function CurriculumRoadmapView({ currentUser }) {
       fetchCurriculums();
     }
   }, [selectedMajor, targetGroup, selectedCourse]);
+
+  const handleOpenEditModal = (sub) => {
+    let deptId = sub.departmentId;
+    if (!deptId && sub.departmentName && departments.length > 0) {
+      const matchedDept = departments.find(d => d.name === sub.departmentName);
+      if (matchedDept) deptId = matchedDept.id;
+    }
+    setEditingSubject({
+      id: sub.id,
+      subjectId: sub.subjectId,
+      subjectCode: sub.subjectCode || '',
+      subjectName: sub.subjectName || '',
+      credits: sub.credits || 3,
+      semester: sub.semester || 1,
+      departmentId: deptId || (departments.length > 0 ? departments[0].id : ''),
+      type: sub.type || (sub.subjectCode?.startsWith('TN') ? 'MON_THI_TOT_NGHIEP' : 'MON_HOC_PHAN'),
+      isCompulsory: sub.isCompulsory !== undefined ? sub.isCompulsory : true
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingSubject?.subjectName?.trim() || !editingSubject?.subjectCode?.trim()) {
+      alert('Vui lòng nhập đầy đủ Mã môn và Tên môn học!');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      const res = await fetch(`/api/v1/curriculums/subjects/${editingSubject.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          curriculumId: activeCurriculum?.id,
+          majorCode: selectedMajor,
+          courseCode: selectedCourse,
+          targetGroup: targetGroup,
+          subjectId: editingSubject.subjectId,
+          subjectCode: editingSubject.subjectCode.trim().toUpperCase(),
+          subjectName: editingSubject.subjectName.trim(),
+          credits: parseInt(editingSubject.credits, 10) || 3,
+          semester: parseInt(editingSubject.semester, 10) || 1,
+          departmentId: editingSubject.departmentId ? parseInt(editingSubject.departmentId, 10) : null,
+          type: editingSubject.type,
+          isCompulsory: editingSubject.isCompulsory
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsEditModalOpen(false);
+        setFeedbackMsg({ type: 'success', text: data.message || 'Đã cập nhật môn học trong khung chương trình thành công!' });
+        setTimeout(() => setFeedbackMsg({ type: '', text: '' }), 5000);
+        await fetchCurriculums();
+      } else {
+        alert(data.message || 'Lỗi khi cập nhật môn học');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ khi lưu môn học');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    fetchAvailableSubjects();
+    setNewSubjectData({
+      subjectCode: '',
+      subjectName: '',
+      credits: 3,
+      semester: 1,
+      departmentId: departments[0]?.id || '',
+      type: 'MON_HOC_PHAN',
+      isCompulsory: true
+    });
+    setSelectedExistingSubjectId('');
+    setExistingSubjectSearch('');
+    setAddTab('new');
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveAdd = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('jwt_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    let payload = {
+      curriculumId: activeCurriculum?.id,
+      majorCode: selectedMajor,
+      courseCode: selectedCourse,
+      targetGroup: targetGroup,
+      semester: parseInt(newSubjectData.semester, 10) || 1,
+      isCompulsory: newSubjectData.isCompulsory
+    };
+
+    if (addTab === 'new') {
+      if (!newSubjectData.subjectCode?.trim() || !newSubjectData.subjectName?.trim()) {
+        alert('Vui lòng nhập đầy đủ Mã môn và Tên môn học!');
+        return;
+      }
+      payload = {
+        ...payload,
+        subjectCode: newSubjectData.subjectCode.trim().toUpperCase(),
+        subjectName: newSubjectData.subjectName.trim(),
+        credits: parseInt(newSubjectData.credits, 10) || 3,
+        departmentId: newSubjectData.departmentId ? parseInt(newSubjectData.departmentId, 10) : null,
+        type: newSubjectData.type
+      };
+    } else {
+      if (!selectedExistingSubjectId) {
+        alert('Vui lòng chọn một môn học từ danh mục!');
+        return;
+      }
+      payload = {
+        ...payload,
+        subjectId: parseInt(selectedExistingSubjectId, 10)
+      };
+    }
+
+    setAddSaving(true);
+    try {
+      const res = await fetch('/api/v1/curriculums/subjects', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsAddModalOpen(false);
+        setFeedbackMsg({ type: 'success', text: data.message || 'Đã thêm môn học vào khung chương trình thành công!' });
+        setTimeout(() => setFeedbackMsg({ type: '', text: '' }), 5000);
+        await fetchCurriculums();
+      } else {
+        alert(data.message || 'Không thể thêm môn học vào khung chương trình');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ khi thêm môn học');
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
+  const handleDeleteSubject = (sub) => {
+    setDeleteConfirmDialog({
+      isOpen: true,
+      subject: sub,
+      loading: false
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmDialog.subject) return;
+    const sub = deleteConfirmDialog.subject;
+    setDeleteConfirmDialog(prev => ({ ...prev, loading: true }));
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const params = new URLSearchParams({
+        curriculumId: activeCurriculum?.id || '',
+        majorCode: selectedMajor || '',
+        courseCode: selectedCourse || '',
+        subjectId: sub.subjectId || sub.id || ''
+      });
+      const res = await fetch(`/api/v1/curriculums/subjects/${sub.id}?${params.toString()}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDeleteConfirmDialog({ isOpen: false, subject: null, loading: false });
+        setFeedbackMsg({ type: 'success', text: data.message || 'Đã xóa môn học khỏi khung chương trình thành công!' });
+        setTimeout(() => setFeedbackMsg({ type: '', text: '' }), 5000);
+        await fetchCurriculums();
+      } else {
+        alert(data.message || 'Lỗi khi xóa môn học khỏi khung chương trình');
+        setDeleteConfirmDialog(prev => ({ ...prev, loading: false }));
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ khi xóa môn học');
+      setDeleteConfirmDialog(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const handleSelectTargetGroup = (code) => {
     setTargetGroup(code);
@@ -261,18 +514,38 @@ export default function CurriculumRoadmapView({ currentUser }) {
             </a>
 
             {isPrivileged && (
-              <button
-                type="button"
-                onClick={() => setIsImportModalOpen(true)}
-                className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
-                title="Tải lên file Excel khung chương trình đào tạo để cập nhật vào hệ thống (Quyền PĐT / BGH)"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Import Lộ Trình (Excel)</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleOpenAddModal}
+                  className="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm font-bold bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer"
+                  title="Thêm môn học mới hoặc nội dung thi vào khung chương trình đào tạo"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Môn Vào Khung</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="btn btn-secondary btn-sm flex items-center gap-2 shadow-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border-slate-300"
+                  title="Tải lên file Excel khung chương trình đào tạo để cập nhật vào hệ thống (Quyền PĐT / BGH)"
+                >
+                  <Upload className="w-4 h-4 text-emerald-600" />
+                  <span>Import Lộ Trình (Excel)</span>
+                </button>
+              </>
             )}
           </div>
         </div>
+
+        {feedbackMsg.text && (
+          <div className={`p-3.5 rounded-xl text-xs font-bold flex items-center gap-2.5 shadow-xs mt-3 ${
+            feedbackMsg.type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {feedbackMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
+            <span>{feedbackMsg.text}</span>
+          </div>
+        )}
 
         {!isPrivileged && (
           <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs rounded-xl flex items-center gap-2.5 font-medium shadow-xs mt-3">
@@ -496,13 +769,16 @@ export default function CurriculumRoadmapView({ currentUser }) {
                 <th className="p-3">Hình thức Thi / Đánh giá</th>
                 <th className="p-3 text-center">Hệ số</th>
                 <th className="p-3">Khoa / Đơn vị Phụ trách</th>
+                {isPrivileged && (
+                  <th className="p-3 text-center w-28">Thao tác</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredSubjects.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500 text-xs italic">
-                    Chưa có môn học nào trong lộ trình này. Hãy nhấn nút "Import Lộ Trình (Excel)" hoặc xuất file mẫu để khởi tạo.
+                  <td colSpan={isPrivileged ? 9 : 8} className="p-8 text-center text-slate-500 text-xs italic">
+                    Chưa có môn học nào trong lộ trình này. Hãy nhấn nút "Thêm Môn Vào Khung" hoặc "Import Lộ Trình (Excel)" để khởi tạo.
                   </td>
                 </tr>
               ) : (
@@ -548,6 +824,28 @@ export default function CurriculumRoadmapView({ currentUser }) {
                       <td className="p-3 text-xs text-slate-600 font-medium">
                         {sub.departmentName || 'Khoa Binh chủng'}
                       </td>
+                      {isPrivileged && (
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(sub)}
+                              className="p-1.5 text-blue-700 hover:bg-blue-100 rounded-lg transition cursor-pointer"
+                              title="Chỉnh sửa thông tin môn học trong khung"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubject(sub)}
+                              className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition cursor-pointer"
+                              title="Xóa môn học này khỏi khung chương trình"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -634,6 +932,531 @@ export default function CurriculumRoadmapView({ currentUser }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA MÔN HỌC TRONG KHUNG */}
+      {isEditModalOpen && editingSubject && (
+        <div className="modal-overlay" onClick={() => setIsEditModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '580px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2 text-blue-700">
+                <Pencil className="w-5 h-5" />
+                <h3 className="font-military text-lg font-bold text-slate-900">
+                  Điều Chỉnh Môn Học Trong Khung
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="btn btn-icon btn-secondary btn-xs cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Mã môn / Mã thi <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingSubject.subjectCode}
+                    onChange={(e) => setEditingSubject({ ...editingSubject, subjectCode: e.target.value.toUpperCase() })}
+                    placeholder="VD: QS101, TN01"
+                    className="form-input text-xs font-mono font-bold w-full uppercase"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Phân loại nội dung
+                  </label>
+                  <select
+                    value={editingSubject.type}
+                    onChange={(e) => setEditingSubject({ ...editingSubject, type: e.target.value })}
+                    className="form-input text-xs font-semibold w-full cursor-pointer"
+                  >
+                    <option value="MON_HOC_PHAN">Môn Học phần (Huấn luyện)</option>
+                    <option value="MON_THI_TOT_NGHIEP">Môn Thi tốt nghiệp (Chính trị, Quân sự, Chuyên ngành)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                  Tên môn học / Nội dung kiểm tra, thi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingSubject.subjectName}
+                  onChange={(e) => setEditingSubject({ ...editingSubject, subjectName: e.target.value })}
+                  placeholder="VD: Bắn súng tiểu liên AK bài 1"
+                  className="form-input text-xs font-semibold w-full"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Số tín chỉ
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={editingSubject.credits}
+                    onChange={(e) => setEditingSubject({ ...editingSubject, credits: parseInt(e.target.value, 10) || 1 })}
+                    className="form-input text-xs font-mono font-bold w-full"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    = {(editingSubject.credits || 0) * 15} tiết quy đổi
+                  </p>
+                </div>
+
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Học kỳ
+                  </label>
+                  <select
+                    value={editingSubject.semester}
+                    onChange={(e) => setEditingSubject({ ...editingSubject, semester: parseInt(e.target.value, 10) || 1 })}
+                    className="form-input text-xs font-semibold w-full cursor-pointer"
+                  >
+                    <option value={1}>Học kỳ 1</option>
+                    <option value={2}>Học kỳ 2</option>
+                    <option value={3}>Học kỳ 3</option>
+                    <option value={4}>Học kỳ 4</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                    Tính chất
+                  </label>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={editingSubject.isCompulsory}
+                      onChange={(e) => setEditingSubject({ ...editingSubject, isCompulsory: e.target.checked })}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <span>Bắt buộc</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                  Khoa / Đơn vị phụ trách giảng dạy
+                </label>
+                <select
+                  value={editingSubject.departmentId || ''}
+                  onChange={(e) => setEditingSubject({ ...editingSubject, departmentId: e.target.value ? parseInt(e.target.value, 10) : '' })}
+                  className="form-input text-xs font-semibold w-full cursor-pointer"
+                >
+                  <option value="">-- Mặc định theo Chuyên ngành --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="btn btn-secondary text-xs"
+                  disabled={editSaving}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary text-xs flex items-center gap-1.5 font-bold"
+                  disabled={editSaving}
+                >
+                  {editSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Lưu Điều Chỉnh</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL THÊM MÔN VÀO KHUNG */}
+      {isAddModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsAddModalOpen(false)}>
+          <div className="modal-panel" style={{ maxWidth: '600px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2 text-emerald-700">
+                <Plus className="w-5 h-5" />
+                <h3 className="font-military text-lg font-bold text-slate-900">
+                  Thêm Môn Học Vào Khung Chương Trình
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="btn btn-icon btn-secondary btn-xs cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Tabs: Môn mới vs Môn có sẵn */}
+            <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-1 mb-4">
+              <button
+                type="button"
+                onClick={() => setAddTab('new')}
+                className={`flex-1 py-1.5 px-3 rounded-md text-xs font-bold transition cursor-pointer ${
+                  addTab === 'new'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                + Khởi tạo môn mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddTab('existing')}
+                className={`flex-1 py-1.5 px-3 rounded-md text-xs font-bold transition cursor-pointer ${
+                  addTab === 'existing'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Chọn từ danh mục có sẵn ({availableSubjects.length} môn)
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdd} className="space-y-4">
+              {addTab === 'new' ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Mã môn / Mã thi <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newSubjectData.subjectCode}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, subjectCode: e.target.value.toUpperCase() })}
+                        placeholder="VD: QS107, TN04"
+                        className="form-input text-xs font-mono font-bold w-full uppercase"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Phân loại nội dung
+                      </label>
+                      <select
+                        value={newSubjectData.type}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, type: e.target.value })}
+                        className="form-input text-xs font-semibold w-full cursor-pointer"
+                      >
+                        <option value="MON_HOC_PHAN">Môn Học phần (Huấn luyện)</option>
+                        <option value="MON_THI_TOT_NGHIEP">Môn Thi tốt nghiệp (Chính trị, Quân sự, Chuyên ngành)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                      Tên môn học / Nội dung kiểm tra, thi <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newSubjectData.subjectName}
+                      onChange={(e) => setNewSubjectData({ ...newSubjectData, subjectName: e.target.value })}
+                      placeholder="VD: Kỹ thuật đào bới công sự và ngụy trang"
+                      className="form-input text-xs font-semibold w-full"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Số tín chỉ
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={newSubjectData.credits}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, credits: parseInt(e.target.value, 10) || 1 })}
+                        className="form-input text-xs font-mono font-bold w-full"
+                        required
+                      />
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        = {(newSubjectData.credits || 0) * 15} tiết quy đổi
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Học kỳ áp dụng
+                      </label>
+                      <select
+                        value={newSubjectData.semester}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, semester: parseInt(e.target.value, 10) || 1 })}
+                        className="form-input text-xs font-semibold w-full cursor-pointer"
+                      >
+                        <option value={1}>Học kỳ 1</option>
+                        <option value={2}>Học kỳ 2</option>
+                        <option value={3}>Học kỳ 3</option>
+                        <option value={4}>Học kỳ 4</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Tính chất
+                      </label>
+                      <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={newSubjectData.isCompulsory}
+                          onChange={(e) => setNewSubjectData({ ...newSubjectData, isCompulsory: e.target.checked })}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                        />
+                        <span>Bắt buộc</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                      Khoa / Đơn vị phụ trách
+                    </label>
+                    <select
+                      value={newSubjectData.departmentId || ''}
+                      onChange={(e) => setNewSubjectData({ ...newSubjectData, departmentId: e.target.value ? parseInt(e.target.value, 10) : '' })}
+                      className="form-input text-xs font-semibold w-full cursor-pointer"
+                    >
+                      <option value="">-- Chọn khoa/bộ môn phụ trách --</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                      Tìm kiếm môn học có sẵn
+                    </label>
+                    <div className="relative mb-2">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={existingSubjectSearch}
+                        onChange={(e) => setExistingSubjectSearch(e.target.value)}
+                        placeholder="Tìm theo mã hoặc tên môn học..."
+                        className="form-input text-xs pl-9 w-full"
+                      />
+                    </div>
+
+                    <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 bg-white">
+                      {availableSubjects
+                        .filter(s => {
+                          if (!existingSubjectSearch) return true;
+                          const q = existingSubjectSearch.toLowerCase();
+                          return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q);
+                        })
+                        .map((s) => {
+                          const isSelected = String(selectedExistingSubjectId) === String(s.id);
+                          const isAlreadyInCurriculum = allSubjects.some(sub => sub.subjectCode === s.code);
+                          return (
+                            <div
+                              key={s.id}
+                              onClick={() => !isAlreadyInCurriculum && setSelectedExistingSubjectId(s.id)}
+                              className={`p-2.5 text-xs flex items-center justify-between cursor-pointer transition ${
+                                isSelected
+                                  ? 'bg-emerald-50 border-l-4 border-l-emerald-600 text-emerald-900 font-bold'
+                                  : isAlreadyInCurriculum
+                                  ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'
+                                  : 'hover:bg-slate-50 text-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]">
+                                  {s.code}
+                                </span>
+                                <span className="font-semibold">{s.name}</span>
+                                <span className="text-slate-500 font-mono text-[11px]">({s.credits} TC)</span>
+                              </div>
+                              <div>
+                                {isAlreadyInCurriculum ? (
+                                  <span className="text-[10px] text-slate-400 italic">Đã có trong khung</span>
+                                ) : isSelected ? (
+                                  <Check className="w-4 h-4 text-emerald-700" />
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Học kỳ áp dụng
+                      </label>
+                      <select
+                        value={newSubjectData.semester}
+                        onChange={(e) => setNewSubjectData({ ...newSubjectData, semester: parseInt(e.target.value, 10) || 1 })}
+                        className="form-input text-xs font-semibold w-full cursor-pointer"
+                      >
+                        <option value={1}>Học kỳ 1</option>
+                        <option value={2}>Học kỳ 2</option>
+                        <option value={3}>Học kỳ 3</option>
+                        <option value={4}>Học kỳ 4</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="form-label text-xs font-bold text-slate-700 mb-1">
+                        Tính chất
+                      </label>
+                      <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs font-semibold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={newSubjectData.isCompulsory}
+                          onChange={(e) => setNewSubjectData({ ...newSubjectData, isCompulsory: e.target.checked })}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                        />
+                        <span>Bắt buộc</span>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="btn btn-secondary text-xs"
+                  disabled={addSaving}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary text-xs flex items-center gap-1.5 font-bold bg-emerald-700 hover:bg-emerald-800"
+                  disabled={addSaving}
+                >
+                  {addSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang thêm...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm Vào Khung</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XÓA MÔN KHỎI KHUNG */}
+      {deleteConfirmDialog.isOpen && deleteConfirmDialog.subject && (
+        <div className="modal-overlay" onClick={() => !deleteConfirmDialog.loading && setDeleteConfirmDialog({ isOpen: false, subject: null, loading: false })}>
+          <div className="modal-panel" style={{ maxWidth: '480px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2.5 bg-red-100 text-red-700 rounded-xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-military text-base font-bold text-slate-900">
+                  Xóa Môn Học Khỏi Khung Chương Trình
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Xác nhận gỡ bỏ môn học khỏi lộ trình đào tạo hiện tại
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-red-50/70 border border-red-200 rounded-xl p-3.5 text-xs text-red-900 mb-4 space-y-1.5">
+              <p className="font-semibold">
+                Đồng chí có chắc chắn muốn xóa môn học sau khỏi khung chương trình?
+              </p>
+              <div className="bg-white/80 p-2.5 rounded-lg border border-red-200 text-slate-800 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-[11px] border border-amber-200">
+                    {deleteConfirmDialog.subject.subjectCode}
+                  </span>
+                  <span className="font-bold">{deleteConfirmDialog.subject.subjectName}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 flex items-center gap-3">
+                  <span>Khối lượng: <strong>{deleteConfirmDialog.subject.credits} TC</strong></span>
+                  <span>Khoa: <strong>{deleteConfirmDialog.subject.departmentName || 'Khoa Binh chủng'}</strong></span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 italic pt-1">
+                ℹ️ Thao tác này chỉ gỡ môn học khỏi khung đào tạo của chuyên ngành này. Dữ liệu điểm của các lớp học viên đã hoàn thành môn học trước đó vẫn được lưu giữ an toàn.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmDialog({ isOpen: false, subject: null, loading: false })}
+                className="btn btn-secondary text-xs"
+                disabled={deleteConfirmDialog.loading}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="btn btn-danger text-xs flex items-center gap-1.5 font-bold"
+                disabled={deleteConfirmDialog.loading}
+              >
+                {deleteConfirmDialog.loading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xác Nhận Xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
