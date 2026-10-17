@@ -284,7 +284,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
   const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
   const isDonVi = userRole === 'ROLE_DONVI';
-  const isGiangVien = userRole === 'ROLE_GIANGVIEN';
+  const isGiangVien = userRole === 'ROLE_GIANGVIEN' || userRole === 'ROLE_TEACHER';
   const canManageSubjects = isPrivilegedUser || isTruongKhoa;
 
   // Navigation between grid cells using Arrow keys & Enter (giống Excel)
@@ -1176,11 +1176,15 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const rawColumns = matrixData?.columns || [];
   const safeColumns = useMemo(() => {
     if (isPrivilegedUser) return rawColumns;
+    if (isGiangVien) {
+      const userAssignedSubjects = currentUser?.assignedSubjectIds || matrixData?.assignedSubjectIds || [];
+      return rawColumns.filter((c) => userAssignedSubjects.includes(c.subjectId));
+    }
     if (currentUser?.departmentId) {
       return rawColumns.filter((c) => c.departmentId === currentUser.departmentId);
     }
     return rawColumns;
-  }, [rawColumns, isPrivilegedUser, currentUser?.departmentId]);
+  }, [rawColumns, isPrivilegedUser, isGiangVien, currentUser?.assignedSubjectIds, matrixData?.assignedSubjectIds, currentUser?.departmentId]);
 
   const safeGradExamSubjects = matrixData?.gradExamSubjects || [
     { id: 101, code: 'TN01', name: 'Thi Chính trị' },
@@ -1295,11 +1299,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <div className="flex items-center gap-2.5 font-medium">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse shrink-0"></span>
             <span>
-              Phân quyền Giáo viên/Bộ môn: Đang hiển thị các môn thuộc <strong>{matrixData?.departmentFilterName || currentUser?.departmentName || 'Khoa/Bộ môn phụ trách'}</strong>. Các môn khác và cột điểm tổng kết, rèn luyện, tốt nghiệp được ẩn theo quy định.
+              {isGiangVien ? (
+                <>
+                  Phân quyền Giáo viên bộ môn: Đang hiển thị <strong>{safeColumns.length} môn</strong> được phân công giảng dạy. Các môn khác của khoa và điểm tổng kết, rèn luyện, tốt nghiệp được bảo mật theo quy định.
+                </>
+              ) : isDonVi ? (
+                <>
+                  Phân quyền Đơn vị Quản lý: Đang tra cứu bảng điểm học viên (Chế độ Chỉ đọc).
+                </>
+              ) : (
+                <>
+                  Phân quyền Trưởng Khoa/Bộ môn: Đang hiển thị các môn thuộc <strong>{matrixData?.departmentFilterName || currentUser?.departmentName || 'Khoa/Bộ môn phụ trách'}</strong>. Các môn khác và cột điểm tổng kết, rèn luyện, tốt nghiệp được ẩn theo quy định.
+                </>
+              )}
             </span>
           </div>
           <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-200 shrink-0">
-            {safeColumns.length} môn phụ trách
+            {safeColumns.length} môn {isGiangVien ? 'phụ trách' : 'quản lý'}
           </span>
         </div>
       )}
@@ -1606,35 +1622,45 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <div>
             <h4 className="font-bold text-amber-300 text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
-              Lớp chưa có danh mục môn học đào tạo
+              {isGiangVien ? 'Chưa có môn học phân công cho đồng chí trong lớp này' : 'Lớp chưa có danh mục môn học đào tạo'}
             </h4>
             <p className="text-xs text-amber-200/80 mt-1">
-              Lớp thuộc chuyên ngành <strong>{matrixData.majorName || 'Quân sự'}</strong>. Bạn có thể nhấn nút để hệ thống tự động liên kết các môn học từ <strong>Lộ trình Đào tạo</strong> của chuyên ngành này vào bảng điểm.
+              {isGiangVien ? (
+                <>
+                  Tài khoản của đồng chí chưa được phân công phụ trách môn học nào trong lớp <strong>{matrixData.classCode || ''}</strong>. Vui lòng liên hệ Ban Chủ nhiệm Khoa hoặc Phòng Đào Tạo để được phân công môn giảng dạy.
+                </>
+              ) : (
+                <>
+                  Lớp thuộc chuyên ngành <strong>{matrixData.majorName || 'Quân sự'}</strong>. Bạn có thể nhấn nút để hệ thống tự động liên kết các môn học từ <strong>Lộ trình Đào tạo</strong> của chuyên ngành này vào bảng điểm.
+                </>
+              )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleInitFromCurriculum}
-              disabled={loading}
-              className="btn btn-primary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-2 cursor-pointer"
-              style={{ backgroundColor: '#d97706', borderColor: '#b45309' }}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>⚡ Lấy Môn từ Lộ Trình Ngay</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                fetchAvailableSubjects();
-                setIsAddSubjectModalOpen(true);
-              }}
-              className="btn btn-secondary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-pointer text-slate-800"
-            >
-              <Plus className="w-4 h-4 text-emerald-600" />
-              <span>+ Thêm Cột Thủ Công</span>
-            </button>
-          </div>
+          {canManageSubjects && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleInitFromCurriculum}
+                disabled={loading}
+                className="btn btn-primary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-2 cursor-pointer"
+                style={{ backgroundColor: '#d97706', borderColor: '#b45309' }}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>⚡ Lấy Môn từ Lộ Trình Ngay</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  fetchAvailableSubjects();
+                  setIsAddSubjectModalOpen(true);
+                }}
+                className="btn btn-secondary font-bold text-xs whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-pointer text-slate-800"
+              >
+                <Plus className="w-4 h-4 text-emerald-600" />
+                <span>+ Thêm Cột Thủ Công</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1671,6 +1697,8 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               >
                 {isPrivilegedUser
                   ? `KẾT QUẢ HỌC TẬP TOÀN KHÓA (${safeColumns.length} MÔN)`
+                  : isGiangVien
+                  ? `CÁC MÔN PHÂN CÔNG PHỤ TRÁCH (${safeColumns.length} MÔN)`
                   : `CÁC MÔN HỌC THUỘC KHOA PHỤ TRÁCH (${safeColumns.length} MÔN)`}
               </th>
 
@@ -1830,7 +1858,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           <tbody>
             {safeRows.length === 0 ? (
               <tr>
-                <td colSpan={15 + (matrixData?.columns?.length || 0)} className="py-16 text-center text-slate-400 font-medium bg-slate-50/50">
+                <td colSpan={10 + (safeColumns?.length || 0)} className="py-16 text-center text-slate-400 font-medium bg-slate-50/50">
                   {loading ? 'Đang tải bảng điểm học viên...' : 'Lớp học hiện chưa có dữ liệu học viên trong hệ thống. Vui lòng thêm học viên hoặc import danh sách.'}
                 </td>
               </tr>

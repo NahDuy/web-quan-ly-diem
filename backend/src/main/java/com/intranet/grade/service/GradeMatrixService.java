@@ -93,7 +93,20 @@ public class GradeMatrixService {
         boolean isTeacherView = isGiangVien;
         String deptFilterName = (isGiangVien || isTruongKhoa) && currentUser != null ? currentUser.getDepartmentName() : null;
 
-        List<SubjectColumnDTO> columns = subjects.stream().map(s -> SubjectColumnDTO.builder()
+        List<Subject> displaySubjects = subjects;
+        if (isGiangVien) {
+            final List<Integer> teacherAssigned = assignedSubjectIds;
+            displaySubjects = subjects.stream()
+                    .filter(s -> teacherAssigned.contains(s.getId()))
+                    .collect(Collectors.toList());
+        } else if (isTruongKhoa && currentUser != null && currentUser.getDepartmentId() != null) {
+            Integer deptId = currentUser.getDepartmentId();
+            displaySubjects = subjects.stream()
+                    .filter(s -> s.getDepartment() != null && s.getDepartment().getId().equals(deptId))
+                    .collect(Collectors.toList());
+        }
+
+        List<SubjectColumnDTO> columns = displaySubjects.stream().map(s -> SubjectColumnDTO.builder()
                 .subjectId(s.getId())
                 .subjectCode(s.getCode())
                 .subjectName(s.getName())
@@ -134,7 +147,7 @@ public class GradeMatrixService {
             double totalWeightedScore = 0.0;
             int totalCredits = 0;
 
-            for (Subject sub : subjects) {
+            for (Subject sub : displaySubjects) {
                 String key = s.getId() + "_" + sub.getId();
                 Grade g = gradeMap.get(key);
                 if (g != null && g.getScore() != null) {
