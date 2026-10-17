@@ -60,6 +60,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/v1/auth/**", "/api/v1/auth/**", "/auth/**", "/error").permitAll()
+                .requestMatchers("/v1/admissions/export-template", "/api/v1/admissions/export-template").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/v1/classes/**", "/api/v1/classes/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .requestMatchers("/v1/classes/*/matrix/bulk-update", "/api/v1/classes/*/matrix/bulk-update").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_TRUONGKHOA", "ROLE_BOMON", "ROLE_GIANGVIEN")
                 .requestMatchers("/v1/classes/*/import-excel", "/api/v1/classes/*/import-excel").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")

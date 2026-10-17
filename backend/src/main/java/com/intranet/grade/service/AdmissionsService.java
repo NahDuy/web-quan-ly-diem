@@ -626,4 +626,253 @@ public class AdmissionsService {
         }
         return text;
     }
+
+    public byte[] exportAdmissionsTemplate() throws Exception {
+        try (Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+
+            Sheet sheet = wb.createSheet("DS_DauVao_Mau");
+            sheet.setDisplayGridlines(true);
+
+            Font fontTitle = wb.createFont();
+            fontTitle.setFontName("Times New Roman");
+            fontTitle.setFontHeightInPoints((short) 11);
+            fontTitle.setBold(true);
+
+            Font fontBigTitle = wb.createFont();
+            fontBigTitle.setFontName("Times New Roman");
+            fontBigTitle.setFontHeightInPoints((short) 14);
+            fontBigTitle.setBold(true);
+            fontBigTitle.setColor(IndexedColors.DARK_RED.getIndex());
+
+            Font fontCourse = wb.createFont();
+            fontCourse.setFontName("Times New Roman");
+            fontCourse.setFontHeightInPoints((short) 12);
+            fontCourse.setBold(true);
+
+            Font fontMajor = wb.createFont();
+            fontMajor.setFontName("Times New Roman");
+            fontMajor.setFontHeightInPoints((short) 12);
+            fontMajor.setBold(true);
+            fontMajor.setColor(IndexedColors.ROYAL_BLUE.getIndex());
+
+            Font fontHeader = wb.createFont();
+            fontHeader.setFontName("Times New Roman");
+            fontHeader.setFontHeightInPoints((short) 11);
+            fontHeader.setBold(true);
+
+            Font fontCell = wb.createFont();
+            fontCell.setFontName("Times New Roman");
+            fontCell.setFontHeightInPoints((short) 11);
+
+            CellStyle styleCenter = wb.createCellStyle();
+            styleCenter.setFont(fontTitle);
+            styleCenter.setAlignment(HorizontalAlignment.CENTER);
+            styleCenter.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle styleBigTitle = wb.createCellStyle();
+            styleBigTitle.setFont(fontBigTitle);
+            styleBigTitle.setAlignment(HorizontalAlignment.CENTER);
+            styleBigTitle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle styleCourse = wb.createCellStyle();
+            styleCourse.setFont(fontCourse);
+            styleCourse.setAlignment(HorizontalAlignment.LEFT);
+            styleCourse.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle styleMajor = wb.createCellStyle();
+            styleMajor.setFont(fontMajor);
+            styleMajor.setAlignment(HorizontalAlignment.LEFT);
+            styleMajor.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle styleHeader = wb.createCellStyle();
+            styleHeader.setFont(fontHeader);
+            styleHeader.setAlignment(HorizontalAlignment.CENTER);
+            styleHeader.setVerticalAlignment(VerticalAlignment.CENTER);
+            styleHeader.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+            styleHeader.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            styleHeader.setBorderTop(BorderStyle.THIN);
+            styleHeader.setBorderBottom(BorderStyle.THIN);
+            styleHeader.setBorderLeft(BorderStyle.THIN);
+            styleHeader.setBorderRight(BorderStyle.THIN);
+
+            CellStyle styleCellCenter = wb.createCellStyle();
+            styleCellCenter.setFont(fontCell);
+            styleCellCenter.setAlignment(HorizontalAlignment.CENTER);
+            styleCellCenter.setVerticalAlignment(VerticalAlignment.CENTER);
+            styleCellCenter.setBorderTop(BorderStyle.THIN);
+            styleCellCenter.setBorderBottom(BorderStyle.THIN);
+            styleCellCenter.setBorderLeft(BorderStyle.THIN);
+            styleCellCenter.setBorderRight(BorderStyle.THIN);
+
+            CellStyle styleCellLeft = wb.createCellStyle();
+            styleCellLeft.setFont(fontCell);
+            styleCellLeft.setAlignment(HorizontalAlignment.LEFT);
+            styleCellLeft.setVerticalAlignment(VerticalAlignment.CENTER);
+            styleCellLeft.setBorderTop(BorderStyle.THIN);
+            styleCellLeft.setBorderBottom(BorderStyle.THIN);
+            styleCellLeft.setBorderLeft(BorderStyle.THIN);
+            styleCellLeft.setBorderRight(BorderStyle.THIN);
+
+            // Row 0 & 1: Quoc hieu
+            Row r0 = sheet.createRow(0);
+            Cell c00 = r0.createCell(0);
+            c00.setCellValue("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM");
+            c00.setCellStyle(styleCenter);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 6));
+
+            Row r1 = sheet.createRow(1);
+            Cell c10 = r1.createCell(0);
+            c10.setCellValue("Độc lập - Tự do - Hạnh phúc");
+            c10.setCellStyle(styleCenter);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(1, 1, 0, 6));
+
+            int rowIdx = 3;
+
+            // SECTION 1: SQDB Sinh viên TNĐH
+            Row rTitle1 = sheet.createRow(rowIdx++);
+            Cell cT1 = rTitle1.createCell(0);
+            cT1.setCellValue("DANH SÁCH HỌC VIÊN ĐẦU KHÓA HUẤN LUYỆN");
+            cT1.setCellStyle(styleBigTitle);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rK1 = sheet.createRow(rowIdx++);
+            Cell cK1 = rK1.createCell(0);
+            cK1.setCellValue("Khóa 229 Đào tạo sĩ quan dự bị (từ sinh viên TNĐH) ; Khai giảng 07/08/2026; Bế giảng 11/2026");
+            cK1.setCellStyle(styleCourse);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rM1 = sheet.createRow(rowIdx++);
+            Cell cM1 = rM1.createCell(0);
+            cM1.setCellValue("Chuyên ngành: Binh chủng Hợp thành (BCHT); Văn bằng tốt nghiệp: Chứng chỉ");
+            cM1.setCellStyle(styleMajor);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rH1 = sheet.createRow(rowIdx++);
+            String[] headers = {"TT", "Họ và tên học viên", "Ngày, tháng, năm sinh", "Nơi sinh / Quê quán", "Giới tính", "Dân tộc", "Đơn vị / Nơi cư trú"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell h = rH1.createCell(i);
+                h.setCellValue(headers[i]);
+                h.setCellStyle(styleHeader);
+            }
+
+            Object[][] sample1 = {
+                {1, "Nguyễn Việt Anh", "04/05/2004", "Việt Yên, Hưng Yên", "Nam", "Kinh", "TQSQK3"},
+                {2, "Lưu Huy Tuấn Anh", "30/09/2004", "Hoàn Long, Hưng Yên", "Nam", "Kinh", "TQSQK3"},
+                {3, "Đặng Quang Chiến", "31/12/2004", "Chí Minh, Hưng Yên", "Nam", "Kinh", "TQSQK3"},
+                {4, "Lê Minh Hiếu", "10/10/2004", "Khoái Châu, Hưng Yên", "Nam", "Kinh", "TQSQK3"},
+                {5, "Trần Đình Nhật", "15/01/2003", "Thiên Trường, Ninh Bình", "Nam", "Kinh", "TQSQK3"},
+                {6, "Dương Bá Quyết", "10/01/2004", "Thư Lâm, Hà Nội", "Nam", "Kinh", "TQSQK3"},
+                {7, "Hoàng Đình Tiến", "18/01/2004", "Kim Thanh, Ninh Bình", "Nam", "Kinh", "TQSQK3"}
+            };
+
+            for (Object[] st : sample1) {
+                Row row = sheet.createRow(rowIdx++);
+                Cell cStt = row.createCell(0);
+                cStt.setCellValue((Integer) st[0]);
+                cStt.setCellStyle(styleCellCenter);
+
+                Cell cName = row.createCell(1);
+                cName.setCellValue((String) st[1]);
+                cName.setCellStyle(styleCellLeft);
+
+                Cell cDob = row.createCell(2);
+                cDob.setCellValue((String) st[2]);
+                cDob.setCellStyle(styleCellCenter);
+
+                Cell cPob = row.createCell(3);
+                cPob.setCellValue((String) st[3]);
+                cPob.setCellStyle(styleCellLeft);
+
+                Cell cGen = row.createCell(4);
+                cGen.setCellValue((String) st[4]);
+                cGen.setCellStyle(styleCellCenter);
+
+                Cell cEth = row.createCell(5);
+                cEth.setCellValue((String) st[5]);
+                cEth.setCellStyle(styleCellCenter);
+
+                Cell cUnit = row.createCell(6);
+                cUnit.setCellValue((String) st[6]);
+                cUnit.setCellStyle(styleCellCenter);
+            }
+
+            rowIdx += 2;
+
+            // SECTION 2: Khẩu đội trưởng
+            Row rTitle2 = sheet.createRow(rowIdx++);
+            Cell cT2 = rTitle2.createCell(0);
+            cT2.setCellValue("DANH SÁCH HỌC VIÊN ĐẦU KHÓA HUẤN LUYỆN");
+            cT2.setCellStyle(styleBigTitle);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rK2 = sheet.createRow(rowIdx++);
+            Cell cK2 = rK2.createCell(0);
+            cK2.setCellValue("Khóa 225 Đào tạo khẩu đội trưởng (từ HSQ xuất ngũ) ; Khai giảng 05/02/2026; Bế giảng 05/2026");
+            cK2.setCellStyle(styleCourse);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rM2 = sheet.createRow(rowIdx++);
+            Cell cM2 = rM2.createCell(0);
+            cM2.setCellValue("Chuyên ngành: Trinh sát Bộ binh (TSBB); Văn bằng tốt nghiệp: Chứng chỉ");
+            cM2.setCellStyle(styleMajor);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
+
+            Row rH2 = sheet.createRow(rowIdx++);
+            for (int i = 0; i < headers.length; i++) {
+                Cell h = rH2.createCell(i);
+                h.setCellValue(headers[i]);
+                h.setCellStyle(styleHeader);
+            }
+
+            Object[][] sample2 = {
+                {1, "Linh Du Dương", "22/08/2005", "Thống Nhất, Quảng Ninh", "Nam", "Dao", "TQSQK3"},
+                {2, "Phạm Ngọc Dân", "28/06/2005", "Thần Khê, Hưng Yên", "Nam", "Kinh", "TQSQK3"},
+                {3, "Mai Anh Dũng", "14/07/2005", "Hải An, Ninh Bình", "Nam", "Kinh", "TQSQK3"},
+                {4, "Vũ Mạnh Duy", "23/11/2004", "Quyết Thắng, Hải Phòng", "Nam", "Kinh", "TQSQK3"}
+            };
+
+            for (Object[] st : sample2) {
+                Row row = sheet.createRow(rowIdx++);
+                Cell cStt = row.createCell(0);
+                cStt.setCellValue((Integer) st[0]);
+                cStt.setCellStyle(styleCellCenter);
+
+                Cell cName = row.createCell(1);
+                cName.setCellValue((String) st[1]);
+                cName.setCellStyle(styleCellLeft);
+
+                Cell cDob = row.createCell(2);
+                cDob.setCellValue((String) st[2]);
+                cDob.setCellStyle(styleCellCenter);
+
+                Cell cPob = row.createCell(3);
+                cPob.setCellValue((String) st[3]);
+                cPob.setCellStyle(styleCellLeft);
+
+                Cell cGen = row.createCell(4);
+                cGen.setCellValue((String) st[4]);
+                cGen.setCellStyle(styleCellCenter);
+
+                Cell cEth = row.createCell(5);
+                cEth.setCellValue((String) st[5]);
+                cEth.setCellStyle(styleCellCenter);
+
+                Cell cUnit = row.createCell(6);
+                cUnit.setCellValue((String) st[6]);
+                cUnit.setCellStyle(styleCellCenter);
+            }
+
+            sheet.setColumnWidth(0, 8 * 256);
+            sheet.setColumnWidth(1, 26 * 256);
+            sheet.setColumnWidth(2, 16 * 256);
+            sheet.setColumnWidth(3, 28 * 256);
+            sheet.setColumnWidth(4, 12 * 256);
+            sheet.setColumnWidth(5, 12 * 256);
+            sheet.setColumnWidth(6, 18 * 256);
+
+            wb.write(baos);
+            return baos.toByteArray();
+        }
+    }
 }

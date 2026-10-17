@@ -33,6 +33,16 @@ public class AdmissionsController {
         ));
     }
 
+    @GetMapping("/export-template")
+    public ResponseEntity<byte[]> exportAdmissionsTemplate() throws Exception {
+        byte[] bytes = admissionsService.exportAdmissionsTemplate();
+        String filename = "Mau_DanhSach_HocVien_DauVao.xlsx";
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(bytes);
+    }
+
     @PostMapping("/preview")
     public ResponseEntity<AdmissionsPreviewResponse> previewAdmissionsFile(
             @RequestParam("file") MultipartFile file,
