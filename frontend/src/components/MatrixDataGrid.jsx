@@ -29,6 +29,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
+  const userRole = currentUser?.role || matrixData?.userRole || '';
+  const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
+  const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
+  const isDonVi = userRole === 'ROLE_DONVI';
+  const isGiangVien = userRole === 'ROLE_GIANGVIEN' || userRole === 'ROLE_TEACHER';
+  const canManageSubjects = isPrivilegedUser || isTruongKhoa;
+
   const [editedScores, setEditedScores] = useState({});
   const [editedConducts, setEditedConducts] = useState({});
   const [editedGradExamScores, setEditedGradExamScores] = useState({});
@@ -318,13 +325,6 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     const interval = setInterval(checkLockStatus, 1000);
     return () => clearInterval(interval);
   }, [matrixData?.lockDeadline, matrixData?.isLocked, isPrivilegedUser, matrixData?.className, matrixData?.classCode, semester]);
-
-  const userRole = currentUser?.role || matrixData?.userRole || '';
-  const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
-  const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
-  const isDonVi = userRole === 'ROLE_DONVI';
-  const isGiangVien = userRole === 'ROLE_GIANGVIEN' || userRole === 'ROLE_TEACHER';
-  const canManageSubjects = isPrivilegedUser || isTruongKhoa;
 
   // Navigation between grid cells using Arrow keys & Enter (giống Excel)
   const handleGridKeyDown = (e, rowIdx, colIdx, isGradExam = false) => {
