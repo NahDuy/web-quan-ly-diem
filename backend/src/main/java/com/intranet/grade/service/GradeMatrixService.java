@@ -550,6 +550,114 @@ public class GradeMatrixService {
         }
     }
 
+    @Transactional
+    public int lockAllClasses(Integer semester) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền khóa toàn bộ bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        List<ClassEntity> classes = classRepository.findAll();
+        User user = userRepository.findById(currentUser.getId()).orElse(null);
+        ZonedDateTime now = ZonedDateTime.now();
+
+        for (ClassEntity clazz : classes) {
+            GradeLock lock = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(clazz.getId(), sem)
+                    .orElseGet(() -> GradeLock.builder().clazz(clazz).semester(sem).build());
+
+            lock.setIsLocked(true);
+            lock.setLockedAt(now);
+            lock.setLockedBy(user);
+            gradeLockRepository.save(lock);
+        }
+
+        return classes.size();
+    }
+
+    @Transactional
+    public int unlockAllClasses(Integer semester) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền mở khóa toàn bộ bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        List<ClassEntity> classes = classRepository.findAll();
+        User user = userRepository.findById(currentUser.getId()).orElse(null);
+        ZonedDateTime now = ZonedDateTime.now();
+
+        for (ClassEntity clazz : classes) {
+            Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(clazz.getId(), sem);
+            if (lockOpt.isPresent()) {
+                GradeLock lock = lockOpt.get();
+                lock.setIsLocked(false);
+                lock.setLockDeadline(null);
+                lock.setAutoLockReason(null);
+                lock.setUnlockedAt(now);
+                lock.setUnlockedBy(user);
+                gradeLockRepository.save(lock);
+            }
+        }
+
+        return classes.size();
+    }
+
+    @Transactional
+    public int scheduleLockAllClasses(Integer semester, ZonedDateTime deadline, String reason) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền hẹn lịch khóa bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        List<ClassEntity> classes = classRepository.findAll();
+        String lockReason = reason != null && !reason.trim().isEmpty() ? reason.trim() : "Hạn chót nhập điểm học phần (áp dụng toàn khóa)";
+        boolean isExpired = deadline != null && ZonedDateTime.now().isAfter(deadline);
+
+        for (ClassEntity clazz : classes) {
+            GradeLock lock = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(clazz.getId(), sem)
+                    .orElseGet(() -> GradeLock.builder().clazz(clazz).semester(sem).build());
+
+            lock.setLockDeadline(deadline);
+            lock.setAutoLockReason(lockReason);
+
+            if (isExpired) {
+                lock.setIsLocked(true);
+                lock.setLockedAt(deadline);
+            } else {
+                lock.setIsLocked(false);
+            }
+
+            gradeLockRepository.save(lock);
+        }
+
+        return classes.size();
+    }
+
+    @Transactional
+    public int cancelScheduleLockAll(Integer semester) {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null || !Arrays.asList("ROLE_BGH", "ROLE_PDT").contains(currentUser.getRoleCode())) {
+            throw new AccessDeniedException("Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền hủy lịch hẹn khóa bảng điểm.");
+        }
+
+        int sem = semester != null ? semester : 1;
+        List<ClassEntity> classes = classRepository.findAll();
+
+        for (ClassEntity clazz : classes) {
+            Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(clazz.getId(), sem);
+            if (lockOpt.isPresent()) {
+                GradeLock lock = lockOpt.get();
+                lock.setLockDeadline(null);
+                lock.setAutoLockReason(null);
+                gradeLockRepository.save(lock);
+            }
+        }
+
+        return classes.size();
+    }
+
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000)
     @Transactional
     public void autoLockExpiredGradeLocks() {

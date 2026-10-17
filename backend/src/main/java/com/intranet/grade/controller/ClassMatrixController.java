@@ -172,6 +172,70 @@ public class ClassMatrixController {
         ));
     }
 
+    @PostMapping("/lock-all")
+    public ResponseEntity<Map<String, Object>> lockAllGradeMatrix(
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        int count = gradeMatrixService.lockAllClasses(semester);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã KHÓA và NIÊM PHONG toàn bộ bảng điểm của " + count + " lớp đào tạo thành công!",
+                "count", count
+        ));
+    }
+
+    @PostMapping("/unlock-all")
+    public ResponseEntity<Map<String, Object>> unlockAllGradeMatrix(
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        int count = gradeMatrixService.unlockAllClasses(semester);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã PHÊ DUYỆT MỞ KHÓA toàn bộ bảng điểm của " + count + " lớp đào tạo thành công!",
+                "count", count
+        ));
+    }
+
+    @PostMapping("/schedule-lock-all")
+    public ResponseEntity<Map<String, Object>> scheduleLockAllGradeMatrix(
+            @RequestParam(required = false, defaultValue = "1") Integer semester,
+            @RequestParam String deadline,
+            @RequestParam(required = false) String reason) {
+
+        java.time.ZonedDateTime zdt;
+        try {
+            zdt = java.time.ZonedDateTime.parse(deadline).withZoneSameInstant(VIETNAM_ZONE);
+        } catch (Exception e1) {
+            try {
+                zdt = java.time.Instant.parse(deadline).atZone(VIETNAM_ZONE);
+            } catch (Exception e2) {
+                try {
+                    zdt = java.time.OffsetDateTime.parse(deadline).atZoneSameInstant(VIETNAM_ZONE);
+                } catch (Exception e3) {
+                    zdt = java.time.LocalDateTime.parse(deadline).atZone(VIETNAM_ZONE);
+                }
+            }
+        }
+
+        int count = gradeMatrixService.scheduleLockAllClasses(semester, zdt, reason);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã thiết lập lịch hẹn tự động khóa toàn bộ " + count + " lớp đào tạo thành công!",
+                "lockDeadline", zdt.toString(),
+                "count", count
+        ));
+    }
+
+    @PostMapping("/cancel-schedule-lock-all")
+    public ResponseEntity<Map<String, Object>> cancelScheduleLockAll(
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        int count = gradeMatrixService.cancelScheduleLockAll(semester);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã hủy lịch hẹn khóa của toàn bộ " + count + " lớp đào tạo thành công!",
+                "count", count
+        ));
+    }
+
     @PostMapping("/{classId}/replace-subject")
     public ResponseEntity<Map<String, Object>> replaceSubjectInClass(
             @PathVariable Integer classId,

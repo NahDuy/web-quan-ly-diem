@@ -67,6 +67,7 @@ public class SecurityConfig {
                 .requestMatchers("/v1/classes/*/matrix/bulk-update", "/api/v1/classes/*/matrix/bulk-update").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_TRUONGKHOA", "ROLE_BOMON", "ROLE_GIANGVIEN")
                 .requestMatchers("/v1/classes/*/import-excel", "/api/v1/classes/*/import-excel").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .requestMatchers("/v1/audit-logs/**", "/api/v1/audit-logs/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_TRUONGKHOA", "ROLE_BOMON")
+                .requestMatchers("/v1/classes/lock-all", "/api/v1/classes/lock-all", "/v1/classes/unlock-all", "/api/v1/classes/unlock-all", "/v1/classes/schedule-lock-all", "/api/v1/classes/schedule-lock-all", "/v1/classes/cancel-schedule-lock-all", "/api/v1/classes/cancel-schedule-lock-all").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .requestMatchers("/v1/admissions/**", "/api/v1/admissions/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .anyRequest().authenticated()
             );

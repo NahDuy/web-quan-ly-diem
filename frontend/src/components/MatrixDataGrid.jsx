@@ -72,6 +72,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleDeadline, setScheduleDeadline] = useState('');
   const [scheduleReason, setScheduleReason] = useState('Hạn chót hoàn thành nhập điểm học phần');
+  const [scheduleScope, setScheduleScope] = useState('all'); // 'all' (mặc định) | 'single' (chức năng phụ)
   const [scheduling, setScheduling] = useState(false);
 
   const toLocalInputString = (dateInput) => {
@@ -87,6 +88,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleOpenScheduleModal = () => {
+    setScheduleScope('all');
     if (matrixData?.lockDeadline) {
       setScheduleDeadline(toLocalInputString(matrixData.lockDeadline));
       setScheduleReason(matrixData.autoLockReason || 'Hạn chót hoàn thành nhập điểm học phần');
@@ -103,7 +105,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     if (!scheduleDeadline) {
-      alert('Vui lòng chọn thời gian hẹn lịch khóa bảng điểm!');
+      showAlert('Chưa chọn thời gian', 'Vui lòng chọn thời gian hẹn lịch khóa bảng điểm!', 'warning');
       return;
     }
     setScheduling(true);
@@ -119,20 +121,24 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         deadlineParam = scheduleDeadline;
       }
 
-      const res = await fetch(`/api/v1/classes/${classId}/schedule-lock?semester=${semester}&deadline=${encodeURIComponent(deadlineParam)}&reason=${encodeURIComponent(scheduleReason)}`, {
+      const endpoint = scheduleScope === 'all'
+        ? `/api/v1/classes/schedule-lock-all?semester=${semester}&deadline=${encodeURIComponent(deadlineParam)}&reason=${encodeURIComponent(scheduleReason)}`
+        : `/api/v1/classes/${classId}/schedule-lock?semester=${semester}&deadline=${encodeURIComponent(deadlineParam)}&reason=${encodeURIComponent(scheduleReason)}`;
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSaveSuccessMsg(data.message || 'Đã thiết lập lịch hẹn tự động khóa bảng điểm thành công!');
+        setSaveSuccessMsg(data.message || (scheduleScope === 'all' ? 'Đã hẹn lịch tự động khóa toàn bộ các lớp thành công!' : 'Đã hẹn lịch khóa bảng điểm thành công!'));
         setIsScheduleModalOpen(false);
         fetchMatrix();
       } else {
-        alert(data.message || 'Lỗi khi hẹn lịch khóa bảng điểm');
+        showAlert('Lỗi lên lịch', data.message || 'Lỗi khi hẹn lịch khóa bảng điểm', 'danger');
       }
     } catch (err) {
-      alert('Lỗi kết nối máy chủ khi hẹn lịch khóa');
+      showAlert('Lỗi kết nối', 'Lỗi kết nối máy chủ khi hẹn lịch khóa', 'danger');
     } finally {
       setScheduling(false);
     }
@@ -146,12 +152,114 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        setSaveSuccessMsg('Đã hủy lịch hẹn khóa bảng điểm thành công!');
+        setSaveSuccessMsg('Đã hủy lịch hẹn khóa bảng điểm của lớp này!');
         fetchMatrix();
       }
     } catch (err) {
-      alert('Lỗi khi hủy lịch hẹn khóa bảng điểm');
+      showAlert('Lỗi hủy hẹn', 'Lỗi khi hủy lịch hẹn khóa bảng điểm', 'danger');
     }
+  };
+
+  const handleCancelScheduleAll = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Hủy Lịch Hẹn Khóa TOÀN BỘ Lớp',
+      message: `Đồng chí có chắc chắn muốn hủy bỏ lịch hẹn tự động khóa của TOÀN BỘ ${classList.length} lớp đào tạo trong toàn hệ thống?`,
+      itemName: `Toàn bộ ${classList.length} lớp đào tạo (Học kỳ ${semester})`,
+      warningNote: 'Lịch hẹn khóa tự động sẽ bị gỡ bỏ khỏi tất cả các lớp. Bảng điểm sẽ duy trì trạng thái mở.',
+      confirmLabel: 'Hủy Hẹn Toàn Bộ',
+      cancelLabel: 'Giữ lại',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const res = await fetch(`/api/v1/classes/cancel-schedule-lock-all?semester=${semester}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            setSaveSuccessMsg(data.message || 'Đã hủy lịch hẹn khóa của toàn bộ các lớp thành công!');
+            fetchMatrix();
+          } else {
+            showAlert('Lỗi hủy hẹn', data.message || 'Lỗi khi hủy lịch hẹn khóa', 'danger');
+          }
+        } catch (err) {
+          showAlert('Lỗi kết nối', 'Lỗi kết nối máy chủ khi hủy lịch hẹn', 'danger');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
+      }
+    });
+  };
+
+  const handleLockAllClasses = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Khóa & Niêm Phong TOÀN BỘ Bảng Điểm',
+      message: `Đồng chí có chắc chắn muốn tiến hành Khóa và Niêm Phong toàn bộ bảng điểm của tất cả ${classList.length} lớp đào tạo trong toàn viện?`,
+      itemName: `Toàn bộ ${classList.length} lớp đào tạo (Học kỳ ${semester})`,
+      warningNote: 'Sau khi khóa toàn bộ, tất cả giáo viên bộ môn sẽ không thể chỉnh sửa điểm. Chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền phê duyệt mở khóa.',
+      confirmLabel: 'Khóa Toàn Bộ Lớp',
+      cancelLabel: 'Hủy bỏ',
+      type: 'locked',
+      onConfirm: async () => {
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const res = await fetch(`/api/v1/classes/lock-all?semester=${semester}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            setSaveSuccessMsg(data.message || 'Đã KHÓA và NIÊM PHONG toàn bộ bảng điểm thành công!');
+            fetchMatrix();
+          } else {
+            showAlert('Lỗi khóa toàn bộ', data.message || 'Không thể khóa toàn bộ bảng điểm', 'danger');
+          }
+        } catch (err) {
+          showAlert('Lỗi kết nối', 'Lỗi kết nối khi khóa bảng điểm', 'danger');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
+      }
+    });
+  };
+
+  const handleUnlockAllClasses = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Phê duyệt Mở Khóa TOÀN BỘ Bảng Điểm',
+      message: `Đồng chí có chắc chắn muốn phê duyệt Mở Khóa toàn bộ bảng điểm của tất cả ${classList.length} lớp đào tạo trong toàn viện?`,
+      itemName: `Toàn bộ ${classList.length} lớp đào tạo (Học kỳ ${semester})`,
+      warningNote: 'Bảng điểm của toàn bộ các lớp sẽ được mở lại cho phép giáo viên các khoa/bộ môn điều chỉnh và cập nhật điểm số.',
+      confirmLabel: 'Mở Khóa Toàn Bộ Lớp',
+      cancelLabel: 'Hủy bỏ',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          const token = localStorage.getItem('jwt_token');
+          const res = await fetch(`/api/v1/classes/unlock-all?semester=${semester}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            setSaveSuccessMsg(data.message || 'Đã MỞ KHÓA toàn bộ bảng điểm thành công!');
+            fetchMatrix();
+          } else {
+            showAlert('Lỗi mở khóa', data.message || 'Không thể mở khóa toàn bộ bảng điểm', 'danger');
+          }
+        } catch (err) {
+          showAlert('Lỗi kết nối', 'Lỗi kết nối khi mở khóa bảng điểm', 'danger');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
+      }
+    });
   };
 
   // Dialog xác nhận hành động chuẩn quân sự thay thế window.confirm / window.alert
@@ -1253,17 +1361,32 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
       {/* Lock / Schedule Lock Banner */}
       {matrixData.isLocked ? (
-        <div className="alert alert-error flex items-center justify-between shadow-sm">
+        <div className="alert alert-error flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-xs">
             <Lock className="w-4 h-4 text-red-600 shrink-0" />
-            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA: Bảng điểm lớp đã được niêm phong. Chỉ Ban Giám Đốc / Phòng Đào Tạo mới có quyền mở khóa.</span>
+            <span>BẢNG ĐIỂM ĐÃ BỊ KHÓA: Bảng điểm đã được niêm phong. Chỉ Ban Giám Đốc / Phòng Đào Tạo mới có quyền mở khóa.</span>
           </div>
 
           {(currentUser?.role === 'ROLE_BGH' || currentUser?.role === 'ROLE_PDT') && (
-            <button onClick={handleUnlockMatrix} className="btn btn-danger btn-xs font-bold cursor-pointer">
-              <Unlock className="w-3.5 h-3.5" />
-              Mở Khóa Bảng Điểm
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleUnlockAllClasses}
+                className="btn btn-xs font-bold cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm border border-emerald-700 px-3 py-1 flex items-center gap-1.5"
+                title="Mở khóa đồng loạt bảng điểm cho toàn bộ các lớp trong viện"
+              >
+                <Unlock className="w-3.5 h-3.5" />
+                Mở Khóa Toàn Bộ Lớp
+              </button>
+              <button
+                type="button"
+                onClick={handleUnlockMatrix}
+                className="btn btn-secondary btn-xs font-medium cursor-pointer text-slate-600 hover:text-slate-900 border border-slate-300"
+                title="Chỉ mở khóa riêng bảng điểm cho lớp này"
+              >
+                Mở khóa riêng lớp này
+              </button>
+            </div>
           )}
         </div>
       ) : matrixData.lockDeadline ? (
@@ -1285,6 +1408,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               <>
                 <button
                   type="button"
+                  onClick={handleLockAllClasses}
+                  className="btn btn-danger btn-xs font-bold cursor-pointer shadow-sm flex items-center gap-1 px-3 py-1"
+                  title="Khóa ngay lập tức toàn bộ các lớp trong hệ thống không cần đợi đến hạn chót"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Khóa Toàn Bộ Ngay
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelScheduleAll}
+                  className="btn btn-xs font-bold bg-white text-rose-700 border border-rose-300 hover:bg-rose-50 cursor-pointer"
+                  title="Hủy bỏ lịch hẹn tự động khóa của toàn bộ các lớp"
+                >
+                  Hủy Hẹn Toàn Bộ
+                </button>
+                <button
+                  type="button"
                   onClick={handleOpenScheduleModal}
                   className="btn btn-xs font-bold"
                   style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde047' }}
@@ -1296,19 +1436,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 <button
                   type="button"
                   onClick={handleCancelSchedule}
-                  className="btn btn-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 cursor-pointer"
-                  title="Hủy bỏ lịch hẹn tự động khóa"
+                  className="btn btn-xs text-slate-500 hover:text-slate-700 border border-transparent hover:border-slate-200 cursor-pointer"
+                  title="Chỉ hủy lịch hẹn khóa của riêng lớp này"
                 >
-                  Hủy Hẹn
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLockMatrix}
-                  className="btn btn-danger btn-xs font-bold cursor-pointer"
-                  title="Khóa ngay lập tức không cần đợi đến hạn chót"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  Khóa Ngay
+                  Hủy riêng lớp này
                 </button>
               </>
             )}
@@ -1325,10 +1456,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={handleLockAllClasses}
+                className="btn btn-danger btn-xs font-bold cursor-pointer shadow-sm flex items-center gap-1.5 px-3 py-1"
+                title="Khóa và niêm phong toàn bộ bảng điểm của tất cả các lớp trong toàn viện"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Khóa Toàn Bộ Lớp
+              </button>
+              <button
+                type="button"
                 onClick={handleOpenScheduleModal}
                 className="btn btn-secondary btn-xs font-bold cursor-pointer"
                 style={{ color: '#0369a1', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
-                title="Thiết lập hạn chót thời gian để hệ thống tự động khóa bảng điểm"
+                title="Thiết lập hạn chót thời gian để hệ thống tự động khóa bảng điểm (mặc định toàn bộ lớp)"
               >
                 <Clock className="w-3.5 h-3.5 text-sky-600 mr-1" />
                 Hẹn Lịch Khóa
@@ -1336,12 +1476,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               <button
                 type="button"
                 onClick={handleLockMatrix}
-                className="btn btn-secondary btn-xs font-bold cursor-pointer"
-                style={{ color: '#b45309', borderColor: '#fde047' }}
-                title="Khóa bảng điểm ngay lập tức"
+                className="btn btn-secondary btn-xs font-medium cursor-pointer text-slate-600 hover:text-slate-900 border border-slate-300"
+                title="Khóa bảng điểm chỉ riêng cho lớp học này"
               >
-                <Lock className="w-3.5 h-3.5 text-amber-600 mr-1" />
-                Khóa Ngay
+                Khóa riêng lớp này
               </button>
             </div>
           )}
@@ -2877,10 +3015,57 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             </div>
 
             <p className="text-xs text-slate-600 mb-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-              📌 Khi đến thời điểm đã hẹn, hệ thống sẽ <strong>tự động niêm phong bảng điểm</strong> của lớp này. Giáo viên sẽ không thể chỉnh sửa điểm sau thời hạn.
+              📌 Khi đến thời điểm đã hẹn, hệ thống sẽ <strong>tự động niêm phong bảng điểm</strong>. Giáo viên các bộ môn sẽ không thể sửa điểm sau thời hạn.
             </p>
 
             <form onSubmit={handleScheduleSubmit} className="space-y-4">
+              {/* Lựa chọn phạm vi: Toàn bộ lớp (Chính) vs Riêng lớp này (Phụ) */}
+              <div>
+                <label className="form-label text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Phạm Vi Khóa Bảng Điểm:</span>
+                  <span className="text-[11px] font-semibold text-sky-700">
+                    {scheduleScope === 'all' ? `Toàn bộ ${classList.length} lớp` : `Chỉ riêng lớp ${matrixData?.className || matrixData?.classCode || ''}`}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleScope('all')}
+                    className={`py-2 px-3 rounded-md text-xs font-bold transition-all flex flex-col items-center justify-center cursor-pointer ${
+                      scheduleScope === 'all'
+                        ? 'bg-red-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5" />
+                      Toàn Bộ Các Lớp
+                    </span>
+                    <span className={`text-[10px] mt-0.5 font-normal ${scheduleScope === 'all' ? 'text-red-100' : 'text-slate-500'}`}>
+                      (Khuyến nghị - {classList.length} lớp)
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScheduleScope('single')}
+                    className={`py-2 px-3 rounded-md text-xs font-bold transition-all flex flex-col items-center justify-center cursor-pointer ${
+                      scheduleScope === 'single'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      Chỉ Riêng Lớp Này
+                    </span>
+                    <span className={`text-[10px] mt-0.5 font-normal ${scheduleScope === 'single' ? 'text-amber-100' : 'text-slate-500'}`}>
+                      (Chức năng phụ)
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="form-label text-xs font-bold text-slate-700 mb-1">
                   Thời Điểm Tự Động Khóa (Ngày & Giờ) <span className="text-red-500">*</span>
