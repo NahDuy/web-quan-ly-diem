@@ -15,7 +15,8 @@ const DEFAULT_TARGET_GROUPS = [
   { code: 'HSQ', shortCode: 'HSQ', name: 'Hạ sĩ quan Chỉ huy', desc: 'Hạ sĩ quan Chỉ huy Quân sự', classPattern: 'HSQ-CH-01', studentPattern: '26HSQ-CH001', isCustom: false },
 ];
 
-export default function MajorManagementView() {
+export default function MajorManagementView({ currentUser }) {
+  const isPrivileged = ['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role);
   const [majors, setMajors] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -376,18 +377,28 @@ export default function MajorManagementView() {
               <span>{exporting ? 'Đang xuất file...' : 'Xuất DS Chuyên Ngành (Excel)'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
-              title="Thêm chuyên ngành đào tạo mới"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Thêm Chuyên ngành Mới</span>
-            </button>
+            {isPrivileged && (
+              <button
+                type="button"
+                onClick={handleOpenAdd}
+                className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
+                title="Thêm chuyên ngành đào tạo mới"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Thêm Chuyên ngành Mới</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Read-only Notice Banner for non-privileged users */}
+      {!isPrivileged && (
+        <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs rounded-xl flex items-center gap-2.5 font-medium shadow-xs">
+          <Shield className="w-4 h-4 text-blue-600 shrink-0" />
+          <span><strong>Chế độ Tra cứu quy chuẩn:</strong> Danh mục Chuyên ngành và Đối tượng đào tạo là văn kiện chuẩn của Học viện. Chỉ Ban Giám Hiệu và Phòng Đào Tạo mới có quyền thiết lập hoặc chỉnh sửa.</span>
+        </div>
+      )}
 
       {/* Notifications */}
       {msg && (
@@ -432,13 +443,15 @@ export default function MajorManagementView() {
             <span className="text-[11px] text-emerald-700 font-semibold hidden sm:inline">
               Tự động áp dụng khi nhập file danh sách đầu vào (.xls / .xlsx)
             </span>
-            <button
-              onClick={handleOpenAddTarget}
-              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-amber-600" />
-              Thêm Đối Tượng
-            </button>
+            {isPrivileged && (
+              <button
+                onClick={handleOpenAddTarget}
+                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-600" />
+                Thêm Đối Tượng
+              </button>
+            )}
           </div>
         </div>
 
@@ -448,26 +461,28 @@ export default function MajorManagementView() {
               key={tg.code} 
               className="relative group p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50/30 transition flex flex-col justify-between"
             >
-              <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition">
-                <button
-                  type="button"
-                  onClick={() => handleEditTargetGroup(tg)}
-                  title="Chỉnh sửa đối tượng này"
-                  className="text-slate-400 hover:text-amber-700 p-1 rounded hover:bg-amber-100 transition cursor-pointer"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                {tg.isCustom && (
+              {isPrivileged && (
+                <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition">
                   <button
                     type="button"
-                    onClick={() => handleDeleteTargetGroup(tg.code, tg.name)}
-                    title="Xóa đối tượng này"
-                    className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                    onClick={() => handleEditTargetGroup(tg)}
+                    title="Chỉnh sửa đối tượng này"
+                    className="text-slate-400 hover:text-amber-700 p-1 rounded hover:bg-amber-100 transition cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                )}
-              </div>
+                  {tg.isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTargetGroup(tg.code, tg.name)}
+                      title="Xóa đối tượng này"
+                      className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
               <div>
                 <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-mono font-bold block w-fit mb-1.5">
                   {tg.code}
@@ -559,22 +574,26 @@ export default function MajorManagementView() {
                       26XN-{major.code}001
                     </td>
                     <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => handleOpenEdit(major)}
-                          className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-slate-100 rounded transition cursor-pointer"
-                          title="Sửa chuyên ngành"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(major.id, major.name)}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
-                          title="Xóa chuyên ngành"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {isPrivileged ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenEdit(major)}
+                            className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-slate-100 rounded transition cursor-pointer"
+                            title="Sửa chuyên ngành"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(major.id, major.name)}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                            title="Xóa chuyên ngành"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Quy chuẩn</span>
+                      )}
                     </td>
                   </tr>
                 ))

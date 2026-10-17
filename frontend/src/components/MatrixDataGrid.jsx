@@ -36,6 +36,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   const isGiangVien = userRole === 'ROLE_GIANGVIEN' || userRole === 'ROLE_TEACHER';
   const canManageSubjects = isPrivilegedUser || isTruongKhoa;
 
+  const assignedGradCodes = matrixData?.assignedGradCodes || [];
+  const hasGradExamAssignment = isGiangVien && assignedGradCodes.length > 0;
+  const canViewGradExams = isPrivilegedUser || isDonVi || hasGradExamAssignment;
+
   const [editedScores, setEditedScores] = useState({});
   const [editedConducts, setEditedConducts] = useState({});
   const [editedGradExamScores, setEditedGradExamScores] = useState({});
@@ -548,13 +552,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleGradExamScoreChange = (studentId, gradSubId, value) => {
-    if (!isPrivilegedUser) {
-      showAlert('Từ chối truy cập', 'Giáo viên không có quyền chỉnh sửa điểm thi tốt nghiệp.', 'warning');
+    const gradCode = (gradSubId === 101 || gradSubId === '101') ? 'TN01' : (gradSubId === 102 || gradSubId === '102') ? 'TN02' : 'TN03';
+    const isGradAssigned = isGiangVien && assignedGradCodes.includes(gradCode);
+    if (!isPrivilegedUser && !isGradAssigned) {
+      showAlert('Từ chối truy cập', 'Đồng chí không được phân công chấm môn thi tốt nghiệp này.', 'warning');
       return;
     }
     if (matrixData.isLocked && !isPrivilegedUser) {
       showLockAlert('BẢNG ĐIỂM ĐÃ BỊ KHÓA: Chỉ chỉ huy (Ban Giám Đốc/PĐT) mới có quyền điều chỉnh.');
       return;
+    }
+    if (isGiangVien && !isPrivilegedUser) {
+      const studentRow = matrixData?.rows?.find((r) => r.studentId === studentId);
+      const existingScore = studentRow?.gradExamScores ? studentRow.gradExamScores[parseInt(gradSubId)] : null;
+      if (existingScore !== null && existingScore !== undefined && existingScore !== '') {
+        showAlert('Từ chối thao tác', 'Học viên đã có điểm thi tốt nghiệp. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền phê duyệt sửa đổi!', 'warning');
+        return;
+      }
     }
     const key = `${studentId}_${gradSubId}`;
     if (value === '' || value === null || value === undefined) {
@@ -1338,7 +1352,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
   const rawColumns = matrixData?.columns || [];
   const safeColumns = useMemo(() => {
-    if (isPrivilegedUser) return rawColumns;
+    if (isPrivilegedUser || isDonVi) return rawColumns;
     if (isGiangVien) {
       const userAssignedSubjects = currentUser?.assignedSubjectIds || matrixData?.assignedSubjectIds || [];
       return rawColumns.filter((c) => userAssignedSubjects.includes(c.subjectId));
@@ -1347,7 +1361,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return rawColumns.filter((c) => c.departmentId === currentUser.departmentId);
     }
     return rawColumns;
-  }, [rawColumns, isPrivilegedUser, isGiangVien, currentUser?.assignedSubjectIds, matrixData?.assignedSubjectIds, currentUser?.departmentId]);
+  }, [rawColumns, isPrivilegedUser, isDonVi, isGiangVien, currentUser?.assignedSubjectIds, matrixData?.assignedSubjectIds, currentUser?.departmentId]);
 
   const safeGradExamSubjects = matrixData?.gradExamSubjects || [
     { id: 101, code: 'TN01', name: 'Thi Chính trị' },
@@ -1498,7 +1512,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 </>
               ) : isDonVi ? (
                 <>
-                  Phân quyền Đơn vị Quản lý: Đang tra cứu bảng điểm học viên (Chế độ Chỉ đọc).
+                  Phân quyền Đơn vị Quản lý: Đang tra cứu bảng điểm học viên toàn khóa (Chế độ Chỉ đọc toàn diện).
                 </>
               ) : (
                 <>
@@ -1508,7 +1522,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             </span>
           </div>
           <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-200 shrink-0">
-            {safeColumns.length} môn {isGiangVien ? 'phụ trách' : 'quản lý'}
+            {safeColumns.length} môn {isDonVi ? 'toàn khóa' : isGiangVien ? 'phụ trách' : 'quản lý'}
           </span>
         </div>
       )}
@@ -1888,14 +1902,14 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 colSpan={safeColumns.length}
                 className="py-2 px-3 bg-slate-100 text-slate-800 font-extrabold text-xs border-b border-slate-300 tracking-wider uppercase"
               >
-                {isPrivilegedUser
+                {isPrivilegedUser || isDonVi
                   ? `KẾT QUẢ HỌC TẬP TOÀN KHÓA (${safeColumns.length} MÔN)`
                   : isGiangVien
                   ? `CÁC MÔN PHÂN CÔNG PHỤ TRÁCH (${safeColumns.length} MÔN)`
                   : `CÁC MÔN HỌC THUỘC KHOA PHỤ TRÁCH (${safeColumns.length} MÔN)`}
               </th>
 
-              {isPrivilegedUser && (
+              {(isPrivilegedUser || isDonVi) && (
                 <>
                   <th rowSpan={2} className="min-w-[70px] text-center">
                     <span>Điểm TB</span>
@@ -1905,15 +1919,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     <span>Rèn Luyện</span>
                     <span className="block text-[10px] text-slate-500 font-normal">Kỷ luật</span>
                   </th>
+                </>
+              )}
 
-                  {/* MERGED GROUP HEADER 2: ĐIỂM THI TỐT NGHIỆP (3 MÔN THI TN) */}
-                  <th
-                    colSpan={safeGradExamSubjects.length}
-                    className="py-2 px-3 bg-amber-50 text-amber-800 font-extrabold text-xs border-b border-amber-300 tracking-wider uppercase"
-                  >
-                    ĐIỂM THI TỐT NGHIỆP ({safeGradExamSubjects.length} MÔN THI)
-                  </th>
+              {/* MERGED GROUP HEADER 2: ĐIỂM THI TỐT NGHIỆP (3 MÔN THI TN) */}
+              {canViewGradExams && (
+                <th
+                  colSpan={safeGradExamSubjects.length}
+                  className="py-2 px-3 bg-amber-50 text-amber-800 font-extrabold text-xs border-b border-amber-300 tracking-wider uppercase"
+                >
+                  ĐIỂM THI TỐT NGHIỆP ({safeGradExamSubjects.length} MÔN THI)
+                </th>
+              )}
 
+              {(isPrivilegedUser || isDonVi) && (
+                <>
                   <th rowSpan={2} className="min-w-[80px] text-center">
                     <span>Điểm TN</span>
                     <span className="block text-[10px] text-slate-500 font-normal">TBC 3 môn</span>
@@ -1976,13 +1996,19 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             })}
 
               {/* Sub-headers for 3 Graduation Exam Subjects */}
-              {isPrivilegedUser && safeGradExamSubjects.map((sub) => (
-                <th key={sub.id} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
-                  <div className="th-vertical-subject text-amber-700" title={`${sub.name} (${sub.code})`}>
-                    {sub.name} <span className="text-amber-800 text-[10px]">({sub.code})</span>
-                  </div>
-                </th>
-              ))}
+              {canViewGradExams && safeGradExamSubjects.map((sub) => {
+                const isAssignedGrad = isGiangVien && assignedGradCodes.includes(sub.code);
+                return (
+                  <th key={sub.id} className="p-0 border-t border-slate-200 min-w-[48px] max-w-[56px] align-bottom">
+                    <div className="th-vertical-subject text-amber-700" title={`${sub.name} (${sub.code})${isAssignedGrad ? ' (Đồng chí được phân công chấm môn này)' : ''}`}>
+                      {sub.name} <span className="text-amber-800 text-[10px]">({sub.code})</span>
+                      {isAssignedGrad && (
+                        <span className="ml-1 text-[9px] text-amber-800 font-extrabold bg-amber-200/90 px-1 py-0.5 rounded shadow-2xs">✓ Chấm</span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
 
             {/* Header Row 3: HÀNG HIỂN THỊ SỐ TÍN CHỈ CỦA CÁC MÔN HỌC */}
@@ -2011,7 +2037,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               ))}
 
               {/* Các cột tổng kết và thi tốt nghiệp */}
-              {isPrivilegedUser && (
+              {(isPrivilegedUser || isDonVi) && (
                 <>
                   <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
                     —
@@ -2019,17 +2045,21 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
                     —
                   </th>
+                </>
+              )}
 
-                  {safeGradExamSubjects.map((sub) => (
-                    <th
-                      key={`credit_grad_${sub.id}`}
-                      className="py-1 px-1 text-center bg-amber-50 text-amber-700 font-bold text-[10px] border-x border-slate-200"
-                      title="Môn thi tốt nghiệp"
-                    >
-                      —
-                    </th>
-                  ))}
+              {canViewGradExams && safeGradExamSubjects.map((sub) => (
+                <th
+                  key={`credit_grad_${sub.id}`}
+                  className="py-1 px-1 text-center bg-amber-50 text-amber-700 font-bold text-[10px] border-x border-slate-200"
+                  title="Môn thi tốt nghiệp"
+                >
+                  —
+                </th>
+              ))}
 
+              {(isPrivilegedUser || isDonVi) && (
+                <>
                   <th className="py-1 px-1 bg-slate-50 text-center text-[10px] text-slate-400 font-bold border-x border-slate-200">
                     —
                   </th>
@@ -2155,7 +2185,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                     );
                   })}
 
-                  {isPrivilegedUser && (
+                  {(isPrivilegedUser || isDonVi) && (
                     <>
                       {/* TB (TRUNG BÌNH CỘNG TOÀN KHÓA) */}
                       <td className="font-bold text-sm text-amber-800 bg-amber-50/60">
@@ -2164,48 +2194,71 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
 
                       {/* PHÂN LOẠI RÈN LUYỆN */}
                       <td>
-                        <select
-                          disabled={matrixData.isLocked && !isPrivilegedUser}
-                          value={currentConduct || 'KHA'}
-                          onChange={(e) => handleConductChange(row.studentId, e.target.value)}
-                          className="form-input text-xs rounded px-1.5 py-1 text-slate-800 focus:outline-none disabled:opacity-50 font-semibold"
-                          style={{ cursor: 'pointer', minWidth: '95px' }}
-                        >
-                          <option value="XUAT_SAC">Xuất sắc</option>
-                          <option value="TOT">Tốt</option>
-                          <option value="KHA">Khá</option>
-                          <option value="TRUNG_BINH">Trung bình</option>
-                          <option value="YEU">Yếu</option>
-                        </select>
+                        {isPrivilegedUser ? (
+                          <select
+                            disabled={matrixData.isLocked}
+                            value={currentConduct || 'KHA'}
+                            onChange={(e) => handleConductChange(row.studentId, e.target.value)}
+                            className="form-input text-xs rounded px-1.5 py-1 text-slate-800 focus:outline-none disabled:opacity-50 font-semibold"
+                            style={{ cursor: 'pointer', minWidth: '95px' }}
+                          >
+                            <option value="XUAT_SAC">Xuất sắc</option>
+                            <option value="TOT">Tốt</option>
+                            <option value="KHA">Khá</option>
+                            <option value="TRUNG_BINH">Trung bình</option>
+                            <option value="YEU">Yếu</option>
+                          </select>
+                        ) : (
+                          <span className="font-semibold text-xs text-slate-700 px-2 py-1 bg-slate-100 rounded inline-block">
+                            {currentConduct === 'XUAT_SAC' ? 'Xuất sắc' :
+                             currentConduct === 'TOT' ? 'Tốt' :
+                             currentConduct === 'KHA' ? 'Khá' :
+                             currentConduct === 'TRUNG_BINH' ? 'Trung bình' :
+                             currentConduct === 'YEU' ? 'Yếu' : (currentConduct || 'Khá')}
+                          </span>
+                        )}
                       </td>
+                    </>
+                  )}
 
-                      {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS (Hỗ trợ phím mũi tên & Enter như Excel, chuẩn dấu '.') */}
-                      {safeGradExamSubjects.map((gradSub, gradIdx) => {
-                        const key = `${row.studentId}_${gradSub.id}`;
-                        const isEdited = isGradExamCellEdited(row.studentId, gradSub.id);
-                        const val = isEdited ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : '');
+                  {/* 3 GRADUATION EXAM SUBJECT SCORE INPUTS (Hỗ trợ phím mũi tên & Enter như Excel, chuẩn dấu '.') */}
+                  {canViewGradExams && safeGradExamSubjects.map((gradSub, gradIdx) => {
+                    const key = `${row.studentId}_${gradSub.id}`;
+                    const isEdited = isGradExamCellEdited(row.studentId, gradSub.id);
+                    const val = isEdited ? editedGradExamScores[key] : (row.gradExamScores ? row.gradExamScores[gradSub.id] : '');
 
-                        return (
-                          <td key={gradSub.id} className={isEdited ? 'cell-modified' : ''}>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              id={`grad-score-input-${rowIdx}-${gradIdx}`}
-                              data-row-idx={rowIdx}
-                              data-grad-idx={gradIdx}
-                              disabled={!currentUser || (matrixData.isLocked && !isPrivilegedUser)}
-                              value={val !== null && val !== undefined ? val : ''}
-                              onChange={(e) => handleGradExamScoreInputChange(row.studentId, gradSub.id, e.target.value)}
-                              onKeyDown={(e) => handleGridKeyDown(e, rowIdx, gradIdx, true)}
-                              onBlur={(e) => handleGradExamScoreBlur(row.studentId, gradSub.id, e.target.value)}
-                              placeholder="-"
-                              title={!currentUser ? "Đồng chí cần đăng nhập tài khoản để thực hiện thao tác nhập điểm" : "Điểm thi tốt nghiệp (0-10). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo"}
-                              className={`cell-input text-center text-amber-800 font-bold ${isEdited ? 'font-extrabold' : ''} ${!currentUser || matrixData.isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
-                            />
-                          </td>
-                        );
-                      })}
+                    const isAssignedGrad = isGiangVien && assignedGradCodes.includes(gradSub.code);
+                    const canEditGradScore = isPrivilegedUser
+                      ? !matrixData.isLocked
+                      : (isAssignedGrad && !matrixData.isLocked && (row.gradExamScores?.[gradSub.id] === undefined || row.gradExamScores?.[gradSub.id] === null));
 
+                    return (
+                      <td key={gradSub.id} className={isEdited ? 'cell-modified' : ''}>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          id={`grad-score-input-${rowIdx}-${gradIdx}`}
+                          data-row-idx={rowIdx}
+                          data-grad-idx={gradIdx}
+                          disabled={!canEditGradScore}
+                          value={val !== null && val !== undefined ? val : ''}
+                          onChange={(e) => handleGradExamScoreInputChange(row.studentId, gradSub.id, e.target.value)}
+                          onKeyDown={(e) => handleGridKeyDown(e, rowIdx, gradIdx, true)}
+                          onBlur={(e) => handleGradExamScoreBlur(row.studentId, gradSub.id, e.target.value)}
+                          placeholder="-"
+                          title={
+                            !canEditGradScore
+                              ? (isDonVi ? "Đơn vị ở chế độ chỉ xem bảng điểm" : !currentUser ? "Đồng chí cần đăng nhập tài khoản để thực hiện thao tác nhập điểm" : "Bạn không được phân công chấm môn này hoặc điểm đã được nhập trước đó")
+                              : "Điểm thi tốt nghiệp (0-10). Nhấn mũi tên xuống hoặc Enter để chuyển sang học viên tiếp theo"
+                          }
+                          className={`cell-input text-center text-amber-800 font-bold ${isEdited ? 'font-extrabold' : ''} ${!canEditGradScore ? 'cursor-not-allowed bg-slate-50/70 text-slate-600 font-medium' : ''}`}
+                        />
+                      </td>
+                    );
+                  })}
+
+                  {(isPrivilegedUser || isDonVi) && (
+                    <>
                       {/* ĐIỂM TN (TBC 3 MÔN THI TN) */}
                       <td className="font-bold text-sm text-blue-700 bg-blue-50/60">
                         {tbcGradExamScore !== null ? tbcGradExamScore.toFixed(2) : '-'}

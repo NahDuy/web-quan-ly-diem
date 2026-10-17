@@ -31,7 +31,8 @@ const TARGET_GROUP_MAJORS = {
   HSQ: ['BB', 'BCHT'],
 };
 
-export default function CurriculumRoadmapView() {
+export default function CurriculumRoadmapView({ currentUser }) {
+  const isPrivileged = ['ROLE_BGH', 'ROLE_PDT'].includes(currentUser?.role);
   const [targetGroups, setTargetGroups] = useState(() => {
     try {
       const saved = localStorage.getItem('military_target_groups');
@@ -259,17 +260,26 @@ export default function CurriculumRoadmapView() {
               <span>Xuất File Excel Mẫu</span>
             </a>
 
-            <button
-              type="button"
-              onClick={() => setIsImportModalOpen(true)}
-              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
-              title="Tải lên file Excel khung chương trình đào tạo để cập nhật vào hệ thống"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Import Lộ Trình (Excel)</span>
-            </button>
+            {isPrivileged && (
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
+                title="Tải lên file Excel khung chương trình đào tạo để cập nhật vào hệ thống (Quyền PĐT / BGH)"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Import Lộ Trình (Excel)</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {!isPrivileged && (
+          <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs rounded-xl flex items-center gap-2.5 font-medium shadow-xs mt-3">
+            <Shield className="w-4 h-4 text-blue-600 shrink-0" />
+            <span><strong>Chế độ Tra cứu Lộ trình đào tạo:</strong> Khung chương trình đào tạo do Phòng Đào Tạo và Ban Giám Hiệu quy định và quản lý. Các đơn vị và giáo viên chỉ xem để huấn luyện theo đúng kế hoạch.</span>
+          </div>
+        )}
       </div>
 
       {/* Target Group & Major Selection Bar */}

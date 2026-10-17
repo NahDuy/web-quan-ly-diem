@@ -84,10 +84,20 @@ public class GradeMatrixService {
         boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
 
         List<Integer> assignedSubjectIds = new ArrayList<>();
-        if (currentUser != null && isGiangVien) {
-            assignedSubjectIds = teacherSubjectRepository.findByTeacherId(currentUser.getId()).stream()
+        List<String> assignedGradCodes = new ArrayList<>();
+        if (currentUser != null && (isGiangVien || isTruongKhoa)) {
+            List<com.intranet.grade.entity.TeacherSubject> tsList = teacherSubjectRepository.findByTeacherId(currentUser.getId());
+            assignedSubjectIds = tsList.stream()
                     .map(ts -> ts.getSubject().getId())
                     .collect(Collectors.toList());
+            for (com.intranet.grade.entity.TeacherSubject ts : tsList) {
+                if (ts.getSubject() != null && ts.getSubject().getCode() != null) {
+                    String code = ts.getSubject().getCode().toUpperCase().trim();
+                    if (code.equals("TN01") || code.equals("TN02") || code.equals("TN03")) {
+                        assignedGradCodes.add(code);
+                    }
+                }
+            }
         }
 
         boolean isTeacherView = isGiangVien;
@@ -219,9 +229,17 @@ public class GradeMatrixService {
             if (scoreMil != null) gradExamScoresMap.put(102, scoreMil);
             if (scoreSpe != null) gradExamScoresMap.put(103, scoreSpe);
             if (isTeacherView) {
+                if (!assignedGradCodes.isEmpty()) {
+                    Map<Integer, BigDecimal> filteredGradMap = new HashMap<>();
+                    if (assignedGradCodes.contains("TN01") && scorePol != null) filteredGradMap.put(101, scorePol);
+                    if (assignedGradCodes.contains("TN02") && scoreMil != null) filteredGradMap.put(102, scoreMil);
+                    if (assignedGradCodes.contains("TN03") && scoreSpe != null) filteredGradMap.put(103, scoreSpe);
+                    gradExamScoresMap = filteredGradMap;
+                } else {
+                    gradExamScoresMap = Collections.emptyMap();
+                }
                 tbcScore = null;
                 conduct = null;
-                gradExamScoresMap = Collections.emptyMap();
                 tbcGradExamScore = null;
                 finalGradScore = null;
                 classification = null;
@@ -263,6 +281,7 @@ public class GradeMatrixService {
                 .isTeacherView(isTeacherView)
                 .departmentFilterName(deptFilterName)
                 .assignedSubjectIds(assignedSubjectIds)
+                .assignedGradCodes(assignedGradCodes)
                 .userRole(roleCode)
                 .canEdit(!isDonVi)
                 .build();
@@ -282,6 +301,19 @@ public class GradeMatrixService {
         boolean isPrivileged = Arrays.asList("ROLE_PDT", "ROLE_BGH").contains(roleCode);
         boolean isTruongKhoa = "ROLE_TRUONGKHOA".equals(roleCode) || "ROLE_BOMON".equals(roleCode);
         boolean isGiangVien = "ROLE_GIANGVIEN".equals(roleCode);
+
+        List<String> userGradCodes = new ArrayList<>();
+        if (currentUser != null && (isGiangVien || isTruongKhoa)) {
+            List<com.intranet.grade.entity.TeacherSubject> tsList = teacherSubjectRepository.findByTeacherId(currentUser.getId());
+            for (com.intranet.grade.entity.TeacherSubject ts : tsList) {
+                if (ts.getSubject() != null && ts.getSubject().getCode() != null) {
+                    String code = ts.getSubject().getCode().toUpperCase().trim();
+                    if (code.equals("TN01") || code.equals("TN02") || code.equals("TN03")) {
+                        userGradCodes.add(code);
+                    }
+                }
+            }
+        }
 
         int sem = request.getSemester() != null ? request.getSemester() : 1;
 
@@ -306,9 +338,27 @@ public class GradeMatrixService {
             }
         }
 
-        // Giáo viên không có quyền sửa điểm rèn luyện hoặc điểm thi tốt nghiệp
-        if (!isPrivileged && request.getEvaluationUpdates() != null && !request.getEvaluationUpdates().isEmpty()) {
-            throw new AccessDeniedException("Giáo viên không có quyền chỉnh sửa điểm rèn luyện hoặc điểm thi tốt nghiệp. Chỉ Ban Đào Tạo (PĐT) hoặc Quản trị viên (ADMIN) mới có quyền.");
+        // Kiểm tra quyền cập nhật điểm rèn luyện hoặc điểm thi tốt nghiệp
+        if (request.getEvaluationUpdates() != null && !request.getEvaluationUpdates().isEmpty()) {
+            if (!isPrivileged) {
+                if (userGradCodes.isEmpty()) {
+                    throw new AccessDeniedException("Giáo viên không có quyền chỉnh sửa điểm rèn luyện hoặc điểm thi tốt nghiệp. Chỉ Ban Đào Tạo (PĐT) hoặc Giảng viên được phân công chấm thi tốt nghiệp mới có quyền.");
+                }
+                for (EvaluationUpdateItem item : request.getEvaluationUpdates()) {
+                    if (item.getConductGrade() != null) {
+                        throw new AccessDeniedException("Giáo viên không có quyền chỉnh sửa kết quả rèn luyện.");
+                    }
+                    if (item.getScorePolitical() != null && !userGradCodes.contains("TN01")) {
+                        throw new AccessDeniedException("Đồng chí không được phân công chấm thi môn Chính trị (TN01).");
+                    }
+                    if (item.getScoreMilitary() != null && !userGradCodes.contains("TN02")) {
+                        throw new AccessDeniedException("Đồng chí không được phân công chấm thi môn Quân sự chung (TN02).");
+                    }
+                    if (item.getScoreSpecialty() != null && !userGradCodes.contains("TN03")) {
+                        throw new AccessDeniedException("Đồng chí không được phân công chấm thi môn Chuyên ngành (TN03).");
+                    }
+                }
+            }
         }
 
         ClassEntity clazz = classRepository.findById(classId)
@@ -426,6 +476,9 @@ public class GradeMatrixService {
                     isEvalModified = true;
                 }
                 if (isEvalModified) {
+                    if (!isPrivileged) {
+                        throw new org.springframework.security.access.AccessDeniedException("Học viên " + student.getFullName() + " đã có điểm thi tốt nghiệp. Giáo viên chỉ được nhập điểm 1 lần, chỉ Ban Giám Đốc hoặc Phòng Đào Tạo mới có quyền phê duyệt sửa đổi!");
+                    }
                     if (request.getReason() == null || request.getReason().trim().isEmpty() || request.getReason().startsWith("Cập nhật điểm định kỳ")) {
                         throw new IllegalArgumentException("Học viên " + student.getFullName() + " đã có điểm tốt nghiệp/kết quả rèn luyện. Việc điều chỉnh dữ liệu cũ bắt buộc phải có lý do / căn cứ quyết định giải trình cụ thể để lưu Audit Log!");
                     }

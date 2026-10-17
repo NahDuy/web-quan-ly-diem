@@ -4,13 +4,15 @@ import AdmissionsImportModal from './AdmissionsImportModal';
 import ConfirmModal from './ConfirmModal';
 
 export default function StudentManagementView({ currentUser }) {
-  // Quyền xóa lớp học: Chỉ dành riêng cho 2 role cao nhất (ROLE_BGH và ROLE_BOMON hoặc ROLE_ADMIN/ROLE_PDT)
-  // 4 vai trò:
-  // 1. Ban Giám Đốc / Ban Giám Hiệu & Phòng Đào Tạo (ROLE_BGH, ROLE_PDT, ROLE_ADMIN) -> CÓ QUYỀN XÓA LỚP
-  // 2. Chủ nhiệm Bộ môn (ROLE_BOMON) -> CÓ QUYỀN XÓA LỚP
-  // 3. Giáo viên Huấn luyện (ROLE_GIANGVIEN) -> KHÔNG ĐƯỢC XÓA LỚP
+  // Phân quyền theo chuẩn quân sự:
+  // - BGH & PDT: Toàn quyền (xóa lớp, dọn sạch lớp, nạp danh sách tuyển sinh đầu vào, thêm/sửa/xóa học viên)
+  // - DONVI: Quản lý học viên đơn vị mình (thêm/sửa thông tin học viên)
+  // - GIANGVIEN: Chỉ xem danh sách học viên để nắm quân số (Read-only, không được thêm/sửa/xóa)
   const userRole = currentUser?.role || 'ROLE_GIANGVIEN';
-  const canDeleteClasses = ['ROLE_BGH', 'ROLE_PDT', 'ROLE_BOMON'].includes(userRole);
+  const isPrivileged = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
+  const canDeleteClasses = isPrivileged;
+  const canAddStudent = ['ROLE_BGH', 'ROLE_PDT', 'ROLE_DONVI'].includes(userRole);
+  const canImportAdmissions = isPrivileged;
 
   const [students, setStudents] = useState([]);
   const [classList, setClassList] = useState([]);
@@ -406,33 +408,37 @@ export default function StudentManagementView({ currentUser }) {
 
           {/* Right: Primary Action Buttons */}
           <div className="flex items-center flex-wrap gap-2.5">
-            {/* Thêm mới học viên */}
-            <button
-              onClick={handleOpenAddModal}
-              className="btn btn-primary btn-sm"
-              title="Thêm một học viên quân sự mới vào hệ thống"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              <span>+ Thêm Học Viên</span>
-            </button>
+            {/* Thêm mới học viên: Chỉ BGH, PDT, DONVI (Chặn Giáo viên) */}
+            {canAddStudent && (
+              <button
+                onClick={handleOpenAddModal}
+                className="btn btn-primary btn-sm"
+                title="Thêm một học viên quân sự mới vào hệ thống (Quyền Chỉ huy / Đơn vị)"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                <span>+ Thêm Học Viên</span>
+              </button>
+            )}
 
-            {/* Nhập DS đầu vào từ Excel */}
-            <button 
-              onClick={() => setIsAdmissionsModalOpen(true)}
-              className="btn btn-sm"
-              style={{
-                backgroundColor: '#fef3c7',
-                color: '#b45309',
-                border: '1px solid #fde047',
-                fontWeight: 700
-              }}
-              title="Nhập danh sách học viên đầu vào từ file Excel (.xls / .xlsx)"
-            >
-              <Sparkles className="w-4 h-4 text-amber-600 mr-1" />
-              <span>Nhập DS Đầu Vào (.xls)</span>
-            </button>
+            {/* Nhập DS đầu vào từ Excel: Chỉ BGH & PDT */}
+            {canImportAdmissions && (
+              <button 
+                onClick={() => setIsAdmissionsModalOpen(true)}
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde047',
+                  fontWeight: 700
+                }}
+                title="Nhập danh sách học viên đầu vào từ file Excel theo quy chuẩn trường (Quyền BGH / PĐT)"
+              >
+                <Sparkles className="w-4 h-4 text-amber-600 mr-1" />
+                <span>Nhập DS Đầu Vào (.xls)</span>
+              </button>
+            )}
 
-            {/* Xuất file Excel */}
+            {/* Xuất file Excel: Toàn quyền cho các role */}
             <button
               onClick={handleExportStudents}
               className="btn btn-secondary btn-sm"
@@ -442,7 +448,7 @@ export default function StudentManagementView({ currentUser }) {
               <span>Xuất Excel</span>
             </button>
 
-            {/* Cụm Dọn sạch lớp (Chỉ BGH / Bộ Môn) */}
+            {/* Cụm Dọn sạch lớp (Chỉ BGH / PĐT) */}
             {canDeleteClasses && (
               <button
                 onClick={() => setIsDeleteAllModalOpen(true)}
@@ -453,7 +459,7 @@ export default function StudentManagementView({ currentUser }) {
                   border: '1px solid #fca5a5',
                   fontWeight: 600
                 }}
-                title="Dọn sạch toàn bộ lớp học và học viên để chuẩn bị nạp lại dữ liệu mới từ Excel (Quyền Chỉ huy / Bộ môn)"
+                title="Dọn sạch toàn bộ lớp học và học viên để chuẩn bị nạp lại dữ liệu mới từ Excel (Quyền Ban Giám Hiệu / Phòng Đào Tạo)"
               >
                 <Trash2 className="w-3.5 h-3.5 text-red-600 mr-1" />
                 <span>Dọn Sạch Lớp</span>
@@ -657,20 +663,27 @@ export default function StudentManagementView({ currentUser }) {
                     )}
                   </td>
                   <td className="p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleOpenEditModal(student)}
-                      className="p-1 text-slate-400 hover:text-amber-600 transition"
-                      title="Sửa hồ sơ"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleRequestDeleteStudent(student.id, student.fullName, student.studentCode)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
-                      title="Xóa học viên"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canAddStudent && (
+                      <button
+                        onClick={() => handleOpenEditModal(student)}
+                        className="p-1 text-slate-400 hover:text-amber-600 transition"
+                        title="Sửa hồ sơ"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isPrivileged && (
+                      <button
+                        onClick={() => handleRequestDeleteStudent(student.id, student.fullName, student.studentCode)}
+                        className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                        title="Xóa học viên (Chỉ BGH / PĐT)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {!canAddStudent && !isPrivileged && (
+                      <span className="text-[11px] text-slate-400 italic">Chỉ xem</span>
+                    )}
                   </td>
                 </tr>
               ))

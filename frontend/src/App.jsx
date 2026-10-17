@@ -35,6 +35,13 @@ export default function App() {
     classCode: ''
   });
 
+  const getDefaultTabForRole = (role) => {
+    if (role === 'ROLE_GIANGVIEN' || role === 'ROLE_DONVI' || role === 'ROLE_SINHVIEN') {
+      return 'matrix';
+    }
+    return 'dashboard';
+  };
+
   const checkAuth = async () => {
     const token = localStorage.getItem('jwt_token');
     if (token) {
@@ -45,6 +52,7 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUser(data);
+          setActiveTab(getDefaultTabForRole(data.role));
           setAuthLoading(false);
           return;
         }
@@ -82,6 +90,7 @@ export default function App() {
       <AuthPortalView
         onLoginSuccess={(user) => {
           setCurrentUser(user);
+          setActiveTab(getDefaultTabForRole(user.role));
         }}
       />
     );
@@ -245,11 +254,11 @@ export default function App() {
           )}
 
           {activeTab === 'roadmap' && (
-            <CurriculumRoadmapView />
+            <CurriculumRoadmapView currentUser={currentUser} />
           )}
 
           {activeTab === 'majors' && (
-            <MajorManagementView />
+            <MajorManagementView currentUser={currentUser} />
           )}
 
           {activeTab === 'audit' && (
@@ -262,7 +271,10 @@ export default function App() {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={(user) => setCurrentUser(user)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setActiveTab(getDefaultTabForRole(user.role));
+        }}
       />
 
       <ExcelImportModal

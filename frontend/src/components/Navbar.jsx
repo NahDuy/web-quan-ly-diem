@@ -18,7 +18,7 @@ const NAV_SECTIONS = [
   {
     title: 'Chỉ Huy & Điều Hành',
     items: [
-      { id: 'dashboard',   label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard },
+      { id: 'dashboard',   label: 'Dashboard Chỉ Huy',            icon: LayoutDashboard, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON', 'ROLE_DONVI'] },
     ],
   },
   {

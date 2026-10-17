@@ -282,6 +282,14 @@ public class DataInitializer implements CommandLineRunner {
         Subject tt101 = getOrCreateSubject("TT101", "Khí tài Vô tuyến điện Quân sự", 3, defaultDept);
         Subject tt102 = getOrCreateSubject("TT102", "Mạng Thông tin Chỉ huy Tác chiến", 4, defaultDept);
 
+        // 3.1 Môn Thi Tốt nghiệp (Hội đồng Chấm thi Tốt nghiệp)
+        Department deptCt = departmentRepository.findByCode("KHOA_CT").orElse(defaultDept);
+        Department deptQs = departmentRepository.findByCode("KHOA_QS").orElse(defaultDept);
+        Department deptBc = departmentRepository.findByCode("KHOA_BC").orElse(defaultDept);
+        getOrCreateSubject("TN01", "Thi Tốt nghiệp - Chính trị", 1, deptCt);
+        getOrCreateSubject("TN02", "Thi Tốt nghiệp - Quân sự chung", 1, deptQs);
+        getOrCreateSubject("TN03", "Thi Tốt nghiệp - Chuyên ngành", 1, deptBc);
+
         // 4. Curriculums by Major
         initCurriculumForMajor("TSBB", "Lộ trình Đào tạo SQDB Trinh sát Bộ binh", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, ts101, ts102, ts103));
         initCurriculumForMajor("COI", "Lộ trình Đào tạo SQDB Súng Cối 82mm", course, List.of(qs101, qs102, qs103, qs104, qs105, qs106, coi101, coi102, coi103));
