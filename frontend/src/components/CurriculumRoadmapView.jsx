@@ -11,6 +11,9 @@ const DEFAULT_TARGET_GROUPS = [
 
 const TARGET_GROUP_DEFAULT_MAJORS = {
   SQDB: 'BB',
+  'SQDB(XN)': 'BB',
+  'SQDB(H1)': 'BB',
+  'SQDB(SV)': 'BB',
   TDT: 'VTD',
   KDT: 'DL',
   NVKT: 'NVQY',
@@ -19,6 +22,9 @@ const TARGET_GROUP_DEFAULT_MAJORS = {
 
 const TARGET_GROUP_MAJORS = {
   SQDB: ['BB', 'BCHT', 'TSBB', 'COI', 'DKZ', 'PK127', 'PB', 'TT'],
+  'SQDB(XN)': ['BB', 'BCHT', 'TSBB', 'COI', 'DKZ', 'PK127', 'PB', 'TT'],
+  'SQDB(H1)': ['BB', 'BCHT', 'TSBB', 'COI', 'DKZ', 'PK127', 'PB', 'TT'],
+  'SQDB(SV)': ['BB', 'BCHT', 'TSBB', 'COI', 'DKZ', 'PK127', 'PB', 'TT'],
   TDT: ['VTD', 'HTD', 'KTPB', 'CB', 'NA', 'TSBB'],
   KDT: ['DL', 'C60', 'COI', 'C100', 'SPG9', 'AGS17', 'DKZ', 'PXK', 'PK37', 'PK57', 'PK127'],
   NVKT: ['NVQY', 'NVBQVK', 'NVBQD', 'BVU'],
@@ -39,7 +45,17 @@ export default function CurriculumRoadmapView() {
     return DEFAULT_TARGET_GROUPS;
   });
 
-  const [targetGroup, setTargetGroup] = useState('SQDB');
+  const [targetGroup, setTargetGroup] = useState(() => {
+    try {
+      const saved = localStorage.getItem('military_target_groups');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].code;
+      }
+    } catch (e) {}
+    return 'SQDB';
+  });
+
   const [selectedMajor, setSelectedMajor] = useState('BB');
   const [filterType, setFilterType] = useState('ALL'); // ALL, MON_HOC_PHAN, MON_THI_TOT_NGHIEP
   
@@ -55,6 +71,10 @@ export default function CurriculumRoadmapView() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setTargetGroups(parsed);
+          // Nếu targetGroup hiện tại không nằm trong danh mục, cập nhật về phần tử đầu
+          if (!parsed.some(tg => tg.code === targetGroup)) {
+            setTargetGroup(parsed[0].code);
+          }
         }
       }
     } catch (e) {
@@ -78,7 +98,9 @@ export default function CurriculumRoadmapView() {
 
   const fetchMajors = async () => {
     try {
-      const res = await fetch('/api/v1/majors');
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/majors', { headers });
       if (res.ok) {
         const data = await res.json();
         setMajors(data);
@@ -94,7 +116,9 @@ export default function CurriculumRoadmapView() {
   const fetchCurriculums = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/curriculums?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`);
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/v1/curriculums?majorCode=${selectedMajor}&targetGroup=${encodeURIComponent(targetGroup)}&courseCode=${selectedCourse}`, { headers });
       if (res.ok) {
         const data = await res.json();
         setCurriculums(data);
@@ -118,13 +142,17 @@ export default function CurriculumRoadmapView() {
 
   const handleSelectTargetGroup = (code) => {
     setTargetGroup(code);
-    const defaultMajor = TARGET_GROUP_DEFAULT_MAJORS[code];
+    const cleanKey = code.startsWith('SQDB') ? 'SQDB' : code;
+    const defaultMajor = TARGET_GROUP_DEFAULT_MAJORS[code] || TARGET_GROUP_DEFAULT_MAJORS[cleanKey];
     if (defaultMajor && majors.some(m => m.code === defaultMajor)) {
       setSelectedMajor(defaultMajor);
-    } else if (TARGET_GROUP_MAJORS[code] && TARGET_GROUP_MAJORS[code].length > 0) {
-      const firstAvailable = majors.find(m => TARGET_GROUP_MAJORS[code].includes(m.code));
+    } else {
+      const allowedMajors = TARGET_GROUP_MAJORS[code] || TARGET_GROUP_MAJORS[cleanKey] || [];
+      const firstAvailable = majors.find(m => allowedMajors.includes(m.code));
       if (firstAvailable) {
         setSelectedMajor(firstAvailable.code);
+      } else if (majors.length > 0) {
+        setSelectedMajor(majors[0].code);
       }
     }
   };
@@ -132,7 +160,8 @@ export default function CurriculumRoadmapView() {
   const activeCurriculum = curriculums.length > 0 ? curriculums[0] : null;
   const allSubjects = activeCurriculum?.subjects || [];
 
-  const relevantMajorCodes = TARGET_GROUP_MAJORS[targetGroup] || [];
+  const cleanGroupKey = targetGroup?.startsWith('SQDB') ? 'SQDB' : targetGroup;
+  const relevantMajorCodes = TARGET_GROUP_MAJORS[targetGroup] || TARGET_GROUP_MAJORS[cleanGroupKey] || [];
   const relevantMajors = majors.filter(m => relevantMajorCodes.includes(m.code));
   const otherMajors = majors.filter(m => !relevantMajorCodes.includes(m.code));
 

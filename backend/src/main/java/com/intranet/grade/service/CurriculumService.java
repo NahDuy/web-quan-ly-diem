@@ -19,6 +19,8 @@ public class CurriculumService {
     private final ClassRepository classRepository;
     private final GradeRepository gradeRepository;
     private final StudentRepository studentRepository;
+    private final MajorRepository majorRepository;
+    private final SubjectRepository subjectRepository;
 
     @Transactional(readOnly = true)
     public CurriculumProgressDTO getClassCurriculumProgress(Integer classId) {
@@ -138,7 +140,12 @@ public class CurriculumService {
             }
 
             if (targetGroup != null && !targetGroup.isBlank()) {
+                String reqTgClean = targetGroup.toUpperCase().replaceAll("[^A-Z0-9]", "");
+                String curTgClean = tg.toUpperCase().replaceAll("[^A-Z0-9]", "");
                 boolean match = targetGroup.equalsIgnoreCase(tg)
+                        || reqTgClean.contains(curTgClean)
+                        || curTgClean.contains(reqTgClean)
+                        || (targetGroup.toUpperCase().startsWith("SQDB") && tg.toUpperCase().startsWith("SQDB"))
                         || ("KDT".equalsIgnoreCase(targetGroup) && "KHAU_DOI_TRUONG".equalsIgnoreCase(tg))
                         || ("KHAU_DOI_TRUONG".equalsIgnoreCase(targetGroup) && "KDT".equalsIgnoreCase(tg))
                         || ("TDT".equalsIgnoreCase(targetGroup) && "TIEU_DOI_TRUONG".equalsIgnoreCase(tg))
@@ -250,6 +257,65 @@ public class CurriculumService {
                     .subjects(subDTOs)
                     .build());
         }
+
+        // Fallback: Nếu chưa có khung chương trình riêng cho ngành này hoặc dtos rỗng, tự động lấy danh mục môn học thuộc Khoa phụ trách hoặc môn học quân sự chung từ bảng subjects
+        if (dtos.isEmpty() && majorCode != null && !majorCode.isBlank()) {
+            Optional<Major> majorOpt = majorRepository.findByCode(majorCode);
+            if (majorOpt.isPresent()) {
+                Major m = majorOpt.get();
+                List<Subject> allSubjects = subjectRepository.findAll();
+                List<Subject> relevantSubjects = allSubjects.stream()
+                        .filter(s -> (m.getDepartment() != null && s.getDepartment() != null && m.getDepartment().getId().equals(s.getDepartment().getId()))
+                                || (s.getCode() != null && s.getCode().startsWith(m.getCode())))
+                        .collect(Collectors.toList());
+
+                // Nếu chưa có môn riêng theo khoa/ngành, bổ sung các môn quân sự chung và thi tốt nghiệp
+                if (relevantSubjects.isEmpty()) {
+                    relevantSubjects = allSubjects.stream()
+                            .filter(s -> s.getCode() != null && (s.getCode().startsWith("QS") || s.getCode().startsWith("TN")))
+                            .collect(Collectors.toList());
+                }
+
+                if (!relevantSubjects.isEmpty()) {
+                    List<com.intranet.grade.dto.CurriculumSubjectDTO> subDTOs = new ArrayList<>();
+                    int totalCredits = 0;
+                    for (Subject s : relevantSubjects) {
+                        int credits = s.getCredits() != null ? s.getCredits() : 3;
+                        totalCredits += credits;
+                        boolean isGradExam = s.getCode() != null && s.getCode().startsWith("TN");
+                        subDTOs.add(com.intranet.grade.dto.CurriculumSubjectDTO.builder()
+                                .id(s.getId())
+                                .subjectCode(s.getCode())
+                                .subjectName(s.getName())
+                                .credits(credits)
+                                .hours(credits * 15)
+                                .semester(1)
+                                .type(isGradExam ? "MON_THI_TOT_NGHIEP" : "MON_HOC_PHAN")
+                                .examFormat(isGradExam ? "Vấn đáp / Thao trường" : "Lý thuyết & Thao trường")
+                                .weight(isGradExam ? 2.0 : 1.0)
+                                .departmentName(s.getDepartment() != null ? s.getDepartment().getName() : (m.getDepartment() != null ? m.getDepartment().getName() : "Khoa Binh chủng"))
+                                .isCompulsory(true)
+                                .build());
+                    }
+                    dtos.add(com.intranet.grade.dto.CurriculumDTO.builder()
+                            .id(m.getId() + 1000)
+                            .name("Lộ trình Đào tạo Khung - Chuyên ngành " + m.getName())
+                            .majorId(m.getId())
+                            .majorCode(m.getCode())
+                            .majorName(m.getName())
+                            .targetGroup(targetGroup != null ? targetGroup : "SQDB")
+                            .targetGroupName(targetGroup != null ? targetGroup : "Sĩ quan Dự bị (SQDB)")
+                            .courseCode(courseCode != null ? courseCode : "2026")
+                            .courseName("Khung Đào tạo Năm " + (courseCode != null ? courseCode : "2026"))
+                            .academicYear(2026)
+                            .totalCredits(totalCredits)
+                            .totalHours(totalCredits * 15)
+                            .subjects(subDTOs)
+                            .build());
+                }
+            }
+        }
+
         return dtos;
     }
 }
