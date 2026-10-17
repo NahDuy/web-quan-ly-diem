@@ -22,7 +22,7 @@ const EMPTY_MATRIX = {
 };
 
 export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
-  const [classId, setClassId] = useState(1);
+  const [classId, setClassId] = useState('');
   const [semester, setSemester] = useState(1);
   const [classList, setClassList] = useState([]);
   const [matrixData, setMatrixData] = useState(EMPTY_MATRIX);
@@ -327,6 +327,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
         if (data && data.length > 0) {
           setClassList(data);
           setClassId(prev => (data.some(c => c.id === prev) ? prev : data[0].id));
+        } else {
+          setClassList([]);
+          setClassId('');
+          setMatrixData(EMPTY_MATRIX);
         }
       }
     } catch (err) {
@@ -339,6 +343,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   }, []);
 
   const handleInitFromCurriculum = async () => {
+    if (!classId) return;
     setLoading(true);
     setSaveSuccessMsg('');
     try {
@@ -363,6 +368,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const fetchMatrix = async () => {
+    if (!classId) {
+      setMatrixData(EMPTY_MATRIX);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setSaveSuccessMsg('');
     try {
@@ -1267,6 +1277,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleExportHocPhan = () => {
+    if (!classId) {
+      alert('Vui lòng chọn một lớp học để xuất báo cáo!');
+      return;
+    }
     if (isDemoMode) {
       alert('Tải file Kết quả Học phần mẫu (KetQuaHocPhan.xlsx) tự động khi kết nối Backend.');
       return;
@@ -1275,6 +1289,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
   };
 
   const handleExportTotNghiep = () => {
+    if (!classId) {
+      alert('Vui lòng chọn một lớp học để xuất báo cáo!');
+      return;
+    }
     if (isDemoMode) {
       alert('Tải file Kết quả Tốt nghiệp mẫu (KetQuaTotNghiep.xls/.xlsx) tự động khi kết nối Backend.');
       return;
@@ -1541,9 +1559,10 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             </span>
           </div>
           <select
-            value={classId}
-            onChange={(e) => setClassId(parseInt(e.target.value))}
-            className="form-input text-xs font-bold text-slate-900 flex-1 max-w-md h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg cursor-pointer"
+            value={classId || ''}
+            onChange={(e) => setClassId(e.target.value ? parseInt(e.target.value, 10) : '')}
+            disabled={classList.length === 0}
+            className="form-input text-xs font-bold text-slate-900 flex-1 max-w-md h-9 py-1 px-3 shadow-xs border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 rounded-lg cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {classList.length > 0 ? (
               classList.map((cls) => {
@@ -1557,13 +1576,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                 );
               })
             ) : (
-              <>
-                <option value={1}>SQDB2026-HT1 — Lớp SQDB 2026 Binh chủng Hợp thành 1</option>
-                <option value={2}>SQDB2026-PB1 — Lớp SQDB 2026 Pháo binh 1</option>
-                <option value={3}>SQDB2026-TT1 — Lớp SQDB 2026 Thông tin Kỹ thuật 1</option>
-                <option value={4}>SQDB2025-HT1 — Lớp SQDB 2025 Binh chủng Hợp thành 1</option>
-                <option value={5}>SQDB2024-HT1 — Lớp SQDB 2024 Binh chủng Hợp thành 1</option>
-              </>
+              <option value="" disabled>-- Chưa có lớp học nào trong hệ thống --</option>
             )}
           </select>
 
@@ -1629,13 +1642,18 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
               {canManageSubjects && (
                 <button
                   type="button"
+                  disabled={!classId}
                   onClick={() => {
                     fetchAvailableSubjects();
                     setAddSubjectTab('existing');
                     setIsAddSubjectModalOpen(true);
                   }}
-                  className="btn btn-secondary btn-sm h-9 px-3 flex items-center gap-1.5 text-xs font-bold rounded-lg border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
-                  title="Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp"
+                  className={`btn btn-secondary btn-sm h-9 px-3 flex items-center gap-1.5 text-xs font-bold rounded-lg border transition shadow-2xs ${
+                    !classId
+                      ? 'border-slate-200 text-slate-400 bg-slate-100 opacity-60 cursor-not-allowed'
+                      : 'border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 cursor-pointer'
+                  }`}
+                  title={!classId ? 'Chưa có lớp học được chọn' : 'Thêm cột môn mới, sửa thông tin môn học hoặc đổi môn cho lớp'}
                 >
                   <Plus className="w-4 h-4 text-emerald-700" />
                   <span>Thêm / Sửa Môn</span>
@@ -1672,7 +1690,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
                   <div className="px-3.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                     <span>Báo cáo lớp đang chọn</span>
                     <span className="text-emerald-700 font-mono font-bold">
-                      {matrixData?.classCode || `Lớp #${classId}`}
+                      {matrixData?.classCode || (classId ? `Lớp #${classId}` : 'Chưa có lớp')}
                     </span>
                   </div>
 
@@ -2082,7 +2100,11 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
             {safeRows.length === 0 ? (
               <tr>
                 <td colSpan={10 + (safeColumns?.length || 0)} className="py-16 text-center text-slate-400 font-medium bg-slate-50/50">
-                  {loading ? 'Đang tải bảng điểm học viên...' : 'Lớp học hiện chưa có dữ liệu học viên trong hệ thống. Vui lòng thêm học viên hoặc import danh sách.'}
+                  {loading
+                    ? 'Đang tải bảng điểm học viên...'
+                    : classList.length === 0
+                      ? 'Hệ thống hiện chưa có lớp học nào. Vui lòng tạo lớp học hoặc import danh sách chiêu sinh.'
+                      : 'Lớp học hiện chưa có dữ liệu học viên trong hệ thống. Vui lòng thêm học viên hoặc import danh sách.'}
                 </td>
               </tr>
             ) : (
