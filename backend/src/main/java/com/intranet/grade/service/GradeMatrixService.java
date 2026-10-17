@@ -5,6 +5,7 @@ import com.intranet.grade.entity.*;
 import com.intranet.grade.repository.*;
 import com.intranet.grade.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GradeMatrixService {
 
     private final ClassRepository classRepository;
@@ -270,11 +272,24 @@ public class GradeMatrixService {
 
         int sem = request.getSemester() != null ? request.getSemester() : 1;
 
-        // Check if grade sheet is locked
+        // Check if grade sheet is locked or lock deadline has passed
         Optional<GradeLock> lockOpt = gradeLockRepository.findByClazzIdAndSemesterAndSubjectIdIsNull(classId, sem);
-        if (lockOpt.isPresent() && lockOpt.get().getIsLocked()) {
-            if (!isPrivileged) {
-                throw new AccessDeniedException("BẢNG ĐIỂM ĐÃ BỊ KHÓA (LOCKED). Bạn không có quyền thay đổi.");
+        if (lockOpt.isPresent()) {
+            GradeLock lock = lockOpt.get();
+            boolean isLocked = Boolean.TRUE.equals(lock.getIsLocked());
+
+            // Real-time check if deadline has arrived or passed
+            if (!isLocked && lock.getLockDeadline() != null && ZonedDateTime.now().isAfter(lock.getLockDeadline())) {
+                isLocked = true;
+                lock.setIsLocked(true);
+                lock.setLockedAt(lock.getLockDeadline());
+                gradeLockRepository.save(lock);
+            }
+
+            if (isLocked && !isPrivileged) {
+                String reason = lock.getAutoLockReason() != null ? lock.getAutoLockReason() : "Hạn chót nhập điểm học phần";
+                String timeStr = lock.getLockDeadline() != null ? lock.getLockDeadline().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")) : "";
+                throw new AccessDeniedException("BẢNG ĐIỂM ĐÃ BỊ KHÓA" + (!timeStr.isEmpty() ? " VÀO LÚC " + timeStr : "") + " (LÝ DO: " + reason + "). Đã quá thời hạn cho phép nhập điểm!");
             }
         }
 
@@ -519,6 +534,27 @@ public class GradeMatrixService {
             lock.setLockDeadline(null);
             lock.setAutoLockReason(null);
             gradeLockRepository.save(lock);
+        }
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000)
+    @Transactional
+    public void autoLockExpiredGradeLocks() {
+        try {
+            ZonedDateTime now = ZonedDateTime.now();
+            List<GradeLock> expiredLocks = gradeLockRepository.findAll().stream()
+                    .filter(l -> !Boolean.TRUE.equals(l.getIsLocked()) && l.getLockDeadline() != null && now.isAfter(l.getLockDeadline()))
+                    .collect(Collectors.toList());
+
+            for (GradeLock lock : expiredLocks) {
+                lock.setIsLocked(true);
+                lock.setLockedAt(lock.getLockDeadline());
+                gradeLockRepository.save(lock);
+                log.info("Đã tự động khóa bảng điểm theo lịch hẹn: Lớp ID={}, Học kỳ={}, Hạn chót={}",
+                        lock.getClazz() != null ? lock.getClazz().getId() : "null", lock.getSemester(), lock.getLockDeadline());
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi chạy tác vụ tự động khóa bảng điểm: {}", e.getMessage());
         }
     }
 

@@ -263,6 +263,23 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     fetchMatrix();
   }, [classId, semester]);
 
+  // Real-time lock deadline watcher (tự động khóa giao diện tức thì khi đến hạn)
+  useEffect(() => {
+    if (!matrixData?.lockDeadline || matrixData.isLocked) return;
+
+    const checkLockStatus = () => {
+      const deadline = new Date(matrixData.lockDeadline).getTime();
+      const now = Date.now();
+      if (now >= deadline) {
+        setMatrixData(prev => ({ ...prev, isLocked: true }));
+      }
+    };
+
+    checkLockStatus();
+    const interval = setInterval(checkLockStatus, 1000);
+    return () => clearInterval(interval);
+  }, [matrixData?.lockDeadline, matrixData?.isLocked]);
+
   const userRole = currentUser?.role || matrixData?.userRole || '';
   const isPrivilegedUser = ['ROLE_BGH', 'ROLE_PDT'].includes(userRole);
   const isTruongKhoa = ['ROLE_TRUONGKHOA', 'ROLE_BOMON'].includes(userRole);
@@ -856,6 +873,12 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       }
     }
 
+    if (!isPrivilegedUser && (matrixData.isLocked || (matrixData.lockDeadline && Date.now() >= new Date(matrixData.lockDeadline).getTime()))) {
+      alert(`BẢNG ĐIỂM ĐÃ BỊ KHÓA! Đã quá thời hạn cho phép nhập điểm (${matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}). Không thể lưu điểm!`);
+      setMatrixData(prev => ({ ...prev, isLocked: true }));
+      return;
+    }
+
     setSaving(true);
     setSaveSuccessMsg('');
 
@@ -968,6 +991,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
           return;
         }
       }
+    }
+
+    if (!isPrivilegedUser && (matrixData.isLocked || (matrixData.lockDeadline && Date.now() >= new Date(matrixData.lockDeadline).getTime()))) {
+      alert(`BẢNG ĐIỂM ĐÃ BỊ KHÓA! Đã quá thời hạn cho phép nhập điểm (${matrixData.lockDeadline ? new Date(matrixData.lockDeadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}). Không thể lưu điểm!`);
+      setMatrixData(prev => ({ ...prev, isLocked: true }));
+      setIsReasonModalOpen(false);
+      return;
     }
 
     setSaving(true);
