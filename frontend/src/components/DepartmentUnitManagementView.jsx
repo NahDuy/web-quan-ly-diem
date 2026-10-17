@@ -19,7 +19,8 @@ import {
   UserCheck,
   Award,
   ChevronRight,
-  School
+  School,
+  X
 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 
@@ -60,6 +61,7 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [assignedSubjectIds, setAssignedSubjectIds] = useState([]);
   const [assigningLoading, setAssigningLoading] = useState(false);
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('');
 
   // Department Modal
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -216,6 +218,26 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
       }
     });
   };
+
+  // Batch select/deselect visible filtered subjects
+  const handleSelectAllVisible = (subjectsToSelect) => {
+    const idsToAdd = subjectsToSelect.map(s => s.id);
+    setAssignedSubjectIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
+  };
+
+  const handleDeselectAllVisible = (subjectsToDeselect) => {
+    const idsToRemove = new Set(subjectsToDeselect.map(s => s.id));
+    setAssignedSubjectIds(prev => prev.filter(id => !idsToRemove.has(id)));
+  };
+
+  const filteredAssignmentSubjects = deptSubjects.filter(sub => {
+    if (!assignmentSearchTerm.trim()) return true;
+    const term = assignmentSearchTerm.toLowerCase().trim();
+    return (
+      (sub.name && sub.name.toLowerCase().includes(term)) ||
+      (sub.code && sub.code.toLowerCase().includes(term))
+    );
+  });
 
   // Save subject assignment for teacher
   const handleSaveTeacherSubjects = async () => {
@@ -908,38 +930,88 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-                    {deptSubjects.map((sub) => {
-                      const isAssigned = assignedSubjectIds.includes(sub.id);
-                      return (
-                        <div
-                          key={sub.id}
-                          onClick={() => handleToggleSubjectAssignment(sub.id)}
-                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition select-none ${
-                            isAssigned
-                              ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          }`}
+                  {/* Search and Quick Selection Actions */}
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={assignmentSearchTerm}
+                        onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+                        placeholder="Tìm nhanh môn theo tên hoặc mã môn..."
+                        className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                      />
+                      {assignmentSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setAssignmentSearchTerm('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          title="Xóa tìm kiếm"
                         >
-                          <div className="flex items-center gap-2">
-                            {isAssigned ? (
-                              <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-300 shrink-0" />
-                            )}
-                            <div>
-                              <div>{sub.name}</div>
-                              <div className="text-[10px] font-mono text-slate-500 font-normal">Mã: {sub.code} ({sub.credits} TC)</div>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAllVisible(filteredAssignmentSubjects)}
+                        disabled={filteredAssignmentSubjects.length === 0}
+                        className="px-2.5 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 border border-blue-200 rounded-md transition cursor-pointer"
+                        title="Chọn tất cả các môn đang hiển thị"
+                      >
+                        + Chọn tất cả ({filteredAssignmentSubjects.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeselectAllVisible(filteredAssignmentSubjects)}
+                        disabled={filteredAssignmentSubjects.length === 0}
+                        className="px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 disabled:opacity-50 border border-slate-200 rounded-md transition cursor-pointer"
+                        title="Bỏ chọn các môn đang hiển thị"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                    {filteredAssignmentSubjects.length > 0 ? (
+                      filteredAssignmentSubjects.map((sub) => {
+                        const isAssigned = assignedSubjectIds.includes(sub.id);
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => handleToggleSubjectAssignment(sub.id)}
+                            className={`p-2.5 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition select-none ${
+                              isAssigned
+                                ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isAssigned ? (
+                                <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-300 shrink-0" />
+                              )}
+                              <div>
+                                <div>{sub.name}</div>
+                                <div className="text-[10px] font-mono text-slate-500 font-normal">Mã: {sub.code} ({sub.credits} TC)</div>
+                              </div>
                             </div>
+                            {isAssigned && (
+                              <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-black">
+                                Được nhập điểm
+                              </span>
+                            )}
                           </div>
-                          {isAssigned && (
-                            <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-black">
-                              Được nhập điểm
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full py-6 text-center text-xs text-slate-400">
+                        Không tìm thấy môn học nào khớp với từ khóa "{assignmentSearchTerm}"
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2 flex justify-end">
