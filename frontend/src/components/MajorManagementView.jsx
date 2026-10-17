@@ -316,6 +316,29 @@ export default function MajorManagementView() {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              type="button"
+              onClick={() => {
+                setNewTargetCode('');
+                setNewTargetName('');
+                setNewTargetDesc('Thời gian 06 tháng');
+                setAddTargetError('');
+                setIsAddTargetModalOpen(true);
+              }}
+              className="btn btn-sm flex items-center gap-1.5 shadow-sm font-bold"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#b45309',
+                border: '1px solid #fde047',
+                fontWeight: 700
+              }}
+              title="Thêm đối tượng đào tạo mới vào hệ thống"
+            >
+              <Plus className="w-4 h-4 text-amber-600" />
+              <span>+ Thêm Đối Tượng</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleExportExcel}
               disabled={exporting}
               className="btn btn-secondary btn-sm flex items-center gap-2 shadow-sm text-slate-700 bg-white hover:bg-slate-50 border-slate-300 font-bold"
@@ -326,29 +349,10 @@ export default function MajorManagementView() {
             </button>
 
             <button
-              onClick={() => {
-                setNewTargetCode('');
-                setNewTargetName('');
-                setNewTargetDesc('Thời gian 06 tháng');
-                setAddTargetError('');
-                setIsAddTargetModalOpen(true);
-              }}
-              className="btn btn-sm flex items-center gap-1.5 shadow-sm"
-              style={{
-                backgroundColor: '#fef3c7',
-                color: '#92400e',
-                border: '1px solid #fde047',
-                fontWeight: 700
-              }}
-              title="Thêm đối tượng đào tạo mới vào hệ thống"
-            >
-              <Plus className="w-4 h-4 text-amber-700" />
-              <span>+ Thêm Đối Tượng</span>
-            </button>
-
-            <button
+              type="button"
               onClick={handleOpenAdd}
-              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm"
+              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
+              title="Thêm chuyên ngành đào tạo mới"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm Chuyên ngành Mới</span>

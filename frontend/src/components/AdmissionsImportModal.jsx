@@ -106,7 +106,7 @@ export default function AdmissionsImportModal({ isOpen, onClose, onImportSuccess
       if (res.ok) {
         setSuccessMsg(resData.message || 'Đã nạp thành công toàn bộ học viên và lớp học!');
         setTimeout(() => {
-          onImportSuccess?.();
+          onImportSuccess?.(previewData?.academicYear);
           onClose();
         }, 2200);
       } else {

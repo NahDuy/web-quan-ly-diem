@@ -33,7 +33,7 @@ export default function StudentManagementView({ currentUser }) {
   const displayYears = availableYears.length > 0 ? availableYears : [2026];
 
   const filteredClasses = selectedYear
-    ? classList.filter(c => !c.academicYear || c.academicYear === parseInt(selectedYear))
+    ? classList.filter(c => !c.academicYear || String(c.academicYear) === String(selectedYear))
     : classList;
 
   const handleExportStudents = () => {
@@ -115,10 +115,12 @@ export default function StudentManagementView({ currentUser }) {
 
   const fetchClasses = async () => {
     try {
-      const res = await fetch('/api/v1/classes');
+      const token = localStorage.getItem('jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/v1/classes', { headers });
       if (res.ok) {
         const data = await res.json();
-        setClassList(data);
+        setClassList(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       console.error('Error fetching classes:', e);
@@ -1056,9 +1058,13 @@ export default function StudentManagementView({ currentUser }) {
       <AdmissionsImportModal
         isOpen={isAdmissionsModalOpen}
         onClose={() => setIsAdmissionsModalOpen(false)}
-        onImportSuccess={() => {
-          fetchStudents();
-          fetchClasses();
+        onImportSuccess={async (importedYear) => {
+          if (importedYear) {
+            setSelectedYear(String(importedYear));
+          }
+          setSelectedClassId('');
+          await fetchClasses();
+          await fetchStudents();
         }}
       />
 

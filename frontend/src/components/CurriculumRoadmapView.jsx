@@ -273,14 +273,14 @@ export default function CurriculumRoadmapView() {
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center space-x-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={() => {
                 setAddTargetError('');
                 setIsAddTargetModalOpen(true);
               }}
-              className="btn btn-sm"
+              className="btn btn-sm flex items-center gap-1.5 shadow-sm font-bold"
               style={{
                 backgroundColor: '#fef3c7',
                 color: '#b45309',
@@ -296,16 +296,17 @@ export default function CurriculumRoadmapView() {
             <a
               href={`/api/v1/curriculums/export-template?majorCode=${selectedMajor}&targetGroup=${targetGroup}&courseCode=${selectedCourse}`}
               download
-              className="btn btn-secondary btn-sm"
+              className="btn btn-secondary btn-sm flex items-center gap-2 shadow-sm text-slate-700 bg-white hover:bg-slate-50 border-slate-300 font-bold"
               title="Tải về file Excel mẫu chuẩn đã được minh họa sẵn danh sách môn học và thi tốt nghiệp của chuyên ngành này"
             >
-              <Download className="w-4 h-4 text-amber-600" />
+              <Download className="w-4 h-4 text-emerald-600" />
               <span>Xuất File Excel Mẫu</span>
             </a>
 
             <button
+              type="button"
               onClick={() => setIsImportModalOpen(true)}
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm flex items-center gap-2 shadow-sm font-bold"
               title="Tải lên file Excel khung chương trình đào tạo để cập nhật vào hệ thống"
             >
               <Upload className="w-4 h-4" />

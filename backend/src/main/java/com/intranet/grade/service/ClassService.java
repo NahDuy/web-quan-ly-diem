@@ -41,7 +41,7 @@ public class ClassService {
                             .majorName(c.getMajor() != null ? c.getMajor().getName() : null)
                             .courseCode(c.getCourse() != null ? c.getCourse().getCode() : null)
                             .courseName(c.getCourse() != null ? c.getCourse().getName() : null)
-                            .academicYear(c.getCourse() != null ? c.getCourse().getStartYear() : null)
+                            .academicYear(c.getCourse() != null ? c.getCourse().getAcademicYear() : 2026)
                             .totalStudents(count)
                             .build();
                 })
