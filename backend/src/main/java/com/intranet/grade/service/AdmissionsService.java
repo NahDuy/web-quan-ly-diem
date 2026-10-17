@@ -54,28 +54,59 @@ public class AdmissionsService {
             Map<String, Integer> classCounter = new HashMap<>();
             Map<String, Integer> studentCounter = new HashMap<>();
 
+            Pattern khoaPattern = Pattern.compile("(?i)(?:^|\\s)(?:khóa|khoá)\\s+(?:\\d+|\\.{3}|[A-Z0-9]+)");
+
             for (int r = 0; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
                 if (row == null) continue;
 
+                // 1. Check first if this row is a student data row
+                Cell c0 = row.getCell(0);
+                Cell c1 = row.getCell(1);
+                Integer stt = c0 != null ? parseNumericCell(c0) : null;
+                String name = c1 != null ? getCellString(c1).trim() : "";
+
+                boolean isStudentRow = stt != null && stt > 0 && !name.isBlank()
+                        && !name.contains("Họ và tên") && !name.contains("Chỉ tiêu")
+                        && !name.contains("Tổng") && !name.equalsIgnoreCase("TQSQK3");
+
+                if (isStudentRow) {
+                    String dob = row.getCell(2) != null ? getCellString(row.getCell(2)).trim() : "";
+                    String pob = row.getCell(3) != null ? getCellString(row.getCell(3)).trim() : "";
+                    String gender = row.getCell(4) != null ? getCellString(row.getCell(4)).trim() : "Nam";
+                    String ethnic = row.getCell(5) != null ? getCellString(row.getCell(5)).trim() : "Kinh";
+                    String unit = row.getCell(6) != null ? getCellString(row.getCell(6)).trim() : "";
+
+                    currentStudents.add(ParsedStudentDTO.builder()
+                            .stt(stt)
+                            .fullName(name)
+                            .dob(dob)
+                            .pob(pob)
+                            .gender(gender)
+                            .ethnic(ethnic)
+                            .unit(unit)
+                            .build());
+                    continue; // Skip section header checks on student rows (prevents addresses like "Khoái Châu" from splitting sections)
+                }
+
+                // 2. Only non-student rows can be section headers or major declarations
                 String rowText = getRowFullText(row);
 
-                // Detect Section Header: "Khóa..." or "DANH SÁCH..." or "Đào tạo..."
-                if (rowText.contains("Khóa") || rowText.contains("Khoá") || rowText.contains("Đào tạo") || rowText.contains("đào tạo")) {
-                    if (rowText.toLowerCase().contains("khóa") || rowText.toLowerCase().contains("khoá") || rowText.toLowerCase().contains("sĩ quan dự bị")) {
-                        if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
-                            ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
-                            sections.add(sec);
-                            totalStudents += currentStudents.size();
-                            currentStudents = new ArrayList<>();
-                            currentMajorText = "";
-                        }
+                // Detect Section Header: "Khóa [0-9]+..." or "Khóa ... Đào tạo" or "Đào tạo sĩ quan / khẩu đội / tiểu đội..."
+                boolean isKhóaHeader = khoaPattern.matcher(rowText).find()
+                        || (rowText.toLowerCase().contains("đào tạo") && (rowText.toLowerCase().contains("sĩ quan") || rowText.toLowerCase().contains("khẩu đội") || rowText.toLowerCase().contains("tiểu đội") || rowText.toLowerCase().contains("nhân viên")));
+
+                if (isKhóaHeader) {
+                    if (!currentStudents.isEmpty() && !currentMajorText.isEmpty()) {
+                        ParsedSectionDTO sec = buildSectionDTO(currentTitle, currentKhoa, currentMajorText, currentDetectedTarget, currentTargetName, year, yearShort, classNamingMode, currentStudents, classCounter, studentCounter);
+                        sections.add(sec);
+                        totalStudents += currentStudents.size();
+                        currentStudents = new ArrayList<>();
+                        currentMajorText = "";
                     }
-                    if (rowText.contains("Khóa") || rowText.contains("Khoá") || rowText.contains("K")) {
-                        String extracted = extractKhoaText(rowText, year);
-                        if (!extracted.isBlank()) {
-                            currentKhoa = extracted;
-                        }
+                    String extracted = extractKhoaText(rowText, year);
+                    if (!extracted.isBlank()) {
+                        currentKhoa = extracted;
                     }
                     currentDetectedTarget = detectTargetTypeFromText(rowText, targetTypeOverride);
                     currentTargetName = getTargetName(currentDetectedTarget);
@@ -90,33 +121,6 @@ public class AdmissionsService {
                         currentStudents = new ArrayList<>();
                     }
                     currentMajorText = extractMajorText(rowText);
-                }
-
-                // Check for student data row: cell 0 is numeric STT, cell 1 has name
-                Cell c0 = row.getCell(0);
-                Cell c1 = row.getCell(1);
-
-                if (c0 != null && c1 != null) {
-                    Integer stt = parseNumericCell(c0);
-                    String name = getCellString(c1).trim();
-
-                    if (stt != null && !name.isBlank() && !name.contains("Họ và tên") && !name.contains("Chỉ tiêu") && !name.contains("Tổng") && !name.equalsIgnoreCase("TQSQK3")) {
-                        String dob = row.getCell(2) != null ? getCellString(row.getCell(2)).trim() : "";
-                        String pob = row.getCell(3) != null ? getCellString(row.getCell(3)).trim() : "";
-                        String gender = row.getCell(4) != null ? getCellString(row.getCell(4)).trim() : "Nam";
-                        String ethnic = row.getCell(5) != null ? getCellString(row.getCell(5)).trim() : "Kinh";
-                        String unit = row.getCell(6) != null ? getCellString(row.getCell(6)).trim() : "";
-
-                        currentStudents.add(ParsedStudentDTO.builder()
-                                .stt(stt)
-                                .fullName(name)
-                                .dob(dob)
-                                .pob(pob)
-                                .gender(gender)
-                                .ethnic(ethnic)
-                                .unit(unit)
-                                .build());
-                    }
                 }
             }
 
