@@ -19,6 +19,9 @@ import {
   UserCheck,
   Award,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Filter,
   School,
   X
 } from 'lucide-react';
@@ -62,6 +65,17 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
   const [assignedSubjectIds, setAssignedSubjectIds] = useState([]);
   const [assigningLoading, setAssigningLoading] = useState(false);
   const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('');
+  const [assignmentFilterStatus, setAssignmentFilterStatus] = useState('ALL'); // 'ALL' | 'ASSIGNED' | 'UNASSIGNED'
+  const [expandedUserIds, setExpandedUserIds] = useState(new Set());
+
+  const toggleExpandUser = (userId) => {
+    setExpandedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
 
   // Department Modal
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -231,6 +245,8 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
   };
 
   const filteredAssignmentSubjects = deptSubjects.filter(sub => {
+    if (assignmentFilterStatus === 'ASSIGNED' && !assignedSubjectIds.includes(sub.id)) return false;
+    if (assignmentFilterStatus === 'UNASSIGNED' && assignedSubjectIds.includes(sub.id)) return false;
     if (!assignmentSearchTerm.trim()) return true;
     const term = assignmentSearchTerm.toLowerCase().trim();
     return (
@@ -974,6 +990,46 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                     </div>
                   </div>
 
+                  {/* Filter Status Pills (Tất cả / Đã chọn / Chưa chọn) */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                    <span className="text-[11px] font-semibold text-slate-500 mr-1 flex items-center gap-1">
+                      <Filter className="w-3 h-3 text-slate-400" /> Hiển thị:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentFilterStatus('ALL')}
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
+                        assignmentFilterStatus === 'ALL'
+                          ? 'bg-slate-800 text-white shadow-2xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Tất cả ({deptSubjects.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentFilterStatus('ASSIGNED')}
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
+                        assignmentFilterStatus === 'ASSIGNED'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'bg-white text-emerald-800 border border-emerald-200 hover:bg-emerald-50'
+                      }`}
+                    >
+                      ✓ Đã chọn ({assignedSubjectIds.filter(id => deptSubjects.some(s => s.id === id)).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentFilterStatus('UNASSIGNED')}
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
+                        assignmentFilterStatus === 'UNASSIGNED'
+                          ? 'bg-amber-600 text-white shadow-2xs'
+                          : 'bg-white text-amber-800 border border-amber-200 hover:bg-amber-50'
+                      }`}
+                    >
+                      Chưa chọn ({deptSubjects.length - assignedSubjectIds.filter(id => deptSubjects.some(s => s.id === id)).length})
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
                     {filteredAssignmentSubjects.length > 0 ? (
                       filteredAssignmentSubjects.map((sub) => {
@@ -1096,13 +1152,52 @@ export default function DepartmentUnitManagementView({ currentUser, initialSubTa
                     </td>
                     <td className="py-2.5 px-3">
                       {user.assignedSubjects && user.assignedSubjects.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {user.assignedSubjects.map((s) => (
-                            <span key={s.id} className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold" title={s.name}>
-                              {s.code}
-                            </span>
-                          ))}
-                        </div>
+                        (() => {
+                          const isExpanded = expandedUserIds.has(user.id);
+                          const total = user.assignedSubjects.length;
+                          const MAX_PREVIEW = 2;
+                          const visible = isExpanded ? user.assignedSubjects : user.assignedSubjects.slice(0, MAX_PREVIEW);
+                          const remaining = total - MAX_PREVIEW;
+                          const remainingNames = user.assignedSubjects.slice(MAX_PREVIEW).map(s => `${s.code}: ${s.name}`).join('\n');
+
+                          return (
+                            <div className="flex flex-wrap items-center gap-1 max-w-xs">
+                              {visible.map((s) => (
+                                <span
+                                  key={s.id}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold inline-flex items-center"
+                                  title={`${s.code} — ${s.name} (${s.credits} TC)`}
+                                >
+                                  {s.code}
+                                </span>
+                              ))}
+
+                              {remaining > 0 && !isExpanded && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandUser(user.id)}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold transition cursor-pointer shadow-2xs inline-flex items-center gap-0.5"
+                                  title={`Danh sách ${remaining} môn còn lại:\n${remainingNames}\n(Bấm để xem tất cả)`}
+                                >
+                                  <span>+{remaining} môn</span>
+                                  <ChevronDown className="w-2.5 h-2.5 text-slate-500" />
+                                </button>
+                              )}
+
+                              {isExpanded && remaining > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandUser(user.id)}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-300 font-semibold transition cursor-pointer inline-flex items-center gap-0.5"
+                                  title="Thu gọn danh sách môn học"
+                                >
+                                  <span>Thu gọn</span>
+                                  <ChevronUp className="w-2.5 h-2.5 text-slate-500" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <span className="text-slate-400 text-[11px] italic">
                           {user.roleCode === 'ROLE_GIANGVIEN' ? 'Chưa phân công' : '—'}
