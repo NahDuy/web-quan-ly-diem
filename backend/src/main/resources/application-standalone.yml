@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  servlet:
+    context-path: ""
+
+spring:
+  application:
+    name: grade-management
+  datasource:
+    url: jdbc:h2:file:./data/grade_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+jwt:
+  secret: c3VwZXJzZWNyZXRrZXlmb3JpbnRyYW5ldGdyYWRlbWFuYWdlbWVudHN5c3RlbTIwMjY=
+  expiration: 86400000

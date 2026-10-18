@@ -77,7 +77,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/v1/students/**", "/api/v1/students/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT", "ROLE_DONVI")
                 .requestMatchers(HttpMethod.DELETE, "/v1/students/**", "/api/v1/students/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .requestMatchers("/v1/departments/users/**", "/api/v1/departments/users/**").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
-                .anyRequest().authenticated()
+                .requestMatchers("/v1/**", "/api/**").authenticated()
+                .anyRequest().permitAll()
             );
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

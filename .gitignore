@@ -38,3 +38,10 @@ scratch/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Standalone distribution & local DB
+DONG_GOI_HE_THONG/
+*.zip
+backend/data/
+backend/src/main/resources/static/
+
