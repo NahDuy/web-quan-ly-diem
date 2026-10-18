@@ -20,10 +20,15 @@ export default function DatabaseExplorerView() {
   const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
+  const [dbStatus, setDbStatus] = useState(null);
   const pageSize = 50;
 
   useEffect(() => {
     fetchTables();
+    fetch('/api/v1/system/status')
+      .then((res) => res.json())
+      .then((data) => setDbStatus(data))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -137,29 +142,31 @@ export default function DatabaseExplorerView() {
               Làm mới
             </button>
 
-            <a
-              href="/h2-console"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                background: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textDecoration: 'none',
-                boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)',
-              }}
-            >
-              <ExternalLink size={16} />
-              Mở H2 Web Console (SQL Query)
-            </a>
+            {dbStatus?.databaseType?.toLowerCase().includes('h2') && (
+              <a
+                href="/h2-console"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 18px',
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)',
+                }}
+              >
+                <ExternalLink size={16} />
+                Mở H2 Web Console (SQL Query)
+              </a>
+            )}
           </div>
         </div>
 
@@ -178,23 +185,35 @@ export default function DatabaseExplorerView() {
             <Server size={18} color="#64748b" />
             <div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Động cơ CSDL</div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>H2 Database Engine (MVStore)</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>
+                {dbStatus?.databaseType?.toLowerCase().includes('postgres')
+                  ? 'PostgreSQL 16 (Enterprise Engine)'
+                  : 'H2 Database Engine (MVStore)'}
+              </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={18} color="#64748b" />
             <div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Vị trí lưu trữ dữ liệu</div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>.\data\grade_db.mv.db</div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Môi trường lưu trữ</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>
+                {dbStatus?.databaseType?.toLowerCase().includes('postgres')
+                  ? 'Docker Volume (intranet_postgres:5432)'
+                  : '.\\data\\grade_db.mv.db'}
+              </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Layers size={18} color="#64748b" />
             <div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Chế độ tương thích</div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>PostgreSQL Compatible</div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Chế độ vận hành</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>
+                {dbStatus?.databaseType?.toLowerCase().includes('postgres')
+                  ? 'Môi trường Docker (Chính thức)'
+                  : 'Bản Đóng Gói Độc Lập (Standalone)'}
+              </div>
             </div>
           </div>
 
@@ -202,31 +221,35 @@ export default function DatabaseExplorerView() {
             <CheckCircle size={18} color="#16a34a" />
             <div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Trạng thái kết nối</div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#16a34a' }}>ĐÃ KẾT NỐI (ONLINE)</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#16a34a' }}>
+                {dbStatus?.database === 'CONNECTED' ? 'ĐÃ KẾT NỐI (ONLINE)' : 'CHỜ KẾT NỐI'}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Info notice about H2 Web Console login */}
-        <div
-          style={{
-            marginTop: '16px',
-            padding: '10px 14px',
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: '8px',
-            fontSize: '0.8125rem',
-            color: '#1e40af',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Info size={16} style={{ flexShrink: 0 }} />
-          <span>
-            <strong>Mẹo khi mở H2 Web Console:</strong> JDBC URL: <code>jdbc:h2:file:./data/grade_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE</code> | User Name: <code>sa</code> | Password: <i>(để trống)</i>.
-          </span>
-        </div>
+        {/* Info notice about H2 Web Console login (only when H2) */}
+        {dbStatus?.databaseType?.toLowerCase().includes('h2') && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '10px 14px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '8px',
+              fontSize: '0.8125rem',
+              color: '#1e40af',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Info size={16} style={{ flexShrink: 0 }} />
+            <span>
+              <strong>Mẹo khi mở H2 Web Console:</strong> JDBC URL: <code>jdbc:h2:file:./data/grade_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE</code> | User Name: <code>sa</code> | Password: <i>(để trống)</i>.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Left Table List + Right Table Data Viewer */}

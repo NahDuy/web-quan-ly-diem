@@ -75,12 +75,15 @@ public class SystemStatusController {
         } catch (Exception ignored) {}
         status.put("totalRequests", requestCount);
 
-        // Database connectivity check
+        // Database connectivity & engine check
         boolean dbConnected = false;
+        String dbType = "UNKNOWN";
         try (Connection conn = dataSource.getConnection()) {
             dbConnected = conn.isValid(2);
+            dbType = conn.getMetaData().getDatabaseProductName();
         } catch (Exception ignored) {}
         status.put("database", dbConnected ? "CONNECTED" : "DISCONNECTED");
+        status.put("databaseType", dbType);
 
         return ResponseEntity.ok(status);
     }

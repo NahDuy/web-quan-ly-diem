@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { History, Shield, RefreshCw, TrendingUp, TrendingDown, Minus, Search, Calendar, Filter, X, Clock, UserCheck } from 'lucide-react';
+import { History, Shield, RefreshCw, TrendingUp, TrendingDown, Minus, Search, Calendar, Filter, X, Clock, UserCheck, Database } from 'lucide-react';
+import DatabaseExplorerView from './DatabaseExplorerView';
 
-export default function AuditLogView() {
+export default function AuditLogView({ currentUser }) {
+  const isBghOrPdt = currentUser && (currentUser.role === 'ROLE_BGH' || currentUser.role === 'ROLE_PDT');
+  const [activeSubTab, setActiveSubTab] = useState('audit'); // 'audit' | 'database'
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -95,8 +98,60 @@ export default function AuditLogView() {
 
   return (
     <div className="space-y-4">
-      {/* Header Banner */}
-      <div className="glass-panel p-5 bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+      {/* Sub-tab Navigation for BGH and PDT */}
+      {isBghOrPdt && (
+        <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '10px', width: 'fit-content' }}>
+          <button
+            onClick={() => setActiveSubTab('audit')}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              border: 'none',
+              background: activeSubTab === 'audit' ? '#ffffff' : 'transparent',
+              color: activeSubTab === 'audit' ? '#0f172a' : '#64748b',
+              boxShadow: activeSubTab === 'audit' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <History size={16} />
+            Nhật Ký Chỉnh Sửa Điểm
+          </button>
+          <button
+            onClick={() => setActiveSubTab('database')}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              border: 'none',
+              background: activeSubTab === 'database' ? '#ffffff' : 'transparent',
+              color: activeSubTab === 'database' ? '#166534' : '#64748b',
+              boxShadow: activeSubTab === 'database' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Database size={16} color={activeSubTab === 'database' ? '#16a34a' : '#64748b'} />
+            Cơ Sở Dữ Liệu & Các Bảng
+          </button>
+        </div>
+      )}
+
+      {activeSubTab === 'database' ? (
+        <DatabaseExplorerView />
+      ) : (
+        <>
+          {/* Header Banner */}
+          <div className="glass-panel p-5 bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 shadow-xs">
             <History className="w-6 h-6" />
@@ -328,6 +383,8 @@ export default function AuditLogView() {
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -20,8 +20,7 @@ const TAB_NAMES = {
   matrix:         'Bảng Quản lý Điểm',
   roadmap:        'Lộ trình Đào tạo',
   majors:         'Chuyên ngành & Quy ước',
-  audit:          'Nhật ký Audit Log',
-  database:       'Cơ sở Dữ liệu (H2)',
+  audit:          'Nhật ký & Dữ liệu CSDL',
 };
 
 export default function App() {
@@ -264,11 +263,7 @@ export default function App() {
           )}
 
           {activeTab === 'audit' && (
-            <AuditLogView />
-          )}
-
-          {activeTab === 'database' && (
-            <DatabaseExplorerView />
+            <AuditLogView currentUser={currentUser} />
           )}
         </main>
       </div>
