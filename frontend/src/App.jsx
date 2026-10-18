@@ -9,6 +9,7 @@ import AuditLogView from './components/AuditLogView';
 import CurriculumRoadmapView from './components/CurriculumRoadmapView';
 import MajorManagementView from './components/MajorManagementView';
 import DepartmentUnitManagementView from './components/DepartmentUnitManagementView';
+import DatabaseExplorerView from './components/DatabaseExplorerView';
 import AuthPortalView from './components/AuthPortalView';
 import { User, LogIn, LogOut } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const TAB_NAMES = {
   roadmap:        'Lộ trình Đào tạo',
   majors:         'Chuyên ngành & Quy ước',
   audit:          'Nhật ký Audit Log',
+  database:       'Cơ sở Dữ liệu (H2)',
 };
 
 export default function App() {
@@ -263,6 +265,10 @@ export default function App() {
 
           {activeTab === 'audit' && (
             <AuditLogView />
+          )}
+
+          {activeTab === 'database' && (
+            <DatabaseExplorerView />
           )}
         </main>
       </div>

@@ -12,6 +12,7 @@ import {
   Shield,
   LogIn,
   LogOut,
+  Database,
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -35,6 +36,7 @@ const NAV_SECTIONS = [
     items: [
       { id: 'departments', label: 'Quản lý Khoa & Đơn vị',        icon: Building2, roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
       { id: 'audit',       label: 'Nhật ký Audit Log',            icon: History,   roles: ['ROLE_BGH', 'ROLE_PDT', 'ROLE_TRUONGKHOA', 'ROLE_BOMON'] },
+      { id: 'database',    label: 'Cơ sở Dữ liệu (H2)',           icon: Database,  roles: ['ROLE_BGH', 'ROLE_PDT'] },
     ],
   },
 ];

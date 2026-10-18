@@ -57,9 +57,10 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/v1/auth/**", "/api/v1/auth/**", "/auth/**", "/error", "/v1/system/**", "/api/v1/system/**", "/actuator/**").permitAll()
+                .requestMatchers("/v1/auth/**", "/api/v1/auth/**", "/auth/**", "/error", "/v1/system/**", "/api/v1/system/**", "/actuator/**", "/h2-console/**").permitAll()
                 .requestMatchers("/v1/admissions/export-template", "/api/v1/admissions/export-template").permitAll()
                 .requestMatchers(HttpMethod.GET, "/v1/curriculums/**", "/api/v1/curriculums/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/curriculums/import-excel", "/api/v1/curriculums/import-excel").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")

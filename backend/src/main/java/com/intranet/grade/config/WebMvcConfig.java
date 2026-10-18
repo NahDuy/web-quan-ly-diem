@@ -36,8 +36,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         if (requestedResource.exists() && requestedResource.isReadable()) {
                             return requestedResource;
                         }
-                        // Non-API paths fallback to index.html for React SPA client-side routing
-                        if (!resourcePath.startsWith("api/") && !resourcePath.startsWith("api")) {
+                        // Non-API paths fallback to index.html for React SPA client-side routing (excluding h2-console)
+                        if (!resourcePath.startsWith("api/") && !resourcePath.startsWith("api") && !resourcePath.startsWith("h2-console")) {
                             return new ClassPathResource("/static/index.html");
                         }
                         return null;
