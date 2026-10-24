@@ -270,6 +270,7 @@ public class ExcelService {
         CellStyle titleStyle;
         CellStyle subTitleStyle;
         CellStyle italicCenterStyle;
+        CellStyle italicBoldCenterStyle;
         CellStyle italicRightBoldStyle;
         CellStyle headerBoldStyle;
         CellStyle dataCenterStyle;
@@ -498,6 +499,11 @@ public class ExcelService {
         styles.italicCenterStyle.setFont(italicFont);
         styles.italicCenterStyle.setAlignment(HorizontalAlignment.CENTER);
         styles.italicCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        styles.italicBoldCenterStyle = workbook.createCellStyle();
+        styles.italicBoldCenterStyle.setFont(italicBoldFont);
+        styles.italicBoldCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+        styles.italicBoldCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
         styles.italicRightBoldStyle = workbook.createCellStyle();
         styles.italicRightBoldStyle.setFont(italicBoldFont);
@@ -864,42 +870,51 @@ public class ExcelService {
 
         int totalCols = 14;
 
-        // Row 0: QUÂN KHU 3 (bên trái)
+        // Row 0: Góc trái "Phê Duyệt" (in đậm nghiêng) | Bên phải Tiêu đề chính "KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP"
         Row r0 = sheet.createRow(0);
-        r0.setHeightInPoints(26);
-        Cell cAgency1 = r0.createCell(0);
-        cAgency1.setCellValue("QUÂN KHU 3");
-        cAgency1.setCellStyle(styles.agencyStyle);
+        r0.setHeightInPoints(28);
+        Cell cApprove1 = r0.createCell(0);
+        cApprove1.setCellValue("Phê Duyệt");
+        cApprove1.setCellStyle(styles.italicBoldCenterStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-        // Row 1: TRƯỜNG QUÂN SỰ (bên trái, in đậm, gạch chân)
-        Row r1 = sheet.createRow(1);
-        r1.setHeightInPoints(26);
-        Cell cAgency2 = r1.createCell(0);
-        cAgency2.setCellValue("TRƯỜNG QUÂN SỰ");
-        cAgency2.setCellStyle(styles.agencyUnderlineStyle);
-        sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
-
-        // Tiêu đề chính IN ĐẬM: Đặt ngang hàng với QUÂN KHU 3 & TRƯỜNG QUÂN SỰ (từ cột 3 đến hết, gộp Row 0 và Row 1)
         Cell cTitle = r0.createCell(3);
         cTitle.setCellValue("KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP");
         cTitle.setCellStyle(styles.titleStyle);
-        sheet.addMergedRegion(new CellRangeAddress(0, 1, 3, totalCols - 1));
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 3, totalCols - 1));
 
-        // Row 2: Đơn vị lớp IN ĐẬM (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
-        Row r2 = sheet.createRow(2);
-        r2.setHeightInPoints(24);
-        Cell cSub = r2.createCell(3);
+        // Row 1: Góc trái "Ngày      tháng      năm" | Bên phải Đơn vị & Khóa đào tạo
+        Row r1 = sheet.createRow(1);
+        r1.setHeightInPoints(22);
+        Cell cApprove2 = r1.createCell(0);
+        cApprove2.setCellValue("Ngày      tháng      năm");
+        cApprove2.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 2));
+
+        Cell cSub = r1.createCell(3);
         cSub.setCellValue("Đơn vị: " + className + " - " + resolveKhoaHeader(clazz, matrix));
         cSub.setCellStyle(styles.subTitleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(1, 1, 3, totalCols - 1));
+
+        // Row 2: Góc trái "2026" | Bên phải "(Kèm theo Quyết định số: ...)"
+        Row r2 = sheet.createRow(2);
+        r2.setHeightInPoints(20);
+        Cell cApprove3 = r2.createCell(0);
+        cApprove3.setCellValue("2026");
+        cApprove3.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 2));
+
+        Cell cDecision = r2.createCell(3);
+        cDecision.setCellValue("(Kèm theo Quyết định số:            /QĐ-TQS ngày       tháng 4 năm 2026 của Trường Quân sự)");
+        cDecision.setCellStyle(styles.italicCenterStyle);
         sheet.addMergedRegion(new CellRangeAddress(2, 2, 3, totalCols - 1));
 
         // Row 3: Ngày tiếp nhận, khai giảng, bế giảng (Đồng tâm với khối tiêu đề bên phải: từ cột 3 đến totalCols - 1)
         Row r3 = sheet.createRow(3);
-        r3.setHeightInPoints(20);
+        r3.setHeightInPoints(22);
         Cell cDate = r3.createCell(3);
         cDate.setCellValue("Tiếp nhận 03/02/2026    Khai giảng: 05/02/2026    Bế giảng : 29/5/2026");
-        cDate.setCellStyle(styles.italicCenterStyle);
+        cDate.setCellStyle(styles.subTitleStyle);
         sheet.addMergedRegion(new CellRangeAddress(3, 3, 3, totalCols - 1));
 
         // Row 4: Quân số lớp IN ĐẬM NGHIÊNG
@@ -1106,7 +1121,23 @@ public class ExcelService {
         statCell.setCellStyle(styles.subTitleStyle);
         sheet.addMergedRegion(new CellRangeAddress(statRowIdx, statRowIdx, 0, totalCols - 1));
 
-        // Column widths (Cột 0..2 rộng rãi để "TRƯỜNG QUÂN SỰ" không bị thụt/lẹm chữ)
+        // Chữ ký Trưởng phòng Đào tạo ở góc dưới bên phải (theo đúng mẫu KẾT QUẢ PHÂN LOẠI TỐT NGHIỆP)
+        int signRowIdx = statRowIdx + 2;
+        Row signTitleRow = sheet.createRow(signRowIdx);
+        signTitleRow.setHeightInPoints(24);
+        Cell cSignTitle = signTitleRow.createCell(7);
+        cSignTitle.setCellValue("TRƯỞNG PHÒNG ĐÀO TẠO");
+        cSignTitle.setCellStyle(styles.subTitleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(signRowIdx, signRowIdx, 7, totalCols - 1));
+
+        Row signNoteRow = sheet.createRow(signRowIdx + 1);
+        signNoteRow.setHeightInPoints(20);
+        Cell cSignNote = signNoteRow.createCell(7);
+        cSignNote.setCellValue("(Ký và ghi rõ họ tên)");
+        cSignNote.setCellStyle(styles.italicCenterStyle);
+        sheet.addMergedRegion(new CellRangeAddress(signRowIdx + 1, signRowIdx + 1, 7, totalCols - 1));
+
+        // Column widths (Cột 0..2 vừa vặn cho khối "Phê Duyệt / Ngày tháng năm / 2026")
         sheet.setColumnWidth(0, 7 * 256);  // TT
         sheet.setColumnWidth(1, 13 * 256); // Số TT
         sheet.setColumnWidth(2, 11 * 256); // Năm
