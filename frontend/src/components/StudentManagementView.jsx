@@ -43,6 +43,8 @@ export default function StudentManagementView({ currentUser }) {
     const params = [];
     if (selectedClassId) params.push(`classId=${selectedClassId}`);
     if (selectedYear) params.push(`year=${selectedYear}`);
+    const token = localStorage.getItem('jwt_token');
+    if (token) params.push(`token=${encodeURIComponent(token)}`);
     if (params.length > 0) url += `?${params.join('&')}`;
     window.location.href = url;
   };

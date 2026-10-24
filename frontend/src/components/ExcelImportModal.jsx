@@ -85,7 +85,7 @@ export default function ExcelImportModal({
               <div className="text-[11px] text-slate-400 mt-0.5">Tải file mẫu có sẵn danh sách học viên lớp {classCode || ''} để nhập điểm offline</div>
             </div>
             <a
-              href={`/api/v1/classes/${classId || 1}/export-excel?semester=${semester || 1}`}
+              href={`/api/v1/classes/${classId || 1}/export-excel?semester=${semester || 1}&token=${encodeURIComponent(localStorage.getItem('jwt_token') || '')}`}
               download
               className="btn btn-sm shrink-0 font-bold inline-flex items-center gap-1.5 shadow-sm"
               style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}

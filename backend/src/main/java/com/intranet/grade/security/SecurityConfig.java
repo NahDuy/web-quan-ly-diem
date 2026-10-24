@@ -62,6 +62,15 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/v1/auth/**", "/api/v1/auth/**", "/auth/**", "/error", "/v1/system/**", "/api/v1/system/**", "/actuator/**", "/h2-console/**").permitAll()
                 .requestMatchers("/v1/admissions/export-template", "/api/v1/admissions/export-template").permitAll()
+                .requestMatchers(HttpMethod.GET,
+                        "/v1/classes/*/export-excel", "/api/v1/classes/*/export-excel",
+                        "/v1/classes/*/export-hoc-phan", "/api/v1/classes/*/export-hoc-phan",
+                        "/v1/classes/*/export-tot-nghiep", "/api/v1/classes/*/export-tot-nghiep",
+                        "/v1/classes/export-all-classes-hoc-phan", "/api/v1/classes/export-all-classes-hoc-phan",
+                        "/v1/classes/export-all-classes-tot-nghiep", "/api/v1/classes/export-all-classes-tot-nghiep",
+                        "/v1/classes/export-tong-hop-xet-dieu-kien", "/api/v1/classes/export-tong-hop-xet-dieu-kien",
+                        "/v1/students/export-excel", "/api/v1/students/export-excel"
+                ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/v1/curriculums/**", "/api/v1/curriculums/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/curriculums/import-excel", "/api/v1/curriculums/import-excel").hasAnyAuthority("ROLE_BGH", "ROLE_PDT")
                 .requestMatchers(HttpMethod.GET, "/v1/majors/**", "/api/v1/majors/**").permitAll()

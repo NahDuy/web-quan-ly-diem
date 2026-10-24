@@ -1276,6 +1276,13 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
     }
   };
 
+  const buildExportUrl = (baseUrl) => {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) return baseUrl;
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${sep}token=${encodeURIComponent(token)}`;
+  };
+
   const handleExportHocPhan = () => {
     if (!classId) {
       alert('Vui lòng chọn một lớp học để xuất báo cáo!');
@@ -1285,7 +1292,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Tải file Kết quả Học phần mẫu (KetQuaHocPhan.xlsx) tự động khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/${classId}/export-hoc-phan?semester=${semester}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/${classId}/export-hoc-phan?semester=${semester}`);
   };
 
   const handleExportTotNghiep = () => {
@@ -1297,7 +1304,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Tải file Kết quả Tốt nghiệp mẫu (KetQuaTotNghiep.xls/.xlsx) tự động khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/${classId}/export-tot-nghiep?semester=${semester}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/${classId}/export-tot-nghiep?semester=${semester}`);
   };
 
   const handleExportAllClassesHocPhan = () => {
@@ -1305,7 +1312,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Chức năng xuất toàn bộ lớp khả dụng khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/export-all-classes-hoc-phan?semester=${semester}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/export-all-classes-hoc-phan?semester=${semester}`);
   };
 
   const handleExportAllClassesTotNghiep = () => {
@@ -1313,7 +1320,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Chức năng xuất toàn bộ lớp khả dụng khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/export-all-classes-tot-nghiep?semester=${semester}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/export-all-classes-tot-nghiep?semester=${semester}`);
   };
 
   const handleExportTongHopXetDieuKien = () => {
@@ -1321,7 +1328,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       alert('Tải Báo cáo Tổng hợp Xét ĐK Dự thi Tốt nghiệp tự động khi kết nối Backend.');
       return;
     }
-    window.location.href = `/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}`);
   };
 
   const handleOpenSelectClassesModal = () => {
@@ -1351,7 +1358,7 @@ export default function MatrixDataGrid({ currentUser, onOpenImportModal }) {
       return;
     }
     setSelectClassesModalOpen(false);
-    window.location.href = `/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}&classIds=${selectedExportClassIds.join(',')}`;
+    window.location.href = buildExportUrl(`/api/v1/classes/export-tong-hop-xet-dieu-kien?semester=${semester}&classIds=${selectedExportClassIds.join(',')}`);
   };
 
   const filteredExportClasses = useMemo(() => {
