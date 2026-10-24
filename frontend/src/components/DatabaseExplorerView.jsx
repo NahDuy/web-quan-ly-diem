@@ -10,6 +10,7 @@ import {
   FileText,
   Info,
   CheckCircle,
+  Activity,
 } from 'lucide-react';
 
 export default function DatabaseExplorerView() {
@@ -223,6 +224,16 @@ export default function DatabaseExplorerView() {
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Trạng thái kết nối</div>
               <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#16a34a' }}>
                 {dbStatus?.database === 'CONNECTED' ? 'ĐÃ KẾT NỐI (ONLINE)' : 'CHỜ KẾT NỐI'}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Activity size={18} color="#0284c7" />
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Bộ nhớ RAM máy chủ</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0369a1' }}>
+                {dbStatus ? `${dbStatus.memoryUsedMb} MB / ${dbStatus.memoryMaxMb || dbStatus.memoryTotalMb} MB (Đã cấp: ${dbStatus.memoryAllocatedMb || dbStatus.memoryTotalMb} MB)` : '--'}
               </div>
             </div>
           </div>

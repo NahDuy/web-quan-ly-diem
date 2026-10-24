@@ -51,13 +51,16 @@ public class SystemStatusController {
         long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
         status.put("uptimeSeconds", uptimeMs / 1000);
 
-        // RAM memory usage in MB
+        // RAM memory usage in MB (Used / Committed / Maximum limit)
         Runtime runtime = Runtime.getRuntime();
-        long totalMemory = runtime.totalMemory() / (1024 * 1024);
+        long maxMemory = runtime.maxMemory() / (1024 * 1024);
+        long allocatedMemory = runtime.totalMemory() / (1024 * 1024);
         long freeMemory = runtime.freeMemory() / (1024 * 1024);
-        long usedMemory = totalMemory - freeMemory;
+        long usedMemory = allocatedMemory - freeMemory;
         status.put("memoryUsedMb", usedMemory);
-        status.put("memoryTotalMb", totalMemory);
+        status.put("memoryAllocatedMb", allocatedMemory);
+        status.put("memoryMaxMb", maxMemory);
+        status.put("memoryTotalMb", maxMemory); // For backwards compatibility: displays Used / Max
 
         // Total HTTP Requests handled
         long requestCount = 0;

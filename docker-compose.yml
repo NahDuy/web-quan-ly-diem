@@ -27,6 +27,7 @@ services:
     restart: always
     environment:
       TZ: Asia/Ho_Chi_Minh
+      JAVA_TOOL_OPTIONS: "-Xms1024m -Xmx4096m"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/grade_management
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: SecurePassword123!
@@ -35,8 +36,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
 
   frontend:
     build:
